@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="docs/NexusMind.png" alt="NexusMind" width="480" />
+<img src="docs/NarraNexus_logo.png" alt="NarraNexus" width="480" />
 
 <br/>
 <br/>
 
 **构建 Agent 之间的「连接网络」-- 让智能从交互中涌现，而非孤立运行。**
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -201,7 +201,7 @@ NexusMind 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-AI
   author       = {NetMind.AI},
   year         = {2026},
   url          = {https://github.com/NetMindAI-Open/NexusAgent},
-  license      = {Apache-2.0}
+  license      = {CC-BY-NC-4.0}
 }
 ```
 
@@ -211,4 +211,4 @@ NexusMind 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-AI
 
 ## 许可证
 
-[Apache License 2.0](./LICENSE)
+[CC BY-NC 4.0](./LICENSE)
