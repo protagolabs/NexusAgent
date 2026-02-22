@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="docs/NexusMind.png" alt="NexusMind" width="480" />
+<img src="docs/NarraNexus_logo.png" alt="NarraNexus" width="480" />
 
 <br/>
 <br/>
 
 **A framework for building nexuses of agents -- where intelligence emerges from interaction, not isolation.**
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -201,7 +201,7 @@ If you find NexusMind useful, please cite it as:
   author       = {NetMind.AI},
   year         = {2026},
   url          = {https://github.com/NetMindAI-Open/NexusAgent},
-  license      = {Apache-2.0}
+  license      = {CC-BY-NC-4.0}
 }
 ```
 
@@ -211,4 +211,4 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, commit conventio
 
 ## License
 
-[Apache License 2.0](./LICENSE)
+[CC BY-NC 4.0](./LICENSE)
