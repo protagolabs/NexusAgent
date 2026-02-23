@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="docs/NexusMind.png" alt="NexusMind" width="480" />
+<img src="docs/NarraNexus_logo.png" alt="NarraNexus" width="480" />
 
 <br/>
 <br/>
 
 **构建 Agent 之间的「连接网络」-- 让智能从交互中涌现，而非孤立运行。**
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -21,11 +21,11 @@
 
 大多数 Agent 框架的目标是让 Agent 更*聪明*。NexusMind 的目标是让 Agent 更*互联*。
 
-孤立的 Agent 只是工具。当 Agent 拥有持久记忆、社会身份、人际关系和目标时，它就成为**连接网络（Nexus）**中的参与者——在这个网络中，智能是集体属性而非模型属性。NexusMind 为此提供基础设施：跨对话积累的叙事记忆、追踪实体与关系的社交图谱、支持依赖链的任务系统，以及可在运行时自由组合的模块化能力。
+孤立的 Agent 只是工具。当 Agent 拥有持久记忆、社会身份、人际关系和目标时，它就成为**连接网络（Nexus）**中的参与者——在这个网络中，智能是集体属性而非模型属性。NexusMind 为此提供基础设施：跨对话积累的叙事结构、追踪实体与关系的社交图谱、支持依赖链的任务系统，以及可在运行时自由组合的模块化能力。
 
 ## 核心特性
 
-- **叙事记忆** -- 对话被路由到语义故事线中，按话题相似度跨会话检索，而非按时间顺序
+- **叙事结构** -- 对话被路由到语义故事线中，按话题相似度跨会话检索，而非按时间顺序
 - **热插拔模块** -- 每项能力（聊天、社交图谱、RAG、任务、技能、记忆）都是独立模块，拥有自己的数据库表、MCP 工具和生命周期钩子
 - **社交网络** -- 实体图谱追踪人物、关系、专业领域和互动历史，支持语义搜索
 - **任务调度** -- 一次性、定时、周期、持续任务，支持依赖链（DAG）
@@ -201,7 +201,7 @@ NexusMind 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-AI
   author       = {NetMind.AI},
   year         = {2026},
   url          = {https://github.com/NetMindAI-Open/NexusAgent},
-  license      = {Apache-2.0}
+  license      = {CC-BY-NC-4.0}
 }
 ```
 
@@ -211,4 +211,4 @@ NexusMind 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-AI
 
 ## 许可证
 
-[Apache License 2.0](./LICENSE)
+[CC BY-NC 4.0](./LICENSE)
