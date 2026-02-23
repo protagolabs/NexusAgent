@@ -21,11 +21,11 @@
 
 Most agent frameworks focus on making agents *smarter*. NexusMind focuses on making agents *connected*.
 
-An agent in isolation is a tool. An agent with persistent memory, social identity, relationships, and goals becomes a participant in a **nexus** -- a network where intelligence is a collective property, not a model property. NexusMind provides the infrastructure for this: narrative memory that accumulates across conversations, a social graph that tracks entities and relationships, task systems with dependency chains, and modular capabilities that can be composed at runtime.
+An agent in isolation is a tool. An agent with persistent memory, social identity, relationships, and goals becomes a participant in a **nexus** -- a network where intelligence is a collective property, not a model property. NexusMind provides the infrastructure for this: narrative structure that accumulates across conversations, a social graph that tracks entities and relationships, task systems with dependency chains, and modular capabilities that can be composed at runtime.
 
 ## Key Features
 
-- **Narrative Memory** -- Conversations are routed into semantic storylines maintained across sessions, retrieved by topic similarity rather than chronological order
+- **Narrative Structure** -- Conversations are routed into semantic storylines maintained across sessions, retrieved by topic similarity rather than chronological order
 - **Hot-Swappable Modules** -- Each capability (chat, social graph, RAG, jobs, skills, memory) is a standalone module with its own DB tables, MCP tools, and lifecycle hooks
 - **Social Network** -- Entity graph tracking people, relationships, expertise, and interaction history with semantic search
 - **Job Scheduling** -- One-shot, cron, periodic, and continuous tasks with dependency DAGs
