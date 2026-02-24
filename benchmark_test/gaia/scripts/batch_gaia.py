@@ -3,7 +3,7 @@ GAIA Batch Runner
 =================
 Runs a range of GAIA tasks one-by-one via run_gaia.py with fault tolerance.
 If a task crashes, it logs the error and continues to the next one.
-Consolidates all results into a single JSON at the end.
+Saves JSON + Excel after each question for live monitoring.
 
 Usage:
     python batch_gaia.py --start 2 --end 20 --split validation
@@ -28,6 +28,117 @@ PYTHON = sys.executable
 def load_existing_results(path: str) -> dict:
     with open(path) as f:
         return json.load(f)
+
+
+def save_json(results: list, split: str, start: int, end: int, correct: int) -> Path:
+    """Save consolidated JSON (overwrites same file each time)."""
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    outfile = RESULTS_DIR / f"gaia_{split}_batch_{start}-{end - 1}.json"
+    scored = [r for r in results if r.get("correct") is not None]
+    output = {
+        "metadata": {
+            "split": split,
+            "range": f"{start}-{end - 1}",
+            "timestamp": datetime.now().isoformat(),
+            "total_tasks": len(results),
+            "scored": len(scored),
+            "correct": correct,
+        },
+        "results": sorted(results, key=lambda r: r.get("task_index", 0)),
+    }
+    with open(outfile, "w") as f:
+        json.dump(output, f, indent=2, ensure_ascii=False)
+    return outfile
+
+
+def save_excel(results: list, split: str, start: int, end: int, correct: int):
+    """Save/overwrite Excel with Summary, Results, and Reasoning Traces sheets."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import PatternFill, Font, Alignment
+    except ImportError:
+        return  # skip if openpyxl not available
+
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    xlsx_path = RESULTS_DIR / f"gaia_{split}_batch_{start}-{end - 1}.xlsx"
+
+    wb = Workbook()
+    green = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+    red = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    yellow = PatternFill(start_color="FFFFCC", end_color="FFFFCC", fill_type="solid")
+    bold = Font(bold=True)
+
+    sorted_results = sorted(results, key=lambda r: r.get("task_index", 0))
+    scored = [r for r in sorted_results if r.get("correct") is not None]
+    total = len(sorted_results)
+
+    # --- Summary sheet ---
+    ws0 = wb.active
+    ws0.title = "Summary"
+    summary_rows = [
+        ("Split", split),
+        ("Range", f"{start}-{end - 1}"),
+        ("Timestamp", datetime.now().isoformat()),
+        ("Total Tasks", total),
+        ("Scored", len(scored)),
+        ("Correct", correct),
+        ("Accuracy", f"{100 * correct / len(scored):.1f}%" if scored else "N/A"),
+    ]
+    # Per-level stats
+    for lvl in [1, 2, 3]:
+        lvl_all = [r for r in scored if str(r.get("level", "")) == str(lvl)]
+        lvl_ok = sum(1 for r in lvl_all if r.get("correct"))
+        if lvl_all:
+            summary_rows.append((f"Level {lvl}", f"{lvl_ok}/{len(lvl_all)} ({100 * lvl_ok / len(lvl_all):.1f}%)"))
+    for i, (k, v) in enumerate(summary_rows, 1):
+        ws0.cell(row=i, column=1, value=k).font = bold
+        ws0.cell(row=i, column=2, value=v)
+    ws0.column_dimensions["A"].width = 15
+    ws0.column_dimensions["B"].width = 40
+
+    # --- Results sheet ---
+    ws1 = wb.create_sheet("Results")
+    headers = ["Index", "Level", "Correct", "Predicted", "Ground Truth", "Failure", "Duration(s)", "Question (preview)", "Notes"]
+    for c, h in enumerate(headers, 1):
+        cell = ws1.cell(row=1, column=c, value=h)
+        cell.font = bold
+        cell.alignment = Alignment(horizontal="center")
+    for i, r in enumerate(sorted_results, 2):
+        ok = r.get("correct", False)
+        ft = r.get("failure_type", "unknown")
+        ws1.cell(row=i, column=1, value=r.get("task_index"))
+        ws1.cell(row=i, column=2, value=str(r.get("level", "")))
+        ws1.cell(row=i, column=3, value="Yes" if ok else "No")
+        ws1.cell(row=i, column=4, value=r.get("predicted_answer", ""))
+        ws1.cell(row=i, column=5, value=r.get("ground_truth", ""))
+        ws1.cell(row=i, column=6, value=ft)
+        ws1.cell(row=i, column=7, value=r.get("duration_seconds"))
+        q = r.get("question", "")
+        ws1.cell(row=i, column=8, value=q[:150] if q else "")
+        ws1.cell(row=i, column=9, value="")
+        fill = green if ok else (yellow if ft not in ("success", "") else red)
+        for c in range(1, 10):
+            ws1.cell(row=i, column=c).fill = fill
+
+    # --- Reasoning Traces sheet ---
+    ws2 = wb.create_sheet("Reasoning Traces")
+    headers2 = ["Index", "Level", "Correct", "Question", "Response Text", "Thinking Text", "Tool Calls"]
+    for c, h in enumerate(headers2, 1):
+        ws2.cell(row=1, column=c, value=h).font = bold
+    for i, r in enumerate(sorted_results, 2):
+        ws2.cell(row=i, column=1, value=r.get("task_index"))
+        ws2.cell(row=i, column=2, value=str(r.get("level", "")))
+        ws2.cell(row=i, column=3, value="Yes" if r.get("correct") else "No")
+        ws2.cell(row=i, column=4, value=r.get("question", ""))
+        ws2.cell(row=i, column=5, value=r.get("response_text", ""))
+        ws2.cell(row=i, column=6, value=r.get("thinking_text", ""))
+        tools = r.get("tool_calls", [])
+        if tools:
+            tool_summary = ", ".join(t.get("tool_name", "") for t in tools if isinstance(t, dict))
+            ws2.cell(row=i, column=7, value=tool_summary)
+
+    wb.save(xlsx_path)
+    return xlsx_path
 
 
 def run_single(task_id: int, split: str, extra_args: list[str]) -> dict | None:
@@ -137,29 +248,14 @@ def main():
         elapsed = time.time() - t0
         print_progress(done, total, task_id, correct, done, elapsed, result)
 
+        # Save JSON + Excel after each question
+        outfile = save_json(results, args.split, args.start, args.end, correct)
+        save_excel(results, args.split, args.start, args.end, correct)
+
     print()  # newline after progress bar
 
-    # Save consolidated results
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    outfile = RESULTS_DIR / f"gaia_{args.split}_batch_{args.start}-{args.end - 1}_{ts}.json"
-
-    scored = [r for r in results if r.get("correct") is not None]
-    output = {
-        "metadata": {
-            "split": args.split,
-            "range": f"{args.start}-{args.end - 1}",
-            "timestamp": datetime.now().isoformat(),
-            "total_tasks": len(results),
-            "scored": len(scored),
-            "correct": correct,
-        },
-        "results": sorted(results, key=lambda r: r.get("task_index", 0)),
-    }
-    with open(outfile, "w") as f:
-        json.dump(output, f, indent=2, ensure_ascii=False)
-
     # Final summary
+    scored = [r for r in results if r.get("correct") is not None]
     print(f"\n{'='*60}")
     print(f"BATCH COMPLETE: {correct}/{len(scored)} correct ({100*correct/len(scored):.1f}%)" if scored else "No scored results")
     durations = [r["duration_seconds"] for r in results if r.get("duration_seconds")]
@@ -173,6 +269,8 @@ def main():
     if failures:
         print(f"Failures: {failures}")
     print(f"Results: {outfile}")
+    xlsx_path = RESULTS_DIR / f"gaia_{args.split}_batch_{args.start}-{args.end - 1}.xlsx"
+    print(f"Excel:   {xlsx_path}")
     print(f"{'='*60}")
 
 
