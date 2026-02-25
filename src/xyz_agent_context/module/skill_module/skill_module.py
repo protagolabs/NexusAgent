@@ -10,7 +10,7 @@ Skill Module manages Skills under the user's workspace:
 - Always loaded: No intelligent decision-making or Instance records needed
 
 Skills directory:
-- Located at {agent_workspace}/{agent_id}_{user_id}/skills/
+- Located at {agent-workspace}/{agent_id}_{user_id}/skills/
 - Same as Claude Agent's cwd
 """
 
