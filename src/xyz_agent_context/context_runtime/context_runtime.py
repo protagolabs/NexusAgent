@@ -405,17 +405,22 @@ class ContextRuntime:
 
         # ========================================================================
         # Part 5: Bootstrap Injection (first-run setup, creator only)
+        # Derives creator status directly from DB to avoid dependency on
+        # BasicInfoModule being loaded.
         # ========================================================================
-        if ctx_data.is_creator and ctx_data.creator_id:
+        try:
             import os
             from xyz_agent_context.settings import settings
-            bootstrap_path = os.path.join(
-                settings.base_working_path,
-                f"{self.agent_id}_{ctx_data.creator_id}",
-                "Bootstrap.md"
-            )
-            if os.path.isfile(bootstrap_path):
-                try:
+            from xyz_agent_context.repository import AgentRepository
+
+            agent_record = await AgentRepository(self.db).get_agent(self.agent_id)
+            if agent_record and agent_record.created_by and agent_record.created_by == ctx_data.user_id:
+                bootstrap_path = os.path.join(
+                    settings.base_working_path,
+                    f"{self.agent_id}_{agent_record.created_by}",
+                    "Bootstrap.md"
+                )
+                if os.path.isfile(bootstrap_path):
                     with open(bootstrap_path, "r", encoding="utf-8") as f:
                         bootstrap_content = f.read()
                     bootstrap_section = BOOTSTRAP_INJECTION_PROMPT.format(
@@ -423,8 +428,8 @@ class ContextRuntime:
                     )
                     prompt_parts.append(bootstrap_section)
                     logger.debug(f"        Added Bootstrap injection: {len(bootstrap_section)} chars")
-                except Exception as e:
-                    logger.warning(f"        Failed to read Bootstrap.md: {e}")
+        except Exception as e:
+            logger.warning(f"        Failed to inject Bootstrap: {e}")
 
         # Combine all parts
         full_prompt = "\n\n".join(prompt_parts)
