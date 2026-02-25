@@ -11,7 +11,8 @@ plans/*
 # **/frontend/  # 已取消忽略，frontend 现在纳入版本控制
 # **/src/xyz_agent_context/api/  # 已移至 backend/
 # Agent workspace (user uploaded files, runtime data)
-agent-workspace/
+agent_workspace/*
+!agent_workspace/.gitkeep
 requirements/
 !./frontend/src/lib/api.ts
 !./frontend/src/lib/utils.ts

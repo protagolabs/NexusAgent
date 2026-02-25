@@ -19,11 +19,11 @@ Job lifecycle:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import ClassVar, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # =============================================================================
@@ -91,10 +91,21 @@ class TriggerConfig(BaseModel):
         description="Cron expression, e.g., '0 8 * * *' means every day at 8am"
     )
 
+    # 上限 90 天 = 7776000 秒，防止 LLM 生成不合理的超大值
+    MAX_INTERVAL_SECONDS: ClassVar[int] = 7_776_000
+
     interval_seconds: Optional[int] = Field(
         default=None,
-        description="Execution interval (seconds), e.g., 3600 means every hour"
+        description="Execution interval (seconds), e.g., 3600 means every hour. Max 7776000 (90 days)."
     )
+
+    @field_validator("interval_seconds")
+    @classmethod
+    def clamp_interval_seconds(cls, v: Optional[int]) -> Optional[int]:
+        """将 interval_seconds 限制在合理范围内"""
+        if v is not None and v > cls.MAX_INTERVAL_SECONDS:
+            v = cls.MAX_INTERVAL_SECONDS
+        return v
 
     # === ONGOING Configuration (added 2026-01-21) ===
     end_condition: Optional[str] = Field(
@@ -317,6 +328,9 @@ class JobExecutionResult(BaseModel):
     )
 
     # === Next Execution Time (intelligently determined by LLM) ===
+    # 上限 7 天，防止 LLM 返回远未来的时间
+    MAX_NEXT_RUN_DAYS: ClassVar[int] = 90
+
     next_run_time: Optional[datetime] = Field(
         default=None,
         description=(
@@ -325,6 +339,20 @@ class JobExecutionResult(BaseModel):
             "active -> intelligently adjusted based on task progress, not rigidly following preset intervals"
         )
     )
+
+    @field_validator("next_run_time")
+    @classmethod
+    def clamp_next_run_time(cls, v: Optional[datetime]) -> Optional[datetime]:
+        """将 next_run_time 限制在当前时间 + MAX_NEXT_RUN_DAYS 以内"""
+        if v is not None:
+            from xyz_agent_context.utils import utc_now
+            max_time = utc_now() + timedelta(days=cls.MAX_NEXT_RUN_DAYS)
+            # 比较前统一去掉 timezone 信息（LLM 可能返回 naive datetime）
+            v_naive = v.replace(tzinfo=None) if v.tzinfo else v
+            max_naive = max_time.replace(tzinfo=None) if max_time.tzinfo else max_time
+            if v_naive > max_naive:
+                v = max_time
+        return v
 
     # === Error Information ===
     last_error: Optional[str] = Field(
@@ -394,10 +422,25 @@ class OngoingExecutionResult(BaseModel):
     )
 
     # === Next Execution ===
+    MAX_NEXT_RUN_DAYS: ClassVar[int] = 90
+
     next_run_time: Optional[datetime] = Field(
         default=None,
         description="Next execution time (if should_continue=True)"
     )
+
+    @field_validator("next_run_time")
+    @classmethod
+    def clamp_next_run_time(cls, v: Optional[datetime]) -> Optional[datetime]:
+        """将 next_run_time 限制在当前时间 + MAX_NEXT_RUN_DAYS 以内"""
+        if v is not None:
+            from xyz_agent_context.utils import utc_now
+            max_time = utc_now() + timedelta(days=cls.MAX_NEXT_RUN_DAYS)
+            v_naive = v.replace(tzinfo=None) if v.tzinfo else v
+            max_naive = max_time.replace(tzinfo=None) if max_time.tzinfo else max_time
+            if v_naive > max_naive:
+                v = max_time
+        return v
 
     # === Notification Related ===
     should_notify: bool = Field(
