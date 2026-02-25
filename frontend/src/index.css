@@ -251,20 +251,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Scan line effect in dark mode */
-.dark body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
-  opacity: 0.3;
-  z-index: 9999;
-  pointer-events: none;
-  animation: scan-line 8s linear infinite;
-}
 
 #root {
   min-height: 100vh;
