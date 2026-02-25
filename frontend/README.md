@@ -126,7 +126,7 @@ The interface is divided into four main areas, from left to right:
 - Click to browse and select files for upload
 - File list display (filename, size)
 - File deletion
-- File storage path: `./agent_workspace/{agent_id}_{user_id}/`
+- File storage path: `./agent-workspace/{agent_id}_{user_id}/`
 
 #### 4. Data Panel
 
