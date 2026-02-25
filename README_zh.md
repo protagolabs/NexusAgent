@@ -19,9 +19,9 @@
 
 <br/>
 
-大多数 Agent 框架的目标是让 Agent 更*聪明*。NexusMind 的目标是让 Agent 更*互联*。
+大多数 Agent 框架的目标是让 Agent 更*聪明*。NarraNexus 的目标是让 Agent 更*互联*。
 
-孤立的 Agent 只是工具。当 Agent 拥有持久记忆、社会身份、人际关系和目标时，它就成为**连接网络（Nexus）**中的参与者——在这个网络中，智能是集体属性而非模型属性。NexusMind 为此提供基础设施：跨对话积累的叙事结构、追踪实体与关系的社交图谱、支持依赖链的任务系统，以及可在运行时自由组合的模块化能力。
+孤立的 Agent 只是工具。当 Agent 拥有持久记忆、社会身份、人际关系和目标时，它就成为**连接网络（Nexus）**中的参与者——在这个网络中，智能是集体属性而非模型属性。NarraNexus 为此提供基础设施：跨对话积累的叙事结构、追踪实体与关系的社交图谱、支持依赖链的任务系统，以及可在运行时自由组合的模块化能力。
 
 ## 核心特性
 
@@ -187,17 +187,17 @@ RERANK_BASE_URL=https://api.deepinfra.com/v1/inference
 
 ## 致谢
 
-NexusMind 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-AI/EverMemOS) 构建，这是一个用于结构化长程推理的自组织记忆操作系统。感谢 EverMemOS 团队的基础性工作。
+NarraNexus 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-AI/EverMemOS) 构建，这是一个用于结构化长程推理的自组织记忆操作系统。感谢 EverMemOS 团队的基础性工作。
 
 > Chuanrui Hu, Xingze Gao, Zuyi Zhou, Dannong Xu, Yi Bai, Xintong Li, Hui Zhang, Tong Li, Chong Zhang, Lidong Bing, Yafeng Deng. *EverMemOS: A Self-Organizing Memory Operating System for Structured Long-Horizon Reasoning.* arXiv:2601.02163, 2026. [[论文]](https://arxiv.org/abs/2601.02163)
 
 ## 引用
 
-如果 NexusMind 对你的工作有帮助，请引用：
+如果 NarraNexus 对你的工作有帮助，请引用：
 
 ```bibtex
-@software{nexusagent2025,
-  title        = {NexusMind: A Framework for Building Nexuses of Agents},
+@software{narranexus2026,
+  title        = {NarraNexus: A Framework for Building Nexuses of Agents},
   author       = {NetMind.AI},
   year         = {2026},
   url          = {https://github.com/NetMindAI-Open/NexusAgent},

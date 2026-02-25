@@ -56,7 +56,7 @@ export const useConfigStore = create<ConfigState>()(
       setAgents: (agents) => set({ agents }),
     }),
     {
-      name: 'nexus-mind-config',
+      name: 'narra-nexus-config',
     }
   )
 );
