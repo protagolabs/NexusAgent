@@ -26,39 +26,7 @@
   --color-warning: #fbbf24;
   --color-error: #ff4d6d;
 
-  /* Animation Keyframes */
-  @keyframes glow-pulse {
-    0%, 100% {
-      box-shadow: 0 0 20px var(--glow-color, rgba(0, 255, 213, 0.3)),
-                  0 0 40px var(--glow-color, rgba(0, 255, 213, 0.1));
-    }
-    50% {
-      box-shadow: 0 0 30px var(--glow-color, rgba(0, 255, 213, 0.5)),
-                  0 0 60px var(--glow-color, rgba(0, 255, 213, 0.2));
-    }
-  }
-
-  @keyframes float-gentle {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-10px) rotate(1deg); }
-  }
-
-  @keyframes scan-line {
-    0% { transform: translateY(-100%); opacity: 0; }
-    50% { opacity: 0.5; }
-    100% { transform: translateY(100vh); opacity: 0; }
-  }
-
-  @keyframes data-stream {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 0% 100%; }
-  }
-
-  @keyframes breathe {
-    0%, 100% { opacity: 0.5; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.02); }
-  }
-
+  /* Animation Keyframes — functional only */
   @keyframes slide-up-fade {
     from { opacity: 0; transform: translateY(24px); }
     to { opacity: 1; transform: translateY(0); }
@@ -89,51 +57,9 @@
     100% { background-position: 200% 0; }
   }
 
-  @keyframes rotate-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
   @keyframes typing-blink {
     0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0; }
-  }
-
-  @keyframes gradient-flow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  @keyframes border-glow {
-    0%, 100% {
-      border-color: rgba(0, 255, 213, 0.3);
-      box-shadow: 0 0 10px rgba(0, 255, 213, 0.1);
-    }
-    50% {
-      border-color: rgba(0, 255, 213, 0.6);
-      box-shadow: 0 0 20px rgba(0, 255, 213, 0.2);
-    }
-  }
-
-  @keyframes particle-float {
-    0%, 100% {
-      transform: translateY(0) translateX(0);
-      opacity: 0.3;
-    }
-    25% {
-      transform: translateY(-20px) translateX(10px);
-      opacity: 0.6;
-    }
-    75% {
-      transform: translateY(-10px) translateX(-10px);
-      opacity: 0.4;
-    }
-  }
-
-  @keyframes ripple {
-    0% { transform: scale(0.8); opacity: 1; }
-    100% { transform: scale(2.5); opacity: 0; }
   }
 }
 
@@ -341,42 +267,8 @@ p {
   border: 1px solid var(--glass-border);
 }
 
-.glow {
-  box-shadow: var(--shadow-glow);
-}
-
-.glow-text {
-  text-shadow: 0 0 20px var(--accent-primary), 0 0 40px var(--accent-primary);
-}
-
-.glow-border {
-  border-color: var(--accent-primary) !important;
-  box-shadow: 0 0 20px var(--accent-glow), inset 0 0 20px var(--accent-glow);
-}
-
-/* Gradient text */
-.gradient-text {
-  background: var(--gradient-primary);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradient-flow 4s ease infinite;
-}
-
-/* Noise texture overlay */
-.noise-overlay::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: 0.03;
-  pointer-events: none;
-  mix-blend-mode: overlay;
-}
-
 /* ============================================================================
-   Animation Classes
+   Animation Classes — functional transitions only
    ============================================================================ */
 .animate-slide-up {
   animation: slide-up-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -398,22 +290,6 @@ p {
   animation: scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-glow-pulse {
-  animation: glow-pulse 3s ease-in-out infinite;
-}
-
-.animate-float {
-  animation: float-gentle 4s ease-in-out infinite;
-}
-
-.animate-breathe {
-  animation: breathe 4s ease-in-out infinite;
-}
-
-.animate-rotate-slow {
-  animation: rotate-slow 20s linear infinite;
-}
-
 .animate-shimmer {
   background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-tertiary) 50%, var(--bg-secondary) 100%);
   background-size: 200% 100%;
@@ -426,42 +302,13 @@ p {
   animation: typing-blink 1s step-end infinite;
 }
 
-.animate-border-glow {
-  animation: border-glow 2s ease-in-out infinite;
-}
-
-.animate-ripple::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  border: 2px solid var(--accent-primary);
-  animation: ripple 1.5s ease-out infinite;
-}
-
-/* Staggered animations */
-.stagger-1 { animation-delay: 0.05s; opacity: 0; }
-.stagger-2 { animation-delay: 0.1s; opacity: 0; }
-.stagger-3 { animation-delay: 0.15s; opacity: 0; }
-.stagger-4 { animation-delay: 0.2s; opacity: 0; }
-.stagger-5 { animation-delay: 0.25s; opacity: 0; }
-.stagger-6 { animation-delay: 0.3s; opacity: 0; }
-
 /* Hover effects */
 .hover-lift {
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
 }
 .hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg), 0 0 30px var(--accent-glow);
-}
-
-.hover-glow {
-  transition: box-shadow 0.3s ease, border-color 0.3s ease;
-}
-.hover-glow:hover {
-  box-shadow: var(--shadow-glow);
-  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 .hover-scale {
@@ -484,25 +331,9 @@ p {
   overflow: hidden;
 }
 
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
 .card:hover {
-  box-shadow: var(--shadow-md), 0 0 40px var(--accent-glow);
+  box-shadow: var(--shadow-md);
   border-color: var(--border-strong);
-}
-
-.card:hover::before {
-  opacity: 0.5;
 }
 
 /* ============================================================================
@@ -560,7 +391,6 @@ p {
 
 .markdown-content a:hover {
   border-bottom-color: var(--accent-primary);
-  text-shadow: 0 0 12px var(--accent-primary);
 }
 
 .markdown-content ul,
@@ -609,16 +439,6 @@ p {
   position: relative;
 }
 
-.markdown-content pre::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-  opacity: 0.5;
-}
 
 .markdown-content pre code {
   padding: 0;
@@ -733,31 +553,6 @@ p {
   overflow: hidden;
 }
 
-/* Background dynamic grid */
-.login-container::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--border-subtle) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
-  background-size: 60px 60px;
-  animation: data-stream 30s linear infinite;
-}
-
-/* Center glow */
-.login-container::after {
-  content: '';
-  position: absolute;
-  width: 800px;
-  height: 800px;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: breathe 6s ease-in-out infinite;
-}
-
 .login-card {
   background: var(--glass-bg);
   backdrop-filter: blur(32px) saturate(180%);
@@ -767,19 +562,9 @@ p {
   padding: 3rem;
   width: 100%;
   max-width: 440px;
-  box-shadow: var(--shadow-lg), 0 0 80px var(--accent-glow);
+  box-shadow: var(--shadow-lg);
   position: relative;
   z-index: 1;
-}
-
-.login-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 20%;
-  right: 20%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
 }
 
 /* ============================================================================
@@ -795,28 +580,14 @@ p {
   overflow: hidden;
 }
 
-.agent-item::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, var(--accent-glow), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
 .agent-item:hover {
   background: var(--bg-secondary);
   border-color: var(--border-default);
 }
 
-.agent-item:hover::before {
-  opacity: 0.5;
-}
-
 .agent-item.active {
   background: var(--bg-elevated);
   border-color: var(--accent-primary);
-  box-shadow: 0 0 30px var(--accent-glow), inset 0 0 20px var(--accent-glow);
 }
 
 .agent-item.active::after {
@@ -829,7 +600,6 @@ p {
   height: 50%;
   background: var(--accent-primary);
   border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 10px var(--accent-primary);
 }
 
 /* ============================================================================
@@ -839,7 +609,7 @@ p {
   background: var(--gradient-primary);
   color: var(--text-inverse);
   border-radius: 20px 20px 4px 20px;
-  box-shadow: var(--shadow-md), 0 0 20px var(--accent-glow);
+  box-shadow: var(--shadow-md);
 }
 
 .dark .message-user {
@@ -853,16 +623,6 @@ p {
   position: relative;
 }
 
-.message-assistant::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, var(--accent-primary), transparent);
-  opacity: 0.3;
-}
 
 /* ============================================================================
    Data Display Components
@@ -889,18 +649,6 @@ p {
   position: relative;
 }
 
-.data-card::before {
-  content: '';
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 6px;
-  height: 6px;
-  background: var(--accent-primary);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--accent-primary);
-  animation: typing-blink 2s ease-in-out infinite;
-}
 
 /* ============================================================================
    Tab Styles
@@ -939,7 +687,7 @@ p {
    Input Enhancement
    ============================================================================ */
 .input-glow:focus {
-  box-shadow: 0 0 0 3px var(--accent-glow), 0 0 20px var(--accent-glow);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 /* ============================================================================
@@ -957,40 +705,3 @@ p {
   border-radius: 8px;
 }
 
-/* ============================================================================
-   Particles Background (for special sections)
-   ============================================================================ */
-.particles-container {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: var(--accent-primary);
-  border-radius: 50%;
-  opacity: 0.3;
-  animation: particle-float 6s ease-in-out infinite;
-}
-
-/* ============================================================================
-   Utility: Accent Variants
-   ============================================================================ */
-.accent-cyan {
-  --accent-primary: var(--color-cyan);
-  --accent-glow: rgba(0, 255, 213, 0.15);
-}
-
-.accent-sky {
-  --accent-primary: var(--color-sky);
-  --accent-glow: rgba(56, 189, 248, 0.15);
-}
-
-.accent-magenta {
-  --accent-primary: var(--color-magenta);
-  --accent-glow: rgba(255, 0, 110, 0.15);
-}

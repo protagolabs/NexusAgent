@@ -122,12 +122,13 @@ class ExecutionState:
             all_steps=self.all_steps + (new_step,),
         )
 
-    def record_thinking(self, content: str) -> 'ExecutionState':
+    def record_thinking(self, content: str, display: str | None = None) -> 'ExecutionState':
         """
         Record thinking process, returns a new state object
 
         Args:
             content: Thinking content
+            display: User-friendly display text (optional)
 
         Returns:
             New ExecutionState object
@@ -136,6 +137,8 @@ class ExecutionState:
             "type": "thinking",
             "content": content,
         }
+        if display:
+            new_step["display"] = display
         return ExecutionState(
             final_output=self.final_output,
             response_count=self.response_count + 1,

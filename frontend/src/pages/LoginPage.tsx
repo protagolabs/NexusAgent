@@ -9,7 +9,6 @@ import { Button, Input } from '@/components/ui';
 import { useConfigStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { ParticleBackground } from './ParticleBackground';
 import { CreateUserDialog } from './CreateUserDialog';
 
 export function LoginPage() {
@@ -60,19 +59,13 @@ export function LoginPage() {
 
   return (
     <div className="login-container">
-      <ParticleBackground />
-
       {/* Main login card */}
       <div className="login-card animate-scale-in">
         {/* Logo / Header */}
         <div className="text-center mb-10">
           <div className="relative inline-block mb-5">
-            <div className="absolute -inset-4 bg-[var(--accent-primary)] rounded-3xl opacity-20 blur-2xl animate-breathe" />
-            <div className="relative w-20 h-20 rounded-2xl bg-[var(--gradient-primary)] flex items-center justify-center shadow-[0_0_40px_var(--accent-glow)] animate-float">
+            <div className="relative w-20 h-20 rounded-2xl bg-[var(--gradient-primary)] flex items-center justify-center">
               <Zap className="w-10 h-10 text-[var(--text-inverse)] dark:text-[var(--bg-deep)]" />
-            </div>
-            <div className="absolute -inset-6 animate-rotate-slow">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[var(--accent-primary)] shadow-[0_0_10px_var(--accent-primary)]" />
             </div>
           </div>
 
@@ -115,7 +108,6 @@ export function LoginPage() {
             onClick={handleLogin}
             disabled={loading || !userId.trim()}
             className="w-full h-12 text-base font-semibold group"
-            glow={!loading && !!userId.trim()}
           >
             {loading ? (
               <>
