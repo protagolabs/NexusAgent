@@ -31,10 +31,13 @@ export function ChatPanel() {
 
   const { messages, currentAssistantMessage, currentThinking, currentSteps, currentToolCalls, isStreaming, processMessage, addUserMessage, startStreaming, stopStreaming, getUserVisibleResponse } =
     useChatStore();
-  const { agentId, userId } = useConfigStore();
+  const { agentId, userId, refreshAgents } = useConfigStore();
 
   const { run, isLoading } = useAgentWebSocket({
     onMessage: processMessage,
+    onComplete: () => {
+      refreshAgents(); // Pick up any name changes from bootstrap
+    },
     onClose: () => {
       // When WebSocket connection closes, ensure streaming state is stopped
       stopStreaming();

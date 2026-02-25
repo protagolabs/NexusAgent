@@ -28,6 +28,19 @@ The following are specific instructions from activated modules. Follow them as d
 # Short-term memory section header + description text
 # Used for _build_short_term_memory_prompt() (2026-01-21 P1-2 dual-track memory)
 # ============================================================================
+# ============================================================================
+# Bootstrap injection prompt
+# Used in build_complete_system_prompt() when the creator's Bootstrap.md exists
+# ============================================================================
+BOOTSTRAP_INJECTION_PROMPT = """
+## ⚡ Bootstrap Mode (PRIORITY)
+
+You are in first-run bootstrap mode. **This takes priority over all other instructions.**
+Follow the bootstrap instructions below to complete your initial setup with your creator.
+
+{bootstrap_content}
+"""
+
 SHORT_TERM_MEMORY_HEADER = """
 ## Short-Term Memory (Recent Other Topics)
 

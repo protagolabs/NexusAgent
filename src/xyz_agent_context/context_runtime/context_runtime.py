@@ -32,6 +32,7 @@ from xyz_agent_context.context_runtime.prompts import (
     AUXILIARY_NARRATIVES_HEADER,
     MODULE_INSTRUCTIONS_HEADER,
     SHORT_TERM_MEMORY_HEADER,
+    BOOTSTRAP_INJECTION_PROMPT,
 )
 
 
@@ -401,6 +402,29 @@ class ContextRuntime:
             module_prompt = await self._build_module_instructions_prompt(module_instructions_list)
             prompt_parts.append(module_prompt)
             logger.debug(f"        Added Module Instructions: {len(module_prompt)} chars")
+
+        # ========================================================================
+        # Part 5: Bootstrap Injection (first-run setup, creator only)
+        # ========================================================================
+        if ctx_data.is_creator and ctx_data.creator_id:
+            import os
+            from xyz_agent_context.settings import settings
+            bootstrap_path = os.path.join(
+                settings.base_working_path,
+                f"{self.agent_id}_{ctx_data.creator_id}",
+                "Bootstrap.md"
+            )
+            if os.path.isfile(bootstrap_path):
+                try:
+                    with open(bootstrap_path, "r", encoding="utf-8") as f:
+                        bootstrap_content = f.read()
+                    bootstrap_section = BOOTSTRAP_INJECTION_PROMPT.format(
+                        bootstrap_content=bootstrap_content
+                    )
+                    prompt_parts.append(bootstrap_section)
+                    logger.debug(f"        Added Bootstrap injection: {len(bootstrap_section)} chars")
+                except Exception as e:
+                    logger.warning(f"        Failed to read Bootstrap.md: {e}")
 
         # Combine all parts
         full_prompt = "\n\n".join(prompt_parts)

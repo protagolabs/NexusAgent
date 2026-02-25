@@ -37,7 +37,7 @@ export function Sidebar() {
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const { userId, agentId, agents, setAgentId, setAgents, logout } = useConfigStore();
+  const { userId, agentId, agents, setAgentId, setAgents, logout, refreshAgents } = useConfigStore();
   const { clearAll, clearCurrent } = useChatStore();
 
   // Fetch agents on mount
@@ -48,13 +48,11 @@ export function Sidebar() {
   const fetchAgents = async () => {
     setLoadingAgents(true);
     try {
-      const res = await api.getAgents(userId);
-      if (res.success) {
-        setAgents(res.agents);
-        // If no agent selected and we have agents, select the first one
-        if (!agentId && res.agents.length > 0) {
-          setAgentId(res.agents[0].agent_id);
-        }
+      await refreshAgents();
+      // If no agent selected and we have agents, select the first one
+      const currentAgents = useConfigStore.getState().agents;
+      if (!agentId && currentAgents.length > 0) {
+        setAgentId(currentAgents[0].agent_id);
       }
     } catch (err) {
       console.error('Failed to fetch agents:', err);
