@@ -145,9 +145,6 @@ export function ChatPanel() {
                   ? 'bg-[var(--color-success)]'
                   : 'bg-[var(--text-tertiary)]'
             )} />
-            {isStreaming && (
-              <div className="absolute inset-0 rounded-full bg-[var(--accent-primary)] animate-ping opacity-50" />
-            )}
           </div>
           <div>
             <h3 className="text-sm font-semibold font-[family-name:var(--font-display)] text-[var(--text-primary)]">

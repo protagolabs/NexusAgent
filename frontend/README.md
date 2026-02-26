@@ -1,6 +1,6 @@
-# NexusMind Frontend
+# NarraNexus Frontend
 
-A visual interface for NexusMind built with React + TypeScript + Vite.
+A visual interface for NarraNexus built with React + TypeScript + Vite.
 
 ## Table of Contents
 
@@ -423,7 +423,7 @@ interface ConfigState {
 }
 ```
 
-**Persistence**: Uses localStorage, key is `nexus-mind-config`
+**Persistence**: Uses localStorage, key is `narra-nexus-config`
 
 ### chatStore
 

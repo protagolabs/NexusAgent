@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="docs/NexusMind.png" alt="NexusMind" width="480" />
+<img src="docs/NarraNexus_logo.png" alt="NarraNexus" width="480" />
 
 <br/>
 <br/>
 
 **A framework for building nexuses of agents -- where intelligence emerges from interaction, not isolation.**
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -19,13 +19,13 @@
 
 <br/>
 
-Most agent frameworks focus on making agents *smarter*. NexusMind focuses on making agents *connected*.
+Most agent frameworks focus on making agents *smarter*. NarraNexus focuses on making agents *connected*.
 
-An agent in isolation is a tool. An agent with persistent memory, social identity, relationships, and goals becomes a participant in a **nexus** -- a network where intelligence is a collective property, not a model property. NexusMind provides the infrastructure for this: narrative memory that accumulates across conversations, a social graph that tracks entities and relationships, task systems with dependency chains, and modular capabilities that can be composed at runtime.
+An agent in isolation is a tool. An agent with persistent memory, social identity, relationships, and goals becomes a participant in a **nexus** -- a network where intelligence is a collective property, not a model property. NarraNexus provides the infrastructure for this: narrative structure that accumulates across conversations, a social graph that tracks entities and relationships, task systems with dependency chains, and modular capabilities that can be composed at runtime.
 
 ## Key Features
 
-- **Narrative Memory** -- Conversations are routed into semantic storylines maintained across sessions, retrieved by topic similarity rather than chronological order
+- **Narrative Structure** -- Conversations are routed into semantic storylines maintained across sessions, retrieved by topic similarity rather than chronological order
 - **Hot-Swappable Modules** -- Each capability (chat, social graph, RAG, jobs, skills, memory) is a standalone module with its own DB tables, MCP tools, and lifecycle hooks
 - **Social Network** -- Entity graph tracking people, relationships, expertise, and interaction history with semantic search
 - **Job Scheduling** -- One-shot, cron, periodic, and continuous tasks with dependency DAGs
@@ -187,21 +187,21 @@ The right panel has multiple tabs showing agent state:
 
 ## Acknowledgments
 
-NexusMind's long-term memory system is built on [EverMemOS](https://github.com/EverMind-AI/EverMemOS), a self-organizing memory operating system for structured long-horizon reasoning. We thank the EverMemOS team for their foundational work.
+NarraNexus's long-term memory system is built on [EverMemOS](https://github.com/EverMind-AI/EverMemOS), a self-organizing memory operating system for structured long-horizon reasoning. We thank the EverMemOS team for their foundational work.
 
 > Chuanrui Hu, Xingze Gao, Zuyi Zhou, Dannong Xu, Yi Bai, Xintong Li, Hui Zhang, Tong Li, Chong Zhang, Lidong Bing, Yafeng Deng. *EverMemOS: A Self-Organizing Memory Operating System for Structured Long-Horizon Reasoning.* arXiv:2601.02163, 2026. [[Paper]](https://arxiv.org/abs/2601.02163)
 
 ## Citation
 
-If you find NexusMind useful, please cite it as:
+If you find NarraNexus useful, please cite it as:
 
 ```bibtex
-@software{nexusagent2025,
-  title        = {NexusMind: A Framework for Building Nexuses of Agents},
+@software{narranexus2026,
+  title        = {NarraNexus: A Framework for Building Nexuses of Agents},
   author       = {NetMind.AI},
   year         = {2026},
   url          = {https://github.com/NetMindAI-Open/NexusAgent},
-  license      = {Apache-2.0}
+  license      = {CC-BY-NC-4.0}
 }
 ```
 
@@ -211,4 +211,4 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, commit conventio
 
 ## License
 
-[Apache License 2.0](./LICENSE)
+[CC BY-NC 4.0](./LICENSE)

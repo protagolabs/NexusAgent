@@ -71,7 +71,7 @@ export const useConfigStore = create<ConfigState>()(
       },
     }),
     {
-      name: 'nexus-mind-config',
+      name: 'narra-nexus-config',
     }
   )
 );

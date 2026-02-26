@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# NexusMind Control Panel — runs inside tmux, provides status view and quit
+# NarraNexus Control Panel — runs inside tmux, provides status view and quit
 # ============================================================================
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
