@@ -8,6 +8,9 @@
 
 from loguru import logger
 from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions
+from claude_agent_sdk._errors import MessageParseError
+from claude_agent_sdk._internal import message_parser as _message_parser_module
+from claude_agent_sdk.types import SystemMessage
 from typing import Any, AsyncGenerator
 
 # Handle both relative import (when used as module) and absolute import (when run as script)
@@ -15,6 +18,25 @@ try:
     from .output_transfer import output_transfer
 except ImportError:
     from output_transfer import output_transfer
+
+# Monkey-patch claude_agent_sdk's parse_message to handle unknown message types gracefully.
+# The SDK v0.1.6 raises MessageParseError for unrecognized types like "rate_limit_event",
+# which crashes the entire agent loop. This patch converts them to SystemMessage instead.
+_original_parse_message = _message_parser_module.parse_message
+
+
+def _safe_parse_message(data: dict[str, Any]) -> Any:
+    try:
+        return _original_parse_message(data)
+    except MessageParseError as e:
+        if "Unknown message type" in str(e):
+            msg_type = data.get("type", "unknown") if isinstance(data, dict) else "unknown"
+            logger.debug(f"Skipping unrecognized message type from Claude API: {msg_type}")
+            return SystemMessage(subtype=f"unknown_{msg_type}", data=data)
+        raise
+
+
+_message_parser_module.parse_message = _safe_parse_message
 
 
 class ClaudeAgentSDK:

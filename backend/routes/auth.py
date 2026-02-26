@@ -13,6 +13,7 @@ Provides endpoints for:
 - DELETE /api/auth/agents/{agent_id} - Cascade delete agent and all related data
 """
 
+import os
 from uuid import uuid4
 from fastapi import APIRouter, Query
 from loguru import logger
@@ -180,6 +181,26 @@ async def create_agent(request: CreateAgentRequest):
         )
 
         logger.info(f"Agent created: {agent_id}, record_id: {record_id}")
+
+        # Eagerly create workspace and write Bootstrap.md for first-run setup
+        try:
+            from xyz_agent_context.settings import settings
+            from xyz_agent_context.bootstrap.template import BOOTSTRAP_MD_TEMPLATE
+
+            workspace_path = os.path.join(
+                settings.base_working_path,
+                f"{agent_id}_{request.created_by}"
+            )
+            os.makedirs(workspace_path, exist_ok=True)
+
+            bootstrap_file = os.path.join(workspace_path, "Bootstrap.md")
+            with open(bootstrap_file, "w", encoding="utf-8") as f:
+                f.write(BOOTSTRAP_MD_TEMPLATE)
+
+            logger.info(f"Bootstrap.md written to {bootstrap_file}")
+        except Exception as bootstrap_err:
+            # Non-fatal: agent is already created, bootstrap is best-effort
+            logger.warning(f"Failed to write Bootstrap.md: {bootstrap_err}")
 
         # Return the created agent info
         agent_info = AgentInfo(
