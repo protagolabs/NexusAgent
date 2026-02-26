@@ -40,39 +40,6 @@ export function MainLayout() {
 
   return (
     <div className="h-screen flex bg-[var(--bg-deep)] relative overflow-hidden">
-      {/* Background ambient effects */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `
-              linear-gradient(var(--accent-primary) 1px, transparent 1px),
-              linear-gradient(90deg, var(--accent-primary) 1px, transparent 1px)
-            `,
-            backgroundSize: '60px 60px',
-          }}
-        />
-
-        {/* Corner glow effects */}
-        <div className="absolute -top-40 -left-40 w-80 h-80 bg-[var(--accent-primary)] rounded-full opacity-[0.03] blur-[100px]" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-[var(--accent-secondary)] rounded-full opacity-[0.03] blur-[100px]" />
-
-        {/* Floating particles */}
-        {[...Array(8)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-[var(--accent-primary)] rounded-full opacity-20"
-            style={{
-              left: `${10 + i * 12}%`,
-              top: `${20 + (i % 3) * 25}%`,
-              animation: `particle-float ${4 + i * 0.5}s ease-in-out infinite`,
-              animationDelay: `${i * 0.3}s`,
-            }}
-          />
-        ))}
-      </div>
-
       {/* Sidebar - Agent List */}
       <Sidebar />
 

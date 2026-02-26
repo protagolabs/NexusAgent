@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { api } from '@/lib/api';
 
 export interface AgentInfo {
   agent_id: string;
@@ -30,11 +31,12 @@ interface ConfigState {
   logout: () => void;
   setAgentId: (id: string) => void;
   setAgents: (agents: AgentInfo[]) => void;
+  refreshAgents: () => Promise<void>;
 }
 
 export const useConfigStore = create<ConfigState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Default values
       isLoggedIn: false,
       userId: '',
@@ -54,9 +56,22 @@ export const useConfigStore = create<ConfigState>()(
       setAgentId: (id) => set({ agentId: id }),
 
       setAgents: (agents) => set({ agents }),
+
+      refreshAgents: async () => {
+        const { userId } = get();
+        if (!userId) return;
+        try {
+          const res = await api.getAgents(userId);
+          if (res.success) {
+            set({ agents: res.agents });
+          }
+        } catch (err) {
+          console.error('Failed to refresh agents:', err);
+        }
+      },
     }),
     {
-      name: 'nexus-mind-config',
+      name: 'narra-nexus-config',
     }
   )
 );

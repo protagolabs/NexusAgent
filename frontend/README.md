@@ -1,6 +1,6 @@
-# NexusMind Frontend
+# NarraNexus Frontend
 
-A visual interface for NexusMind built with React + TypeScript + Vite.
+A visual interface for NarraNexus built with React + TypeScript + Vite.
 
 ## Table of Contents
 
@@ -126,7 +126,7 @@ The interface is divided into four main areas, from left to right:
 - Click to browse and select files for upload
 - File list display (filename, size)
 - File deletion
-- File storage path: `./agent-workspace/{agent_id}_{user_id}/`
+- File storage path: `./agent_workspace/{agent_id}_{user_id}/`
 
 #### 4. Data Panel
 
@@ -423,7 +423,7 @@ interface ConfigState {
 }
 ```
 
-**Persistence**: Uses localStorage, key is `nexus-mind-config`
+**Persistence**: Uses localStorage, key is `narra-nexus-config`
 
 ### chatStore
 

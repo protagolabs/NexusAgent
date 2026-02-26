@@ -38,18 +38,18 @@ else
     echo "      .pytest_cache 不存在"
 fi
 
-# 4. 清理 agent-workspace（保留 .gitkeep）
-echo "[4/4] 清理 agent-workspace..."
-if [ -d "agent-workspace" ]; then
+# 4. 清理 agent_workspace（保留 .gitkeep）
+echo "[4/4] 清理 agent_workspace..."
+if [ -d "agent_workspace" ]; then
     # 统计文件夹数量
-    ws_count=$(ls -d agent-workspace/*/ 2>/dev/null | wc -l || echo 0)
+    ws_count=$(ls -d agent_workspace/*/ 2>/dev/null | wc -l || echo 0)
     echo "      找到 $ws_count 个工作区目录"
 
     # 删除所有子目录（不删除 .gitkeep）
-    find agent-workspace -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
-    echo "      已清理 agent-workspace"
+    find agent_workspace -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
+    echo "      已清理 agent_workspace"
 else
-    echo "      agent-workspace 不存在"
+    echo "      agent_workspace 不存在"
 fi
 
 echo ""
