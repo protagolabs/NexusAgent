@@ -106,7 +106,7 @@ All configuration is managed via environment variables (loaded by `pydantic-sett
 | `DB_PASSWORD` | Yes | Database password |
 | `DATABASE_URL` | No | Full MySQL connection string, overrides individual `DB_*` vars |
 | `ADMIN_SECRET_KEY` | Yes | Admin auth key |
-| `BASE_WORKING_PATH` | No | Agent workspace file directory (default: `./agent-workspace`) |
+| `BASE_WORKING_PATH` | No | Agent workspace file directory (default: `./agent_workspace`) |
 
 ---
 

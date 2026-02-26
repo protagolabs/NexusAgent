@@ -1060,7 +1060,7 @@ ADMIN_SECRET_KEY="${val_admin_key}"
 # =============================================================================
 # Workspace (optional)
 # =============================================================================
-# BASE_WORKING_PATH="./agent-workspace"
+# BASE_WORKING_PATH="./agent_workspace"
 EOF
 
     success ".env generated: ${env_file}"
@@ -1098,7 +1098,7 @@ ADMIN_SECRET_KEY="nexus-admin-secret"
 # =============================================================================
 # Workspace (optional)
 # =============================================================================
-# BASE_WORKING_PATH="./agent-workspace"
+# BASE_WORKING_PATH="./agent_workspace"
 EOF
 
     success ".env auto-generated (Docker MySQL default config)"

@@ -13,6 +13,7 @@ plans/*
 # Agent workspace (user uploaded files, runtime data)
 agent_workspace/*
 !agent_workspace/.gitkeep
+agent-workspace/
 requirements/
 !./frontend/src/lib/api.ts
 !./frontend/src/lib/utils.ts

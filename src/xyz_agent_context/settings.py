@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     db_ssl_verify_cert: Optional[str] = None
 
     # ===== Workspace =====
-    base_working_path: str = "./agent-workspace"
+    base_working_path: str = "./agent_workspace"
 
     # ===== Embedding =====
     openai_embedding_model: str = "text-embedding-3-small"
