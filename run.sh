@@ -1028,6 +1028,14 @@ configure_env() {
     echo ""
     read -rp "    ADMIN_SECRET_KEY: " val_admin_key
 
+    echo ""
+    read -rp "    Enable Telegram Bot? [y/N] " setup_telegram
+    local val_telegram_token="" val_telegram_agent_id=""
+    if [[ "$setup_telegram" == "y" || "$setup_telegram" == "Y" ]]; then
+        read -rp "    TELEGRAM_BOT_TOKEN: " val_telegram_token
+        read -rp "    TELEGRAM_AGENT_ID: " val_telegram_agent_id
+    fi
+
     cat > "$env_file" << EOF
 # =============================================================================
 # LLM API Keys
@@ -1054,6 +1062,12 @@ ADMIN_SECRET_KEY="${val_admin_key}"
 # Workspace (optional)
 # =============================================================================
 # BASE_WORKING_PATH="./agent_workspace"
+
+# =============================================================================
+# Telegram Bot（可选，留空则不启动）
+# =============================================================================
+TELEGRAM_BOT_TOKEN="${val_telegram_token}"
+TELEGRAM_AGENT_ID="${val_telegram_agent_id}"
 EOF
 
     success ".env generated: ${env_file}"
@@ -1092,6 +1106,12 @@ ADMIN_SECRET_KEY="nexus-admin-secret"
 # Workspace (optional)
 # =============================================================================
 # BASE_WORKING_PATH="./agent_workspace"
+
+# =============================================================================
+# Telegram Bot（可选，留空则不启动）
+# =============================================================================
+TELEGRAM_BOT_TOKEN=""
+TELEGRAM_AGENT_ID=""
 EOF
 
     success ".env auto-generated (Docker MySQL default config)"
@@ -1468,6 +1488,7 @@ do_run() {
                     "job_trigger.py"
                     "node.*vite"
                     "vite.*5173"
+                    "telegram_bot"
                 )
                 for pat in "${kill_patterns[@]}"; do
                     pkill -f "$pat" 2>/dev/null || true
@@ -1727,6 +1748,16 @@ do_run() {
     tmux new-window -t "$TMUX_SESSION" -n mcp -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":mcp "bash start/mcp.sh" C-m
     info "MCP Server        → tmux window 5 [mcp]         Ports 7801-7805"
+
+    # Window 6: Telegram Bot（仅当 TELEGRAM_BOT_TOKEN 已配置时启动）
+    local telegram_token=""
+    telegram_token=$(grep '^TELEGRAM_BOT_TOKEN=' "${PROJECT_ROOT}/.env" 2>/dev/null \
+        | sed 's/^TELEGRAM_BOT_TOKEN=//' | tr -d '"' || true)
+    if [ -n "$telegram_token" ]; then
+        tmux new-window -t "$TMUX_SESSION" -n telegram -c "$PROJECT_ROOT"
+        tmux send-keys -t "$TMUX_SESSION":telegram "bash start/telegram.sh" C-m
+        info "Telegram Bot      → tmux window 6 [telegram]"
+    fi
 
     tmux select-window -t "$TMUX_SESSION":control
 

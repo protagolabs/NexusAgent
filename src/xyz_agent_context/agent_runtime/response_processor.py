@@ -289,7 +289,6 @@ class ResponseProcessor:
                     "method": "record_thinking",
                     "args": {
                         "content": thinking_content,
-                        "display": thinking_display  # User-friendly display data
                     }
                 }
             )

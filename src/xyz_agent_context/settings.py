@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     # ===== Auth =====
     admin_secret_key: str = ""
 
+    # ===== Telegram Bot =====
+    telegram_bot_token: Optional[str] = None   # TELEGRAM_BOT_TOKEN
+    telegram_agent_id: Optional[str] = None    # TELEGRAM_AGENT_ID
+
 
 settings = Settings()
 
