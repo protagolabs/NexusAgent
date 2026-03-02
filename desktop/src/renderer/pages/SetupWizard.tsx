@@ -243,6 +243,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                   </button>
                 )}
               </div>
+              {(field.key === 'ANTHROPIC_API_KEY' || field.key === 'ANTHROPIC_BASE_URL') && (
+                <p className="text-xs text-gray-400 mt-1">
+                  If you have already logged in via Claude Code CLI locally, you can leave this empty.
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -251,14 +256,12 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
         <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <p className="text-sm font-medium text-gray-700 mb-3">Claude Code Authentication</p>
 
-          {/* Status indicator */}
-          {claudeAuth && (
+          {/* Status indicator — only show when CLI is installed */}
+          {claudeAuth?.cliInstalled && (
             <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-xs">
               <span className="flex items-center gap-1.5">
-                <span className={`inline-block w-1.5 h-1.5 rounded-full ${
-                  claudeAuth.cliInstalled ? 'bg-green-500' : 'bg-red-400'
-                }`} />
-                CLI: {claudeAuth.cliInstalled ? (claudeAuth.cliVersion || 'installed') : 'not installed'}
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
+                CLI: {claudeAuth.cliVersion || 'installed'}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className={`inline-block w-1.5 h-1.5 rounded-full ${
@@ -274,7 +277,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                 )}
                 {claudeAuth.authStatus.state === 'expired' && 'Login expired'}
                 {claudeAuth.authStatus.state === 'not_logged_in' && 'Not logged in'}
-                {claudeAuth.authStatus.state === 'cli_not_installed' && 'CLI not installed'}
               </span>
               {claudeAuth.hasApiKey && (
                 <span className="flex items-center gap-1.5">
@@ -285,79 +287,83 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
             </div>
           )}
 
-          {/* Option 1: Browser OAuth login */}
-          <div className="mb-3">
-            <p className="text-xs text-gray-500 mb-2">
-              Option 1 (Recommended): Click below to open browser and authorize with your Anthropic account.
-            </p>
-            {/* Button row */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setLoginStatus({ state: 'running', message: 'Opening browser...' })
-                  window.nexus.startClaudeLogin()
-                }}
-                disabled={running || loginStatus.state === 'running' || !claudeAuth?.cliInstalled}
-                className="titlebar-no-drag px-4 py-1.5 text-xs font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {loginStatus.state === 'running' ? 'Waiting for browser...' :
-                 claudeAuth?.authStatus.state === 'logged_in' ? 'Re-login' :
-                 'Login with Claude Code'}
-              </button>
+          {/* Option 1: Browser OAuth login — only show when CLI is installed */}
+          {claudeAuth?.cliInstalled && (
+            <div className="mb-3">
+              <p className="text-xs text-gray-500 mb-2">
+                Option 1 (Recommended): Click below to open browser and authorize with your Anthropic account.
+              </p>
+              {/* Button row */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setLoginStatus({ state: 'running', message: 'Opening browser...' })
+                    window.nexus.startClaudeLogin()
+                  }}
+                  disabled={running || loginStatus.state === 'running'}
+                  className="titlebar-no-drag px-4 py-1.5 text-xs font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loginStatus.state === 'running' ? 'Waiting for browser...' :
+                   claudeAuth?.authStatus.state === 'logged_in' ? 'Re-login' :
+                   'Login with Claude Code'}
+                </button>
+                {loginStatus.state === 'running' && (
+                  <>
+                    <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                    <button
+                      onClick={() => window.nexus.cancelClaudeLogin()}
+                      className="titlebar-no-drag text-xs text-gray-500 hover:text-gray-700 underline"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+                {loginStatus.state === 'success' && (
+                  <span className="text-xs text-green-600 font-medium">Login successful!</span>
+                )}
+                {(loginStatus.state === 'failed' || loginStatus.state === 'timeout') && (
+                  <span className="text-xs text-red-500">{loginStatus.message}</span>
+                )}
+              </div>
+              {/* Running: status message + auth code input (below button row) */}
               {loginStatus.state === 'running' && (
-                <>
-                  <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                  <button
-                    onClick={() => window.nexus.cancelClaudeLogin()}
-                    className="titlebar-no-drag text-xs text-gray-500 hover:text-gray-700 underline"
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-              {loginStatus.state === 'success' && (
-                <span className="text-xs text-green-600 font-medium">Login successful!</span>
-              )}
-              {(loginStatus.state === 'failed' || loginStatus.state === 'timeout') && (
-                <span className="text-xs text-red-500">{loginStatus.message}</span>
+                <div className="mt-2">
+                  {loginStatus.message && (
+                    <p className="text-xs text-gray-500 mb-1.5">{loginStatus.message}</p>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Paste the auth code from browser here"
+                      className="titlebar-no-drag flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const value = (e.target as HTMLInputElement).value.trim()
+                          if (value) {
+                            window.nexus.sendClaudeLoginInput(value)
+                            ;(e.target as HTMLInputElement).value = ''
+                          }
+                        }
+                      }}
+                    />
+                    <span className="text-[10px] text-gray-400 shrink-0">Press Enter to submit</span>
+                  </div>
+                </div>
               )}
             </div>
-            {/* Running: status message + auth code input (below button row) */}
-            {loginStatus.state === 'running' && (
-              <div className="mt-2">
-                {loginStatus.message && (
-                  <p className="text-xs text-gray-500 mb-1.5">{loginStatus.message}</p>
-                )}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Paste the auth code from browser here"
-                    className="titlebar-no-drag flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const value = (e.target as HTMLInputElement).value.trim()
-                        if (value) {
-                          window.nexus.sendClaudeLoginInput(value)
-                          ;(e.target as HTMLInputElement).value = ''
-                        }
-                      }
-                    }}
-                  />
-                  <span className="text-[10px] text-gray-400 shrink-0">Press Enter to submit</span>
-                </div>
-              </div>
-            )}
-            {!claudeAuth?.cliInstalled && (
-              <p className="text-xs text-amber-600 mt-1">
-                Claude Code CLI is not installed. It will be auto-installed during setup, or use Option 2/3 below.
-              </p>
-            )}
-          </div>
+          )}
 
-          {/* Option 2: Paste Setup Token */}
+          {/* Hint when CLI is not installed */}
+          {!claudeAuth?.cliInstalled && (
+            <p className="text-xs text-gray-400 mb-3">
+              OAuth login will be available after Claude Code is installed during setup. You can use Option 1/2 below for now.
+            </p>
+          )}
+
+          {/* Option: Paste Setup Token */}
           <div className="mb-2">
             <p className="text-xs text-gray-500 mb-1.5">
-              Option 2: Run <code className="px-1 py-0.5 bg-gray-200 rounded text-[11px]">claude setup-token</code> on
+              Option {claudeAuth?.cliInstalled ? '2' : '1'}: Run <code className="px-1 py-0.5 bg-gray-200 rounded text-[11px]">claude setup-token</code> on
               another machine and paste the token below.
             </p>
             <div className="flex gap-2">
@@ -393,9 +399,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
             )}
           </div>
 
-          {/* Option 3 hint */}
+          {/* Option: Fill API Key directly */}
           <p className="text-xs text-gray-400">
-            Option 3: Fill in the Anthropic API Key field above directly.
+            Option {claudeAuth?.cliInstalled ? '3' : '2'}: Fill in the Anthropic API Key field above directly.
           </p>
         </div>
 
