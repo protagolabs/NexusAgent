@@ -1,6 +1,6 @@
 # Usage Examples
 
-Real-world usage patterns extracted from production conversations. NexusMind's core interaction philosophy: **configure everything and manage everything with natural language**.
+Real-world usage patterns extracted from production conversations. NarraNexus's core interaction philosophy: **configure everything and manage everything with natural language**.
 
 ---
 
@@ -52,7 +52,7 @@ Agent: [Reads API key from Awareness, reconfigures and restarts task]
 
 ## 2. Manage Jobs with Natural Language
 
-NexusMind supports creating and managing jobs directly through chat -- no API calls needed.
+NarraNexus supports creating and managing jobs directly through chat -- no API calls needed.
 
 ### Create Jobs
 

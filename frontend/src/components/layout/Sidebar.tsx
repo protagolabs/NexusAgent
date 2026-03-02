@@ -37,7 +37,7 @@ export function Sidebar() {
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const { userId, agentId, agents, setAgentId, setAgents, logout } = useConfigStore();
+  const { userId, agentId, agents, setAgentId, setAgents, logout, refreshAgents } = useConfigStore();
   const { clearAll, clearCurrent } = useChatStore();
 
   // Fetch agents on mount
@@ -48,13 +48,11 @@ export function Sidebar() {
   const fetchAgents = async () => {
     setLoadingAgents(true);
     try {
-      const res = await api.getAgents(userId);
-      if (res.success) {
-        setAgents(res.agents);
-        // If no agent selected and we have agents, select the first one
-        if (!agentId && res.agents.length > 0) {
-          setAgentId(res.agents[0].agent_id);
-        }
+      await refreshAgents();
+      // If no agent selected and we have agents, select the first one
+      const currentAgents = useConfigStore.getState().agents;
+      if (!agentId && currentAgents.length > 0) {
+        setAgentId(currentAgents[0].agent_id);
       }
     } catch (err) {
       console.error('Failed to fetch agents:', err);
@@ -244,7 +242,7 @@ export function Sidebar() {
               </div>
               <div>
                 <span className="font-[family-name:var(--font-display)] font-bold text-lg text-[var(--text-primary)] tracking-tight">
-                  Nexus<span className="text-[var(--accent-primary)]">Mind</span>
+                  Narra<span className="text-[var(--accent-primary)]">Nexus</span>
                 </span>
                 <p className="text-[10px] text-[var(--text-tertiary)] font-mono tracking-wider">INTELLIGENT AGENT PLATFORM</p>
               </div>
@@ -274,9 +272,7 @@ export function Sidebar() {
                 <User className="w-5 h-5 text-[var(--text-secondary)]" />
               </div>
               {/* Online indicator */}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[var(--color-success)] border-2 border-[var(--bg-secondary)]">
-                <div className="absolute inset-0 rounded-full bg-[var(--color-success)] animate-ping opacity-50" />
-              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[var(--color-success)] border-2 border-[var(--bg-secondary)]" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-[var(--text-primary)] truncate font-[family-name:var(--font-mono)]">

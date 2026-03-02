@@ -43,15 +43,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             'bg-transparent text-[var(--text-primary)]',
             'border border-[var(--border-default)]',
             'hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)]',
-            'hover:shadow-[0_0_20px_var(--accent-glow)]',
             'active:bg-[var(--accent-glow)]',
           ],
           variant === 'accent' && [
             'bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)]',
             'text-[#0a0a12]',
             'border border-transparent',
-            'shadow-[0_0_20px_var(--accent-glow)]',
-            'hover:shadow-[0_0_30px_var(--accent-glow),0_0_60px_var(--accent-glow)]',
             'hover:brightness-110',
             'active:scale-[0.98]',
           ],
@@ -59,11 +56,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             'bg-[var(--color-error)]/10 text-[var(--color-error)]',
             'border border-[var(--color-error)]/30',
             'hover:bg-[var(--color-error)]/20 hover:border-[var(--color-error)]/50',
-            'hover:shadow-[0_0_20px_rgba(255,77,109,0.2)]',
           ],
-
-          // Glow effect
-          glow && 'animate-glow-pulse',
 
           // Sizes
           size === 'sm' && 'h-8 px-3 text-xs rounded-lg',
@@ -75,15 +68,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        {/* Shine effect on hover */}
-        <span className="absolute inset-0 overflow-hidden rounded-inherit pointer-events-none">
-          <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-        </span>
-
-        {/* Content */}
-        <span className="relative z-10 flex items-center gap-2">
-          {children}
-        </span>
+        {children}
       </button>
     );
   }

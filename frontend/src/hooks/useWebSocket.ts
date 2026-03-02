@@ -1,18 +1,14 @@
 /**
  * WebSocket hook for agent runtime streaming
  *
- * Supports auto-reconnect (exponential backoff) and connection state management
+ * Agent runtime 是一次性流式执行，不支持自动重连（重连会重发请求触发新的 agent run）。
+ * 连接意外断开时直接报错，由用户手动重试。
  */
 
 import { useState, useCallback, useRef } from 'react';
 import type { RuntimeMessage } from '@/types';
 
 export type WebSocketStatus = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
-
-/** Reconnect configuration */
-const RECONNECT_BASE_DELAY = 1000;   // Initial reconnect interval 1s
-const RECONNECT_MAX_DELAY = 16000;   // Max reconnect interval 16s
-const RECONNECT_MAX_ATTEMPTS = 5;    // Max reconnect attempts
 
 interface UseAgentWebSocketOptions {
   onMessage?: (message: RuntimeMessage) => void;
@@ -24,26 +20,14 @@ interface UseAgentWebSocketOptions {
 export function useAgentWebSocket(options: UseAgentWebSocketOptions = {}) {
   const [status, setStatus] = useState<WebSocketStatus>('idle');
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reconnectAttemptRef = useRef(0);
-  // Save the latest run params for reconnection
-  const lastParamsRef = useRef<{ agentId: string; userId: string; inputContent: string } | null>(null);
-  // Flag for intentional close by user (skip reconnect)
+  // 标记用户主动关闭（跳过报错）
   const intentionalCloseRef = useRef(false);
-  // Flag for receiving complete message (normal finish, skip reconnect)
+  // 标记收到 complete 消息（正常结束）
   const completedRef = useRef(false);
 
   const { onMessage, onError, onComplete, onClose } = options;
 
-  /** Clear reconnect timer */
-  const clearReconnectTimer = useCallback(() => {
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-  }, []);
-
-  /** Create WebSocket connection */
+  /** 创建 WebSocket 连接 */
   const connect = useCallback(
     (agentId: string, userId: string, inputContent: string): Promise<void> => {
       return new Promise<void>((resolve, reject) => {
@@ -56,7 +40,6 @@ export function useAgentWebSocket(options: UseAgentWebSocketOptions = {}) {
 
         ws.onopen = () => {
           setStatus('connected');
-          reconnectAttemptRef.current = 0; // Connection succeeded, reset reconnect counter
           ws.send(JSON.stringify({
             agent_id: agentId,
             user_id: userId,
@@ -68,6 +51,10 @@ export function useAgentWebSocket(options: UseAgentWebSocketOptions = {}) {
         ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data) as RuntimeMessage;
+
+            // 忽略心跳消息，仅用于保持连接活跃
+            if (message.type === 'heartbeat') return;
+
             onMessage?.(message);
 
             if (message.type === 'complete') {
@@ -89,70 +76,51 @@ export function useAgentWebSocket(options: UseAgentWebSocketOptions = {}) {
         ws.onclose = () => {
           wsRef.current = null;
 
-          // Normal completion or intentional close -> skip reconnect
+          // 正常完成或用户主动关闭
           if (completedRef.current || intentionalCloseRef.current) {
             setStatus('closed');
             onClose?.();
             return;
           }
 
-          // Unexpected disconnect -> attempt reconnect
-          if (reconnectAttemptRef.current < RECONNECT_MAX_ATTEMPTS && lastParamsRef.current) {
-            const attempt = reconnectAttemptRef.current;
-            const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, attempt), RECONNECT_MAX_DELAY);
-            console.warn(`WebSocket closed unexpectedly. Reconnecting in ${delay}ms (attempt ${attempt + 1}/${RECONNECT_MAX_ATTEMPTS})`);
-            setStatus('connecting');
-
-            reconnectTimerRef.current = setTimeout(() => {
-              reconnectAttemptRef.current++;
-              const params = lastParamsRef.current!;
-              connect(params.agentId, params.userId, params.inputContent).catch(() => {
-                // Reconnect failure will be handled by the next onclose
-              });
-            }, delay);
-          } else {
-            setStatus('error');
-            onClose?.();
-          }
+          // 意外断开 → 直接报错，不自动重连
+          console.warn('WebSocket closed unexpectedly during agent execution.');
+          setStatus('error');
+          onClose?.();
         };
       });
     },
     [onMessage, onError, onComplete, onClose]
   );
 
-  /** Initiate a new Agent request */
+  /** 发起新的 Agent 请求 */
   const run = useCallback(
     async (agentId: string, userId: string, inputContent: string) => {
-      // Close existing connection
+      // 关闭已有连接
       if (wsRef.current) {
         intentionalCloseRef.current = true;
         wsRef.current.close();
         intentionalCloseRef.current = false;
       }
-      clearReconnectTimer();
 
-      // Reset state
-      reconnectAttemptRef.current = 0;
+      // 重置状态
       completedRef.current = false;
       intentionalCloseRef.current = false;
-      lastParamsRef.current = { agentId, userId, inputContent };
 
       return connect(agentId, userId, inputContent);
     },
-    [connect, clearReconnectTimer]
+    [connect]
   );
 
-  /** Manually close connection (skip reconnect) */
+  /** 手动关闭连接 */
   const close = useCallback(() => {
-    clearReconnectTimer();
     intentionalCloseRef.current = true;
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
     }
-    lastParamsRef.current = null;
     setStatus('idle');
-  }, [clearReconnectTimer]);
+  }, []);
 
   return {
     run,
