@@ -1,8 +1,8 @@
 /**
  * @file Dashboard.tsx
- * @description 主控制面板 — 服务状态展示、启动/停止、日志查看
+ * @description Main dashboard — service status display, start/stop, log viewing
  *
- * 日志区域支持按服务 tab 切换，前端状态由 Backend 健康状态派生。
+ * Log area supports tab switching by service; frontend status is derived from Backend health status.
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
@@ -14,7 +14,7 @@ interface DashboardProps {
   onOpenSettings: () => void
 }
 
-/** 固定的日志 tab 前缀（All 始终在最前） */
+/** Fixed log tab prefix (All is always first) */
 const LOG_TAB_ALL = { id: null as string | null, label: 'All' }
 
 const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
@@ -25,7 +25,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [logFilter, setLogFilter] = useState<string | null>(null)
 
-  // 加载初始状态
+  // Load initial state
   const refreshStatus = useCallback(async () => {
     const [svcStatus, healthStatus, initialLogs] = await Promise.all([
       window.nexus.getServiceStatus(),
@@ -41,7 +41,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
     refreshStatus()
   }, [refreshStatus])
 
-  // 订阅实时健康状态
+  // Subscribe to real-time health status
   useEffect(() => {
     const unsubscribe = window.nexus.onHealthUpdate((status: OverallHealth) => {
       setHealth(status)
@@ -49,7 +49,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
     return unsubscribe
   }, [])
 
-  // 定期刷新服务状态
+  // Periodically refresh service status
   useEffect(() => {
     const interval = setInterval(async () => {
       const svcStatus = await window.nexus.getServiceStatus()
@@ -58,7 +58,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
     return () => clearInterval(interval)
   }, [])
 
-  // 监听托盘操作
+  // Listen for tray actions
   useEffect(() => {
     const unsubscribe = window.nexus.onTrayAction(async (action: string) => {
       if (action === 'start-all') await handleStartAll()
@@ -96,7 +96,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
     window.nexus.openExternal('http://localhost:8000')
   }
 
-  // 合并健康检查和进程状态，确定每个卡片的显示状态
+  // Merge health check and process status to determine display status for each card
   const getCardStatus = (serviceId: string) => {
     const proc = services.find((s) => s.serviceId === serviceId)
     const svcHealth = health?.services.find((s) => s.serviceId === serviceId)
@@ -112,27 +112,27 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
     return health?.services.find((s) => s.serviceId === serviceId)?.port ?? null
   }
 
-  // Frontend 状态：由 Backend 健康状态派生（Backend serve 前端静态文件）
+  // Frontend status: derived from Backend health status (Backend serves frontend static files)
   const frontendStatus = getCardStatus('backend')
 
-  // 检查是否有任何服务在运行
+  // Check if any service is running
   const anyRunning = services.some(
     (s) => s.status === 'running' || s.status === 'starting'
   )
 
-  // 日志 tab 从 services 动态派生
+  // Log tabs dynamically derived from services
   const logTabs = [LOG_TAB_ALL, ...services.map((s) => ({ id: s.serviceId, label: s.label }))]
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      {/* 标题栏 */}
+      {/* Title bar */}
       <div className="titlebar-drag shrink-0 flex items-center justify-center pt-8 pb-2 bg-white border-b border-gray-100">
         <AsciiBanner size="small" />
       </div>
 
-      {/* 主内容 */}
+      {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* 基础设施状态 */}
+        {/* Infrastructure status */}
         <div className="px-5 pt-4 pb-1">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
             Infrastructure
@@ -149,13 +149,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
           </div>
         </div>
 
-        {/* 应用服务状态 */}
+        {/* Application service status */}
         <div className="px-5 pt-2 pb-2">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
             Services
           </h2>
           <div className="grid grid-cols-4 gap-2">
-            {/* 应用服务（从 getServiceStatus 动态渲染） */}
+            {/* Application services (dynamically rendered from getServiceStatus) */}
             {services.map((svc) => (
               <ServiceCard
                 key={svc.serviceId}
@@ -167,7 +167,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
               />
             ))}
 
-            {/* Frontend（由 Backend :8000 提供，状态跟随 Backend） */}
+            {/* Frontend (served by Backend :8000, status follows Backend) */}
             <ServiceCard
               label="Frontend"
               status={frontendStatus}
@@ -177,7 +177,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
           </div>
         </div>
 
-        {/* 操作按钮 */}
+        {/* Action buttons */}
         <div className="flex items-center gap-2 px-5 py-3">
           <button
             onClick={handleOpenApp}
@@ -227,9 +227,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
           </button>
         </div>
 
-        {/* 日志区域：tab 切换 + 日志内容 */}
+        {/* Log area: tab switching + log content */}
         <div className="flex-1 mx-5 mb-4 border border-gray-200 rounded-lg overflow-hidden bg-white flex flex-col">
-          {/* 服务 tab 栏 */}
+          {/* Service tab bar */}
           <div className="flex items-center gap-1 px-2 pt-1.5 pb-0 bg-gray-50 border-b border-gray-200">
             {logTabs.map((tab) => (
               <button
@@ -246,7 +246,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings }) => {
             ))}
           </div>
 
-          {/* 日志内容 */}
+          {/* Log content */}
           <div className="flex-1 overflow-hidden">
             <LogViewer initialLogs={logs} serviceFilter={logFilter} />
           </div>

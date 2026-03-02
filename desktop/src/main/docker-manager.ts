@@ -1,9 +1,9 @@
 /**
  * @file docker-manager.ts
- * @description Docker Compose 容器生命周期管理
+ * @description Docker Compose container lifecycle management
  *
- * 管理 MySQL（主数据库）和 EverMemOS（可选）的 Docker 容器。
- * 通过 child_process 调用 docker compose 命令。
+ * Manages Docker containers for MySQL (primary database) and EverMemOS (optional).
+ * Invokes docker compose commands via child_process.
  */
 
 import { execFile } from 'child_process'
@@ -14,7 +14,7 @@ import { getShellEnv } from './shell-env'
 
 const execFileAsync = promisify(execFile)
 
-// ─── 类型定义 ───────────────────────────────────────
+// ─── Type Definitions ───────────────────────────────────────
 
 export interface ContainerStatus {
   name: string
@@ -30,9 +30,9 @@ export interface DockerGroupStatus {
   available: boolean
 }
 
-// ─── 工具函数 ───────────────────────────────────────
+// ─── Utility Functions ───────────────────────────────────────
 
-/** 安全执行命令（使用登录 Shell 环境确保能找到 docker） */
+/** Safe command execution (uses login shell env to ensure docker is found) */
 async function execSafe(
   cmd: string,
   args: string[],
@@ -51,10 +51,10 @@ async function execSafe(
 }
 
 /**
- * 检测可用的 compose 命令风格（缓存结果）
+ * Detect available compose command style (cached)
  *
- * - V2 插件: docker compose（Docker Desktop 或 docker-compose-plugin 包）
- * - V1 独立: docker-compose（Homebrew 或 pip 安装）
+ * - V2 plugin: docker compose (Docker Desktop or docker-compose-plugin package)
+ * - V1 standalone: docker-compose (Homebrew or pip install)
  */
 let composeStyle: 'v2' | 'v1' | null = null
 
@@ -67,17 +67,17 @@ async function detectComposeStyle(): Promise<'v2' | 'v1'> {
   const v1 = await execSafe('docker-compose', ['version'], { timeout: 5000 })
   if (v1.success) { composeStyle = 'v1'; return 'v1' }
 
-  // 都不可用时默认 V2，让错误信息更明确
+  // Default to V2 when neither is available, for clearer error messages
   composeStyle = 'v2'
   return 'v2'
 }
 
-/** 重置缓存（Docker 安装后需要重新检测） */
+/** Reset cache (need to re-detect after Docker installation) */
 export function resetComposeDetection(): void {
   composeStyle = null
 }
 
-/** 获取 docker compose 命令前缀（自动适配 V1/V2） */
+/** Get docker compose command prefix (auto-detect V1/V2) */
 async function composeCmd(composePath: string): Promise<{ cmd: string; baseArgs: string[] }> {
   const style = await detectComposeStyle()
   return style === 'v1'
@@ -85,17 +85,17 @@ async function composeCmd(composePath: string): Promise<{ cmd: string; baseArgs:
     : { cmd: 'docker', baseArgs: ['compose', '-f', composePath] }
 }
 
-// ─── Docker 状态检测 ─────────────────────────────────
+// ─── Docker Status Detection ─────────────────────────────────
 
-/** 检测 Docker daemon 是否就绪 */
+/** Check if Docker daemon is ready */
 export async function isDockerReady(): Promise<boolean> {
   const result = await execSafe('docker', ['info'], { timeout: 10000 })
   return result.success
 }
 
 /**
- * 确保 Docker daemon 可用。
- * Dashboard "Start All" 前调用，避免重启后 daemon 不在的问题。
+ * Ensure Docker daemon is available.
+ * Called before Dashboard "Start All" to handle daemon not running after reboot.
  *
  * macOS: Docker Desktop → Colima
  * Linux: systemctl → pkexec systemctl
@@ -104,24 +104,24 @@ export async function ensureDockerDaemon(): Promise<boolean> {
   if (await isDockerReady()) return true
 
   if (process.platform === 'darwin') {
-    // 策略 1: 启动 Docker Desktop
+    // Strategy 1: Launch Docker Desktop
     try {
       await execSafe('open', ['-a', 'Docker'], { timeout: 10000 })
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 2000))
         if (await isDockerReady()) return true
       }
-    } catch { /* Docker Desktop 未安装 */ }
+    } catch { /* Docker Desktop not installed */ }
 
-    // 策略 2: 启动 Colima
+    // Strategy 2: Start Colima
     const result = await execSafe('colima', ['start'], { timeout: 120000 })
     if (result.success && await isDockerReady()) return true
   } else {
-    // Linux 策略 1: 直接 systemctl（可能已在 docker 组）
+    // Linux strategy 1: direct systemctl (may already be in docker group)
     await execSafe('systemctl', ['start', 'docker'], { timeout: 30000 })
     if (await isDockerReady()) return true
 
-    // Linux 策略 2: 提权 systemctl（pkexec 弹密码框）
+    // Linux strategy 2: privileged systemctl (pkexec password prompt)
     await execSafe('pkexec', ['systemctl', 'start', 'docker'], { timeout: 30000 })
     if (await isDockerReady()) return true
   }
@@ -129,9 +129,9 @@ export async function ensureDockerDaemon(): Promise<boolean> {
   return false
 }
 
-// ─── MySQL（主数据库） ──────────────────────────────
+// ─── MySQL (Primary Database) ──────────────────────────────
 
-/** 启动 MySQL 容器 */
+/** Start MySQL containers */
 export async function startMySQL(): Promise<{ success: boolean; output: string }> {
   const { cmd, baseArgs } = await composeCmd(DOCKER_COMPOSE_PATH)
   const result = await execSafe(cmd, [...baseArgs, 'up', '-d'], { timeout: 60000 })
@@ -141,7 +141,7 @@ export async function startMySQL(): Promise<{ success: boolean; output: string }
   }
 }
 
-/** 停止 MySQL 容器 */
+/** Stop MySQL containers */
 export async function stopMySQL(): Promise<{ success: boolean; output: string }> {
   const { cmd, baseArgs } = await composeCmd(DOCKER_COMPOSE_PATH)
   const result = await execSafe(cmd, [...baseArgs, 'down'], { timeout: 30000 })
@@ -151,24 +151,24 @@ export async function stopMySQL(): Promise<{ success: boolean; output: string }>
   }
 }
 
-/** 获取 MySQL 容器状态 */
+/** Get MySQL container status */
 export async function getMySQLStatus(): Promise<ContainerStatus[]> {
   return getComposeStatus(DOCKER_COMPOSE_PATH)
 }
 
-/** 检测 MySQL 端口是否可连接 */
+/** Check if MySQL port is reachable */
 export async function isMySQLReady(): Promise<boolean> {
   return checkPort(PORTS.MYSQL)
 }
 
-// ─── EverMemOS（可选） ──────────────────────────────
+// ─── EverMemOS (Optional) ──────────────────────────────
 
-/** 检查 EverMemOS 配置是否存在 */
+/** Check if EverMemOS configuration exists */
 export function isEverMemOSAvailable(): boolean {
   return existsSync(EVERMEMOS_COMPOSE_PATH)
 }
 
-/** 启动 EverMemOS 容器 */
+/** Start EverMemOS containers */
 export async function startEverMemOS(): Promise<{ success: boolean; output: string }> {
   if (!isEverMemOSAvailable()) {
     return { success: false, output: 'EverMemOS config file not found' }
@@ -181,7 +181,7 @@ export async function startEverMemOS(): Promise<{ success: boolean; output: stri
   }
 }
 
-/** 停止 EverMemOS 容器 */
+/** Stop EverMemOS containers */
 export async function stopEverMemOS(): Promise<{ success: boolean; output: string }> {
   if (!isEverMemOSAvailable()) return { success: true, output: '' }
   const { cmd, baseArgs } = await composeCmd(EVERMEMOS_COMPOSE_PATH)
@@ -192,11 +192,11 @@ export async function stopEverMemOS(): Promise<{ success: boolean; output: strin
   }
 }
 
-// ─── 通用操作 ───────────────────────────────────────
+// ─── Common Operations ───────────────────────────────────────
 
-/** 启动所有 Docker 容器（MySQL + 可选 EverMemOS） */
+/** Start all Docker containers (MySQL + optional EverMemOS) */
 export async function startAll(): Promise<{ mysql: boolean; evermemos: boolean }> {
-  // 确保 Docker daemon 可用（重启电脑后 Colima 可能未启动）
+  // Ensure Docker daemon is available (Colima may not be running after reboot)
   await ensureDockerDaemon()
 
   const mysqlResult = await startMySQL()
@@ -210,12 +210,12 @@ export async function startAll(): Promise<{ mysql: boolean; evermemos: boolean }
   }
 }
 
-/** 停止所有 Docker 容器 */
+/** Stop all Docker containers */
 export async function stopAll(): Promise<void> {
   await Promise.all([stopMySQL(), stopEverMemOS()])
 }
 
-/** 获取所有 Docker 组状态 */
+/** Get all Docker group statuses */
 export async function getAllStatus(): Promise<DockerGroupStatus[]> {
   const groups: DockerGroupStatus[] = [
     {
@@ -240,9 +240,9 @@ export async function getAllStatus(): Promise<DockerGroupStatus[]> {
   return groups
 }
 
-// ─── 内部工具 ───────────────────────────────────────
+// ─── Internal Utilities ───────────────────────────────────────
 
-/** 获取指定 compose 文件的容器状态 */
+/** Get container status for a given compose file */
 async function getComposeStatus(composePath: string): Promise<ContainerStatus[]> {
   if (!existsSync(composePath)) return []
 
@@ -257,7 +257,7 @@ async function getComposeStatus(composePath: string): Promise<ContainerStatus[]>
   if (!result.success || !result.stdout.trim()) return []
 
   try {
-    // docker compose ps --format json 每行输出一个 JSON 对象
+    // docker compose ps --format json outputs one JSON object per line
     const lines = result.stdout.trim().split('\n')
     return lines.map((line) => {
       const data = JSON.parse(line)
@@ -272,7 +272,7 @@ async function getComposeStatus(composePath: string): Promise<ContainerStatus[]>
   }
 }
 
-/** 检查端口是否可连接 */
+/** Check if a port is reachable */
 async function checkPort(port: number, host = '127.0.0.1'): Promise<boolean> {
   return new Promise((resolve) => {
     const net = require('net')

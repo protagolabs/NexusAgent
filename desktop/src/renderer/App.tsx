@@ -1,6 +1,6 @@
 /**
  * @file App.tsx
- * @description 应用根组件 — 根据安装状态显示 SetupWizard 或 Dashboard
+ * @description Application root component — displays SetupWizard or Dashboard based on setup state
  */
 
 import React, { useEffect, useState } from 'react'
@@ -13,18 +13,18 @@ const App: React.FC = () => {
   const [page, setPage] = useState<Page>('loading')
 
   useEffect(() => {
-    // 检查是否已完成初始设置
+    // Check if initial setup is complete
     window.nexus.getSetupState().then(({ setupComplete }) => {
       setPage(setupComplete ? 'dashboard' : 'setup')
     })
   }, [])
 
-  // 设置完成后切换到 Dashboard
+  // Switch to Dashboard after setup is complete
   const handleSetupComplete = () => {
     setPage('dashboard')
   }
 
-  // 从 Dashboard 返回设置页
+  // Return to settings page from Dashboard
   const handleOpenSettings = () => {
     setPage('setup')
   }

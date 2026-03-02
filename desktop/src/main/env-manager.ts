@@ -1,15 +1,15 @@
 /**
  * @file env-manager.ts
- * @description .env 文件的读写与验证
+ * @description .env file reading, writing, and validation
  *
- * 管理项目根目录的 .env 文件，支持从 .env.example 初始化、
- * 读取键值对、写入键值对、验证必填字段。
+ * Manages the .env file in the project root, supporting initialization from .env.example,
+ * reading key-value pairs, writing key-value pairs, and validating required fields.
  */
 
 import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'fs'
 import { ENV_FILE_PATH, ENV_EXAMPLE_PATH } from './constants'
 
-// ─── 类型定义 ───────────────────────────────────────
+// ─── Type Definitions ───────────────────────────────────────
 
 export interface EnvConfig {
   [key: string]: string
@@ -21,22 +21,22 @@ export interface EnvValidation {
   warnings: string[]
 }
 
-/** 必填字段 */
+/** Required fields */
 const REQUIRED_KEYS = ['OPENAI_API_KEY']
 
-/** 可选但推荐的字段 */
+/** Optional but recommended fields */
 const OPTIONAL_KEYS = ['GOOGLE_API_KEY', 'ADMIN_SECRET_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL']
 
-// ─── 解析与序列化 ───────────────────────────────────
+// ─── Parsing & Serialization ───────────────────────────────────
 
-/** 解析 .env 文件内容为键值对 */
+/** Parse .env file content into key-value pairs */
 export function parseEnvContent(content: string): EnvConfig {
   const config: EnvConfig = {}
   const lines = content.split('\n')
 
   for (const line of lines) {
     const trimmed = line.trim()
-    // 跳过空行和注释
+    // Skip empty lines and comments
     if (!trimmed || trimmed.startsWith('#')) continue
 
     const eqIndex = trimmed.indexOf('=')
@@ -45,7 +45,7 @@ export function parseEnvContent(content: string): EnvConfig {
     const key = trimmed.substring(0, eqIndex).trim()
     let value = trimmed.substring(eqIndex + 1).trim()
 
-    // 去除引号包裹
+    // Strip surrounding quotes
     if ((value.startsWith('"') && value.endsWith('"')) ||
         (value.startsWith("'") && value.endsWith("'"))) {
       value = value.slice(1, -1)
@@ -57,7 +57,7 @@ export function parseEnvContent(content: string): EnvConfig {
   return config
 }
 
-/** 将键值对序列化为 .env 文件内容（保留注释和结构） */
+/** Serialize key-value pairs to .env file content (preserving comments and structure) */
 export function serializeEnv(config: EnvConfig, template?: string): string {
   if (!template) {
     return Object.entries(config)
@@ -65,7 +65,7 @@ export function serializeEnv(config: EnvConfig, template?: string): string {
       .join('\n') + '\n'
   }
 
-  // 基于模板文件保留注释结构
+  // Preserve comment structure based on template file
   const lines = template.split('\n')
   const result: string[] = []
   const writtenKeys = new Set<string>()
@@ -73,7 +73,7 @@ export function serializeEnv(config: EnvConfig, template?: string): string {
   for (const line of lines) {
     const trimmed = line.trim()
 
-    // 保留空行和注释
+    // Preserve empty lines and comments
     if (!trimmed || trimmed.startsWith('#')) {
       result.push(line)
       continue
@@ -95,7 +95,7 @@ export function serializeEnv(config: EnvConfig, template?: string): string {
     }
   }
 
-  // 追加模板中没有的新键
+  // Append new keys not in the template
   for (const [key, value] of Object.entries(config)) {
     if (!writtenKeys.has(key)) {
       result.push(`${key}="${value}"`)
@@ -105,9 +105,9 @@ export function serializeEnv(config: EnvConfig, template?: string): string {
   return result.join('\n')
 }
 
-// ─── 公开 API ───────────────────────────────────────
+// ─── Public API ───────────────────────────────────────
 
-/** 确保 .env 文件存在（从 .env.example 复制或创建空文件） */
+/** Ensure .env file exists (copy from .env.example or create empty file) */
 export function ensureEnvFile(): void {
   if (existsSync(ENV_FILE_PATH)) return
 
@@ -118,20 +118,20 @@ export function ensureEnvFile(): void {
   }
 }
 
-/** 读取 .env 文件，返回键值对 */
+/** Read .env file, return key-value pairs */
 export function readEnv(): EnvConfig {
   ensureEnvFile()
   const content = readFileSync(ENV_FILE_PATH, 'utf-8')
   return parseEnvContent(content)
 }
 
-/** 写入键值对到 .env 文件（合并模式，不覆盖未指定的键） */
+/** Write key-value pairs to .env file (merge mode, does not overwrite unspecified keys) */
 export function writeEnv(updates: EnvConfig): void {
   ensureEnvFile()
   const current = readEnv()
   const merged = { ...current, ...updates }
 
-  // 尝试使用 .env.example 作为模板保留格式
+  // Try to use .env.example as template to preserve formatting
   let template: string | undefined
   if (existsSync(ENV_EXAMPLE_PATH)) {
     template = readFileSync(ENV_EXAMPLE_PATH, 'utf-8')
@@ -141,7 +141,7 @@ export function writeEnv(updates: EnvConfig): void {
   writeFileSync(ENV_FILE_PATH, content, 'utf-8')
 }
 
-/** 验证 .env 配置是否完整 */
+/** Validate .env configuration completeness */
 export function validateEnv(): EnvValidation {
   const config = readEnv()
   const missing: string[] = []
@@ -166,7 +166,7 @@ export function validateEnv(): EnvValidation {
   }
 }
 
-/** 获取所有可配置的 key 及其描述 */
+/** Get all configurable keys and their descriptions */
 export function getEnvFields(): Array<{
   key: string
   label: string

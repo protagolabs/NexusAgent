@@ -1,9 +1,9 @@
 /**
  * @file health-monitor.ts
- * @description 服务健康状态轮询检查
+ * @description Service health status polling monitor
  *
- * 定期检查各服务的端口连通性和 HTTP 响应，
- * 通过事件通知 Renderer 进程更新 Dashboard 状态。
+ * Periodically checks service port connectivity and HTTP responses,
+ * notifies the Renderer process via events to update Dashboard status.
  */
 
 import * as net from 'net'
@@ -11,7 +11,7 @@ import * as http from 'http'
 import { EventEmitter } from 'events'
 import { SERVICES, INFRA_SERVICES, HEALTH_CHECK_INTERVAL } from './constants'
 
-// ─── 类型定义 ───────────────────────────────────────
+// ─── Type Definitions ───────────────────────────────────────
 
 export type HealthState = 'healthy' | 'unhealthy' | 'unknown'
 
@@ -40,7 +40,7 @@ export class HealthMonitor extends EventEmitter {
 
   constructor() {
     super()
-    // 初始化所有应用服务为 unknown 状态
+    // Initialize all application services to unknown state
     for (const svc of SERVICES) {
       this.healthStates.set(svc.id, {
         serviceId: svc.id,
@@ -51,7 +51,7 @@ export class HealthMonitor extends EventEmitter {
         message: 'Waiting...'
       })
     }
-    // 初始化所有基础设施服务为 unknown 状态
+    // Initialize all infrastructure services to unknown state
     for (const infra of INFRA_SERVICES) {
       this.infraStates.set(infra.id, {
         serviceId: infra.id,
@@ -64,15 +64,15 @@ export class HealthMonitor extends EventEmitter {
     }
   }
 
-  /** 开始定时健康检查 */
+  /** Start periodic health checks */
   start(): void {
     if (this.intervalId) return
-    // 立即执行一次
+    // Execute immediately once
     this.checkAll()
     this.intervalId = setInterval(() => this.checkAll(), HEALTH_CHECK_INTERVAL)
   }
 
-  /** 停止定时健康检查 */
+  /** Stop periodic health checks */
   stop(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId)
@@ -80,12 +80,12 @@ export class HealthMonitor extends EventEmitter {
     }
   }
 
-  /** 获取当前所有健康状态 */
+  /** Get current health status for all services */
   getStatus(): OverallHealth {
     const services = Array.from(this.healthStates.values())
     const infrastructure = Array.from(this.infraStates.values())
     const mysql = this.infraStates.get('mysql')?.state ?? 'unknown'
-    // allHealthy 只考虑应用服务和必需基础设施（MySQL），EverMemOS 相关的可选服务不参与
+    // allHealthy only considers app services and required infrastructure (MySQL); optional EverMemOS services are excluded
     const requiredInfraIds = new Set(INFRA_SERVICES.filter((i) => i.required).map((i) => i.id))
     const allHealthy =
       services.every((s) => s.state === 'healthy') &&
@@ -93,23 +93,23 @@ export class HealthMonitor extends EventEmitter {
     return { services, infrastructure, mysql, allHealthy }
   }
 
-  /** 手动触发一次全量检查 */
+  /** Manually trigger a full health check */
   async checkAll(): Promise<OverallHealth> {
     const checks: Promise<void>[] = []
 
-    // 检查基础设施端口（MySQL、MongoDB、Elasticsearch 等）
+    // Check infrastructure ports (MySQL, MongoDB, Elasticsearch, etc.)
     for (const infra of INFRA_SERVICES) {
       checks.push(this.checkInfraPortHealth(infra.id, infra.port))
     }
 
-    // 检查各应用服务
+    // Check application services
     for (const svc of SERVICES) {
       if (svc.healthUrl) {
         checks.push(this.checkHttpHealth(svc.id, svc.healthUrl))
       } else if (svc.port) {
         checks.push(this.checkPortHealth(svc.id, svc.port))
       }
-      // 无端口的服务（poller、job-trigger）由 ProcessManager 状态判断
+      // Services without ports (poller, job-trigger) are determined by ProcessManager status
     }
 
     await Promise.all(checks)
@@ -118,21 +118,21 @@ export class HealthMonitor extends EventEmitter {
     return status
   }
 
-  // ─── 内部方法 ─────────────────────────────────────
+  // ─── Internal Methods ─────────────────────────────────────
 
-  /** TCP 端口连通性检查（应用服务） */
+  /** TCP port connectivity check (application services) */
   private async checkPortHealth(serviceId: string, port: number): Promise<void> {
     const reachable = await this.isPortReachable(port)
     this.updateHealth(this.healthStates, serviceId, reachable ? 'healthy' : 'unhealthy', port, reachable ? 'Port reachable' : 'Port unreachable')
   }
 
-  /** TCP 端口连通性检查（基础设施） */
+  /** TCP port connectivity check (infrastructure) */
   private async checkInfraPortHealth(serviceId: string, port: number): Promise<void> {
     const reachable = await this.isPortReachable(port)
     this.updateHealth(this.infraStates, serviceId, reachable ? 'healthy' : 'unhealthy', port, reachable ? 'Port reachable' : 'Port unreachable')
   }
 
-  /** HTTP 健康检查 */
+  /** HTTP health check */
   private async checkHttpHealth(serviceId: string, url: string): Promise<void> {
     const healthy = await this.isHttpHealthy(url)
     const svc = SERVICES.find((s) => s.id === serviceId)
@@ -145,7 +145,7 @@ export class HealthMonitor extends EventEmitter {
     )
   }
 
-  /** 更新某个服务的健康状态 */
+  /** Update health state for a specific service */
   private updateHealth(
     states: Map<string, ServiceHealth>,
     serviceId: string,
@@ -162,13 +162,13 @@ export class HealthMonitor extends EventEmitter {
     current.lastChecked = Date.now()
     current.message = message
 
-    // 仅在状态变化时触发事件
+    // Only emit event on state change
     if (prev !== state) {
       this.emit('service-health-change', serviceId, state, prev)
     }
   }
 
-  /** 检查 TCP 端口是否可连接 */
+  /** Check if a TCP port is reachable */
   private isPortReachable(
     port: number,
     host = '127.0.0.1',
@@ -190,12 +190,12 @@ export class HealthMonitor extends EventEmitter {
     })
   }
 
-  /** 检查 HTTP URL 是否返回 2xx */
+  /** Check if HTTP URL returns 2xx */
   private isHttpHealthy(url: string, timeout = 3000): Promise<boolean> {
     return new Promise((resolve) => {
       const req = http.get(url, { timeout }, (res) => {
         const statusCode = res.statusCode ?? 0
-        // 消费响应数据，防止内存泄漏
+        // Consume response data to prevent memory leak
         res.resume()
         resolve(statusCode >= 200 && statusCode < 400)
       })

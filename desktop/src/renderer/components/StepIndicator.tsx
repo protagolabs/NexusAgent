@@ -1,6 +1,6 @@
 /**
  * @file StepIndicator.tsx
- * @description Setup Wizard 步骤指示器
+ * @description Setup Wizard step indicator
  */
 
 import React from 'react'
@@ -23,7 +23,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep }) => 
 
         return (
           <React.Fragment key={index}>
-            {/* 步骤圆点 */}
+            {/* Step dot */}
             <div className="flex flex-col items-center gap-1">
               <div
                 className={`
@@ -54,7 +54,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep }) => 
               </span>
             </div>
 
-            {/* 连接线 */}
+            {/* Connector line */}
             {index < steps.length - 1 && (
               <div
                 className={`

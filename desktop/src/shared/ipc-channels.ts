@@ -1,21 +1,21 @@
 /**
  * @file ipc-channels.ts
- * @description IPC 通道名常量 — main 和 preload 共用
+ * @description IPC channel name constants — shared between main and preload
  *
- * 独立于 electron.app，preload 可安全导入。
+ * Independent of electron.app, safe for preload to import.
  */
 
 export const IPC = {
-  // 依赖检测
+  // Dependency detection
   CHECK_DEPENDENCIES: 'check-dependencies',
   INSTALL_DEPENDENCY: 'install-dependency',
 
-  // 环境变量
+  // Environment variables
   GET_ENV: 'get-env',
   SET_ENV: 'set-env',
   VALIDATE_ENV: 'validate-env',
 
-  // EverMemOS 环境变量
+  // EverMemOS environment variables
   GET_EVERMEMOS_ENV: 'get-evermemos-env',
   SET_EVERMEMOS_ENV: 'set-evermemos-env',
   VALIDATE_EVERMEMOS_ENV: 'validate-evermemos-env',
@@ -25,25 +25,25 @@ export const IPC = {
   DOCKER_START: 'docker-start',
   DOCKER_STOP: 'docker-stop',
 
-  // 服务进程
+  // Service processes
   SERVICE_START_ALL: 'service-start-all',
   SERVICE_STOP_ALL: 'service-stop-all',
   SERVICE_RESTART: 'service-restart',
   SERVICE_STATUS: 'service-status',
 
-  // 健康检查
+  // Health check
   HEALTH_STATUS: 'health-status',
   HEALTH_SUBSCRIBE: 'health-subscribe',
 
-  // 数据库
+  // Database
   INIT_DATABASE: 'init-database',
 
-  // 一键自动安装
+  // One-click auto setup
   AUTO_SETUP: 'auto-setup',
   QUICK_START: 'quick-start',
   ON_SETUP_PROGRESS: 'on-setup-progress',
 
-  // Claude Code 认证
+  // Claude Code authentication
   CLAUDE_AUTH_INFO: 'claude-auth-info',
   CLAUDE_LOGIN_START: 'claude-login-start',
   CLAUDE_LOGIN_CANCEL: 'claude-login-cancel',
@@ -51,7 +51,7 @@ export const IPC = {
   CLAUDE_SAVE_SETUP_TOKEN: 'claude-save-setup-token',
   ON_CLAUDE_LOGIN_STATUS: 'on-claude-login-status',
 
-  // 杂项
+  // Miscellaneous
   OPEN_EXTERNAL: 'open-external',
   GET_SETUP_STATE: 'get-setup-state',
   SET_SETUP_COMPLETE: 'set-setup-complete',

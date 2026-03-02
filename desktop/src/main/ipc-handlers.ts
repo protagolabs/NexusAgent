@@ -1,9 +1,9 @@
 /**
  * @file ipc-handlers.ts
- * @description IPC 通信注册中心
+ * @description IPC communication registration center
  *
- * 将所有 Main Process 能力通过 ipcMain.handle 暴露给 Renderer，
- * Renderer 通过 preload 的 contextBridge 安全调用。
+ * Exposes all Main Process capabilities to Renderer via ipcMain.handle,
+ * Renderer calls them securely through preload's contextBridge.
  */
 
 import { ipcMain, shell, BrowserWindow } from 'electron'
@@ -24,14 +24,14 @@ import { getShellEnv } from './shell-env'
 
 const execFileAsync = promisify(execFile)
 
-// ─── 注册所有 IPC Handler ───────────────────────────
+// ─── Register All IPC Handlers ───────────────────────────
 
 export function registerIpcHandlers(
   processManager: ProcessManager,
   healthMonitor: HealthMonitor,
   mainWindow: BrowserWindow
 ): void {
-  // ─── 依赖检测 ─────────────────────────────────────
+  // ─── Dependency Detection ─────────────────────────────────────
 
   ipcMain.handle(IPC.CHECK_DEPENDENCIES, async () => {
     return checkAllDependencies()
@@ -41,7 +41,7 @@ export function registerIpcHandlers(
     return installDependency(depId)
   })
 
-  // ─── 环境变量 ─────────────────────────────────────
+  // ─── Environment Variables ─────────────────────────────────────
 
   ipcMain.handle(IPC.GET_ENV, () => {
     return { config: readEnv(), fields: getEnvFields() }
@@ -56,7 +56,7 @@ export function registerIpcHandlers(
     return validateEnv()
   })
 
-  // ─── EverMemOS 环境变量 ─────────────────────────────
+  // ─── EverMemOS Environment Variables ─────────────────────────────
 
   ipcMain.handle(IPC.GET_EVERMEMOS_ENV, () => {
     return {
@@ -92,7 +92,7 @@ export function registerIpcHandlers(
     return { success: true }
   })
 
-  // ─── 服务进程 ─────────────────────────────────────
+  // ─── Service Processes ─────────────────────────────────────
 
   ipcMain.handle(IPC.SERVICE_START_ALL, async () => {
     await processManager.startAll()
@@ -113,13 +113,13 @@ export function registerIpcHandlers(
     return processManager.getAllStatus()
   })
 
-  // ─── 健康检查 ─────────────────────────────────────
+  // ─── Health Check ─────────────────────────────────────
 
   ipcMain.handle(IPC.HEALTH_STATUS, () => {
     return healthMonitor.getStatus()
   })
 
-  // ─── 一键自动安装 ─────────────────────────────────
+  // ─── One-Click Auto Setup ─────────────────────────────────
 
   ipcMain.handle(IPC.AUTO_SETUP, async (_event, options?: { skipEverMemOS?: boolean }) => {
     return processManager.runAutoSetup(options)
@@ -129,14 +129,14 @@ export function registerIpcHandlers(
     return processManager.runQuickStart(options)
   })
 
-  // 安装进度实时推送
+  // Push setup progress in real-time
   processManager.on('setup-progress', (progress) => {
     mainWindow.webContents.send(IPC.ON_SETUP_PROGRESS, progress)
   })
 
-  // ─── Claude Code 认证 ─────────────────────────────
+  // ─── Claude Code Authentication ─────────────────────────────
 
-  // 活跃的登录进程句柄（防止并发）
+  // Active login process handle (prevent concurrent logins)
   let activeLogin: { cancel: () => void; sendInput: (text: string) => void } | null = null
 
   ipcMain.handle(IPC.CLAUDE_AUTH_INFO, async () => {
@@ -150,7 +150,7 @@ export function registerIpcHandlers(
 
     const onStatusChange = (status: LoginProcessStatus) => {
       mainWindow.webContents.send(IPC.ON_CLAUDE_LOGIN_STATUS, status)
-      // 登录结束后清理句柄
+      // Clean up handle after login ends
       if (status.state !== 'running') {
         activeLogin = null
       }
@@ -159,7 +159,7 @@ export function registerIpcHandlers(
     const handle = startClaudeLogin(
       onStatusChange,
       (url) => {
-        // Electron 原生打开浏览器，比 CLI 的 xdg-open 更可靠
+        // Electron natively opens browser, more reliable than CLI's xdg-open
         shell.openExternal(url)
       }
     )
@@ -189,12 +189,12 @@ export function registerIpcHandlers(
     if (!validation.valid) {
       return validation
     }
-    // Token 格式有效，写入 .env 作为 ANTHROPIC_API_KEY
+    // Token format valid, write to .env as ANTHROPIC_API_KEY
     writeEnv({ ANTHROPIC_API_KEY: token.trim() })
     return { valid: true, message: 'Setup token saved successfully' }
   })
 
-  // ─── 数据库初始化 ─────────────────────────────────
+  // ─── Database Initialization ─────────────────────────────────
 
   ipcMain.handle(IPC.INIT_DATABASE, async () => {
     try {
@@ -215,7 +215,7 @@ export function registerIpcHandlers(
     }
   })
 
-  // ─── 杂项 ─────────────────────────────────────────
+  // ─── Miscellaneous ─────────────────────────────────────────
 
   ipcMain.handle(IPC.OPEN_EXTERNAL, async (_event, url: string) => {
     await shell.openExternal(url)
@@ -234,14 +234,14 @@ export function registerIpcHandlers(
     return processManager.getLogs(serviceId)
   })
 
-  // ─── 事件转发（Main → Renderer） ──────────────────
+  // ─── Event Forwarding (Main → Renderer) ──────────────────
 
-  // 日志实时推送
+  // Real-time log push
   processManager.on('log', (entry) => {
     mainWindow.webContents.send(IPC.ON_LOG, entry)
   })
 
-  // 健康状态实时推送
+  // Real-time health status push
   healthMonitor.on('health-update', (status) => {
     mainWindow.webContents.send(IPC.ON_HEALTH_UPDATE, status)
   })

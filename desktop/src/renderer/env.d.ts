@@ -1,9 +1,9 @@
 /**
  * @file env.d.ts
- * @description Renderer 进程全局类型声明
+ * @description Renderer process global type declarations
  */
 
-/** Preload 暴露的 Nexus API 类型 */
+/** Nexus API types exposed by Preload */
 interface NexusAPI {
   checkDependencies: () => Promise<DependencyStatus[]>
   installDependency: (depId: string) => Promise<{ success: boolean; output: string }>

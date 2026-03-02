@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* macOS 标题栏拖拽区域 */
+/* macOS title bar drag area */
 .titlebar-drag {
   -webkit-app-region: drag;
 }
@@ -11,7 +11,7 @@
   -webkit-app-region: no-drag;
 }
 
-/* 自定义滚动条 */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -30,14 +30,14 @@
   background: #9ca3af;
 }
 
-/* 日志容器 */
+/* Log container */
 .log-container {
   font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
   font-size: 12px;
   line-height: 1.5;
 }
 
-/* 状态指示灯动画 */
+/* Status indicator animation */
 @keyframes pulse-green {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -47,7 +47,7 @@
   animation: pulse-green 2s ease-in-out infinite;
 }
 
-/* ASCII Banner 渐变色 */
+/* ASCII Banner gradient color */
 .ascii-banner {
   background: linear-gradient(90deg, #2196F3, #00ACC1, #4CAF50);
   -webkit-background-clip: text;

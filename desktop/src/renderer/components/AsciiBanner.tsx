@@ -1,10 +1,10 @@
 /**
  * @file AsciiBanner.tsx
- * @description 渐变 ASCII Banner 组件 — 从 run.sh 提取的品牌标识
+ * @description Gradient ASCII Banner component — brand identity extracted from run.sh
  *
- * 支持两种尺寸：
- * - normal: SetupWizard 使用，完整大小 + 副标题
- * - small: Dashboard 标题栏使用，缩小紧凑版 + 副标题
+ * Supports two sizes:
+ * - normal: used by SetupWizard, full size + subtitle
+ * - small: used in Dashboard title bar, compact version + subtitle
  */
 
 import React from 'react'

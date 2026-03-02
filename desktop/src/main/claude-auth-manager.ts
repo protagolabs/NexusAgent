@@ -1,15 +1,15 @@
 /**
  * @file claude-auth-manager.ts
- * @description Claude Code 凭证管理器
+ * @description Claude Code credential manager
  *
- * 封装所有 Claude Code 凭证操作：
- * - 从 macOS Keychain / ~/.claude/.credentials.json 读取 OAuth 凭证
- * - 检测 CLI 安装状态和登录状态
- * - 启动 `claude auth login` 一键浏览器登录（PTY 模式优先，pipe 回退）
- * - 验证 setup-token 格式
+ * Encapsulates all Claude Code credential operations:
+ * - Read OAuth credentials from macOS Keychain / ~/.claude/.credentials.json
+ * - Detect CLI installation and login status
+ * - Launch `claude auth login` browser login (PTY mode preferred, pipe fallback)
+ * - Validate setup-token format
  *
- * 参考 OpenClaw cli-credentials.ts 的凭证读取模式，
- * 参考 OpenClaw pty.ts 的 @lydell/node-pty 用法。
+ * References OpenClaw cli-credentials.ts credential reading patterns,
+ * references OpenClaw pty.ts @lydell/node-pty usage.
  */
 
 import { execFileSync, execFile, spawn, type ChildProcess } from 'child_process'
@@ -21,14 +21,14 @@ import { getShellEnv } from './shell-env'
 
 const execFileAsync = promisify(execFile)
 
-// ─── node-pty 动态加载 ─────────────────────────────
+// ─── node-pty Dynamic Loading ─────────────────────────────
 //
-// macOS 上 claude auth login 的 localhost OAuth 回调可能被浏览器阻止
-// （HTTPS → HTTP 降级），导致用户必须手动粘贴 auth code。
-// pipe 模式下 CLI 不读取 stdin，需要真正的 PTY 使 sendInput() 可工作。
-// 参考 OpenClaw: src/process/supervisor/adapters/pty.ts
+// On macOS, claude auth login's localhost OAuth callback may be blocked by the browser
+// (HTTPS → HTTP downgrade), requiring users to manually paste the auth code.
+// In pipe mode the CLI doesn't read stdin; a real PTY is needed for sendInput() to work.
+// Reference: OpenClaw src/process/supervisor/adapters/pty.ts
 
-/** node-pty spawn 返回的进程句柄 */
+/** Process handle returned by node-pty spawn */
 interface PtyHandle {
   pid: number
   write: (data: string) => void
@@ -37,7 +37,7 @@ interface PtyHandle {
   kill: (signal?: string) => void
 }
 
-/** node-pty 的 spawn 函数签名 */
+/** node-pty spawn function signature */
 type PtySpawnFn = (
   file: string,
   args: string[],
@@ -51,11 +51,11 @@ type PtySpawnFn = (
 ) => PtyHandle
 
 /**
- * 动态加载 @lydell/node-pty 的 spawn 函数
+ * Dynamically load @lydell/node-pty spawn function
  *
- * 使用 try/catch 处理未安装的情况，回退到 pipe 模式。
- * electron-vite externalizeDepsPlugin 会保留 require 调用，
- * 运行时从 node_modules 加载原生模块。
+ * Uses try/catch for when not installed, falls back to pipe mode.
+ * electron-vite externalizeDepsPlugin preserves require calls,
+ * loading native modules from node_modules at runtime.
  */
 function getNodePtySpawn(): PtySpawnFn | null {
   try {
@@ -68,16 +68,16 @@ function getNodePtySpawn(): PtySpawnFn | null {
   }
 }
 
-// ─── 类型定义 ───────────────────────────────────────
+// ─── Type Definitions ───────────────────────────────────────
 
-/** Claude OAuth 原始数据（credentials.json 中的结构） */
+/** Claude OAuth raw data (structure from credentials.json) */
 interface ClaudeOAuthData {
   accessToken: string
   refreshToken?: string
   expiresAt: number
 }
 
-/** 认证状态 */
+/** Authentication status */
 export interface ClaudeAuthStatus {
   state: 'logged_in' | 'expired' | 'not_logged_in' | 'cli_not_installed'
   method?: 'oauth' | 'token'
@@ -85,7 +85,7 @@ export interface ClaudeAuthStatus {
   isExpired?: boolean
 }
 
-/** 完整认证信息 */
+/** Complete authentication info */
 export interface ClaudeAuthInfo {
   cliInstalled: boolean
   cliVersion: string | null
@@ -94,13 +94,13 @@ export interface ClaudeAuthInfo {
   hasSetupToken: boolean
 }
 
-/** 登录进程状态 */
+/** Login process status */
 export interface LoginProcessStatus {
   state: 'idle' | 'running' | 'success' | 'failed' | 'timeout'
   message?: string
 }
 
-// ─── 常量 ─────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────
 
 const CREDENTIALS_RELATIVE_PATH = '.claude/.credentials.json'
 const KEYCHAIN_SERVICE = 'Claude Code-credentials'
@@ -108,16 +108,16 @@ const SETUP_TOKEN_PREFIX = 'sk-ant-oat01-'
 const SETUP_TOKEN_MIN_LENGTH = 80
 const LOGIN_POLL_INTERVAL = 2000
 const DEFAULT_LOGIN_TIMEOUT = 120000
-/** macOS 上等待 OAuth 回调的超时，超时后提示手动粘贴 auth code */
+/** Timeout for waiting OAuth callback on macOS; prompts manual auth code paste after timeout */
 const MACOS_CALLBACK_HINT_DELAY = 20000
 
-// ─── 凭证读取 ─────────────────────────────────────
+// ─── Credential Reading ─────────────────────────────────────
 
 /**
- * 从 macOS Keychain 读取 Claude Code 凭证
+ * Read Claude Code credentials from macOS Keychain
  *
- * 使用 security 命令读取 "Claude Code-credentials" 服务的密码，
- * 解析 JSON 中的 claudeAiOauth 字段。仅 macOS 可用。
+ * Uses the security command to read the password for "Claude Code-credentials" service,
+ * parsing the claudeAiOauth field from JSON. macOS only.
  */
 function readCredentialsFromKeychain(): ClaudeOAuthData | null {
   if (process.platform !== 'darwin') return null
@@ -137,7 +137,7 @@ function readCredentialsFromKeychain(): ClaudeOAuthData | null {
 }
 
 /**
- * 从 ~/.claude/.credentials.json 文件读取凭证
+ * Read credentials from ~/.claude/.credentials.json file
  */
 function readCredentialsFromFile(): ClaudeOAuthData | null {
   try {
@@ -153,7 +153,7 @@ function readCredentialsFromFile(): ClaudeOAuthData | null {
 }
 
 /**
- * 解析并校验 OAuth 数据
+ * Parse and validate OAuth data
  */
 function parseOAuthData(oauth: unknown): ClaudeOAuthData | null {
   if (!oauth || typeof oauth !== 'object') return null
@@ -173,16 +173,16 @@ function parseOAuthData(oauth: unknown): ClaudeOAuthData | null {
   }
 }
 
-/** 判断凭证是否已过期 */
+/** Check if credentials have expired */
 function isExpired(expiresAt: number): boolean {
   return Date.now() > expiresAt
 }
 
 /**
- * 读取 Claude CLI 凭证（主入口）
+ * Read Claude CLI credentials (main entry point)
  *
- * macOS: Keychain 优先 -> 回退文件
- * Linux: 仅文件
+ * macOS: Keychain first -> fallback to file
+ * Linux: file only
  */
 export function readClaudeCredentials(): ClaudeOAuthData | null {
   if (process.platform === 'darwin') {
@@ -192,17 +192,17 @@ export function readClaudeCredentials(): ClaudeOAuthData | null {
   return readCredentialsFromFile()
 }
 
-// ─── 认证状态检测 ──────────────────────────────────
+// ─── Authentication Status Detection ──────────────────────────────────
 
 /**
- * 获取 Claude Code 完整认证信息
+ * Get complete Claude Code authentication info
  *
- * 1. 检测 CLI 安装状态（claude --version, 10 秒超时）
- * 2. 读取凭证文件判断登录状态（毫秒级）
- * 3. 检查 .env 中的 ANTHROPIC_API_KEY
+ * 1. Detect CLI installation (claude --version, 10s timeout)
+ * 2. Read credential files to determine login status (millisecond-level)
+ * 3. Check ANTHROPIC_API_KEY in .env
  */
 export async function getClaudeAuthInfo(readEnvFn: () => Record<string, string>): Promise<ClaudeAuthInfo> {
-  // 1. 检测 CLI 安装
+  // 1. Detect CLI installation
   let cliInstalled = false
   let cliVersion: string | null = null
   try {
@@ -213,10 +213,10 @@ export async function getClaudeAuthInfo(readEnvFn: () => Record<string, string>)
     cliInstalled = true
     cliVersion = stdout.trim().split('\n')[0] || null
   } catch {
-    // CLI 未安装
+    // CLI not installed
   }
 
-  // 2. 读取凭证 → 认证状态
+  // 2. Read credentials → auth status
   let authStatus: ClaudeAuthStatus
   const creds = readClaudeCredentials()
   if (creds) {
@@ -233,7 +233,7 @@ export async function getClaudeAuthInfo(readEnvFn: () => Record<string, string>)
     authStatus = { state: 'cli_not_installed' }
   }
 
-  // 3. 检查 .env 中的 API Key
+  // 3. Check API Key in .env
   const envConfig = readEnvFn()
   const apiKey = envConfig.ANTHROPIC_API_KEY?.trim() || ''
   const hasApiKey = !!apiKey
@@ -248,30 +248,30 @@ export async function getClaudeAuthInfo(readEnvFn: () => Record<string, string>)
   }
 }
 
-// ─── 一键登录 ──────────────────────────────────────
+// ─── One-Click Login ──────────────────────────────────────
 
 /**
- * 启动 `claude auth login` 浏览器登录流程
+ * Launch `claude auth login` browser login flow
  *
- * 混合策略（参考 OpenClaw）：
- * 1. 优先使用 node-pty 提供真正的伪终端（macOS 上 auth code 输入可工作）
- * 2. node-pty 不可用时回退到 pipe 模式（Linux 上 localhost 回调通常自动成功）
- * 3. macOS 上若 20 秒内未检测到新凭证，提示用户手动粘贴 auth code
+ * Hybrid strategy (references OpenClaw):
+ * 1. Prefer node-pty for a real pseudo-terminal (auth code input works on macOS)
+ * 2. Fall back to pipe mode when node-pty is unavailable (localhost callback usually succeeds on Linux)
+ * 3. On macOS, prompt user to manually paste auth code if no new credentials detected within 20s
  *
- * - 每 2 秒轮询凭证文件检测登录完成
- * - 超时 120 秒自动终止
- * - 返回可取消的句柄
+ * - Poll credential files every 2s to detect login completion
+ * - Auto-terminate after 120s timeout
+ * - Returns a cancellable handle
  */
 export function startClaudeLogin(
   onStatusChange: (status: LoginProcessStatus) => void,
   onUrlDetected?: (url: string) => void,
   timeoutMs: number = DEFAULT_LOGIN_TIMEOUT
 ): { promise: Promise<LoginProcessStatus>; cancel: () => void; sendInput: (text: string) => void } {
-  // ── 进程句柄（PTY 模式和 pipe 模式二选一） ──
+  // ── Process handle (PTY or pipe mode, one or the other) ──
   let ptyHandle: PtyHandle | null = null
   let childProc: ChildProcess | null = null
 
-  // ── 定时器 ──
+  // ── Timers ──
   let pollTimer: ReturnType<typeof setInterval> | null = null
   let timeoutTimer: ReturnType<typeof setTimeout> | null = null
   let fallbackHintTimer: ReturnType<typeof setTimeout> | null = null
@@ -282,11 +282,11 @@ export function startClaudeLogin(
     if (timeoutTimer) { clearTimeout(timeoutTimer); timeoutTimer = null }
     if (fallbackHintTimer) { clearTimeout(fallbackHintTimer); fallbackHintTimer = null }
     if (ptyHandle) {
-      try { ptyHandle.kill('SIGTERM') } catch { /* 已退出 */ }
+      try { ptyHandle.kill('SIGTERM') } catch { /* already exited */ }
       ptyHandle = null
     }
     if (childProc) {
-      try { childProc.kill('SIGTERM') } catch { /* 已退出 */ }
+      try { childProc.kill('SIGTERM') } catch { /* already exited */ }
       childProc = null
     }
   }
@@ -298,10 +298,10 @@ export function startClaudeLogin(
   }
 
   /**
-   * 向子进程写入内容（用于传递浏览器返回的 auth code）
+   * Write content to child process (for passing auth code returned by browser)
    *
-   * PTY 模式：写入 PTY stdin（CLI 可正常读取，\r = Enter）
-   * pipe 模式：写入 pipe stdin（CLI 可能不读取，但仍尝试）
+   * PTY mode: write to PTY stdin (CLI can read normally, \r = Enter)
+   * Pipe mode: write to pipe stdin (CLI may not read, but still attempts)
    */
   const sendInput = (text: string) => {
     if (ptyHandle) {
@@ -312,22 +312,22 @@ export function startClaudeLogin(
   }
 
   const promise = new Promise<LoginProcessStatus>((resolve) => {
-    // 记录登录前的凭证状态（用于对比检测新凭证）
+    // Record credential state before login (for comparing to detect new credentials)
     const credsBefore = readClaudeCredentials()
 
     onStatusChange({ state: 'running', message: 'Opening browser for authentication...' })
 
-    // 构造子进程环境：基于 shell 环境，禁用颜色输出以简化 URL 解析
+    // Build child process env: based on shell env, disable color output to simplify URL parsing
     const shellEnv = getShellEnv()
     const spawnEnv: Record<string, string> = {
       ...shellEnv,
-      FORCE_COLOR: '0',       // 禁用颜色输出，防止 ANSI 转义码干扰 URL 解析
-      NO_COLOR: '1',          // 社区标准的禁色标志
-      TERM: 'dumb',           // 告知 CLI 当前不是富终端
-      HOME: process.env.HOME || homedir()  // 确保 HOME 存在（Keychain/凭证读写依赖）
+      FORCE_COLOR: '0',       // Disable color output to prevent ANSI escape codes from interfering with URL parsing
+      NO_COLOR: '1',          // Community-standard no-color flag
+      TERM: 'dumb',           // Tell CLI this is not a rich terminal
+      HOME: process.env.HOME || homedir()  // Ensure HOME exists (required for Keychain/credential read/write)
     }
 
-    // ── 共享的输出处理逻辑 ──
+    // ── Shared output handling logic ──
     const stripAnsi = (s: string) => s.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '')
     const urlRegex = /https?:\/\/[^\s\x1B]+/
     let urlOpened = false
@@ -338,21 +338,21 @@ export function startClaudeLogin(
       console.log(`[claude-login] output: ${text.substring(0, 300)}`)
       accumulatedOutput += text
 
-      // 把 CLI 输出实时推送到 UI，方便调试
+      // Push CLI output to UI in real-time for debugging
       onStatusChange({ state: 'running', message: `CLI: ${text.substring(0, 150).trim() || '(waiting...)'}` })
 
       if (!urlOpened) {
         const match = text.match(urlRegex)
         if (match) {
-          // 去除 URL 尾部可能沾上的标点符号
+          // Strip trailing punctuation that may be attached to URL
           const cleanUrl = match[0].replace(/[)>\]'",;]+$/, '')
           urlOpened = true
           onUrlDetected?.(cleanUrl)
           onStatusChange({ state: 'running', message: 'Browser opened. Waiting for authorization...' })
 
-          // macOS 上启动回退提示计时器：
-          // OAuth 回调可能因 HTTPS→HTTP 降级被浏览器阻止，
-          // 此时用户需要手动粘贴浏览器页面上显示的 auth code
+          // Start fallback hint timer on macOS:
+          // OAuth callback may be blocked by browser due to HTTPS→HTTP downgrade,
+          // user needs to manually paste the auth code shown on the browser page
           if (process.platform === 'darwin') {
             fallbackHintTimer = setTimeout(() => {
               if (!cancelled) {
@@ -371,12 +371,12 @@ export function startClaudeLogin(
       }
     }
 
-    /** 共享的进程退出处理 */
+    /** Shared process exit handler */
     const handleExit = (code: number | null) => {
       clearTimeout(noOutputTimer)
       if (cancelled) return
 
-      // 进程退出后，从累积输出中做最后一次 URL 匹配（应对分块传输）
+      // After process exits, do a final URL match from accumulated output (handle chunked transfer)
       if (!urlOpened) {
         const match = accumulatedOutput.match(urlRegex)
         if (match) {
@@ -384,12 +384,12 @@ export function startClaudeLogin(
           urlOpened = true
           onUrlDetected?.(cleanUrl)
           onStatusChange({ state: 'running', message: 'Browser opened. Waiting for authorization...' })
-          // 不 resolve，继续轮询等待凭证
+          // Don't resolve, continue polling for credentials
           return
         }
       }
 
-      // 进程正常退出后做一次最终检查
+      // Final check after process exits normally
       const creds = readClaudeCredentials()
       if (creds && (!credsBefore || creds.accessToken !== credsBefore.accessToken)) {
         cleanup()
@@ -405,7 +405,7 @@ export function startClaudeLogin(
         onStatusChange(status)
         resolve(status)
       } else {
-        // code === 0 但没检测到新凭证：可能已登录，或凭证写入有延迟
+        // code === 0 but no new credentials detected: may already be logged in, or credential write delay
         if (creds && !isExpired(creds.expiresAt)) {
           cleanup()
           const status: LoginProcessStatus = {
@@ -415,29 +415,29 @@ export function startClaudeLogin(
           onStatusChange(status)
           resolve(status)
         }
-        // 否则继续轮询（凭证写入可能有延迟），最终超时
+        // Otherwise continue polling (credential write may be delayed), eventually timeout
       }
     }
 
-    // ── 启动子进程：PTY 优先，pipe 回退 ──
+    // ── Launch child process: PTY preferred, pipe fallback ──
 
     const ptySpawn = getNodePtySpawn()
 
     if (ptySpawn) {
-      // PTY 模式：提供真正的伪终端，使 CLI 的 stdin 交互可用
-      // 这样 macOS 上用户可以通过 Desktop 输入框粘贴 auth code
+      // PTY mode: provides a real pseudo-terminal, enabling CLI stdin interaction
+      // This way users on macOS can paste auth code via Desktop input field
       try {
         ptyHandle = ptySpawn('claude', ['auth', 'login'], {
           cwd: homedir(),
           env: spawnEnv,
-          name: 'dumb',    // TERM=dumb，减少 ANSI 输出
+          name: 'dumb',    // TERM=dumb, reduce ANSI output
           cols: 120,
           rows: 30,
         })
 
         console.log(`[claude-login] spawned with PTY mode (pid=${ptyHandle.pid})`)
 
-        // PTY 合并 stdout/stderr 为单一数据流
+        // PTY merges stdout/stderr into a single data stream
         ptyHandle.onData((data: string) => {
           handleOutput(data)
         })
@@ -446,7 +446,7 @@ export function startClaudeLogin(
           handleExit(event.exitCode)
         })
       } catch (err) {
-        // PTY spawn 失败（例如 claude 未安装），立即报错
+        // PTY spawn failed (e.g. claude not installed), report error immediately
         if (!cancelled) {
           cleanup()
           const status: LoginProcessStatus = {
@@ -459,8 +459,8 @@ export function startClaudeLogin(
         return
       }
     } else {
-      // Pipe 模式回退：node-pty 不可用时使用标准 child_process
-      // Linux 上 localhost 回调通常自动成功，不需要手动粘贴 auth code
+      // Pipe mode fallback: use standard child_process when node-pty is unavailable
+      // On Linux, localhost callback usually succeeds automatically, no manual auth code paste needed
       console.log('[claude-login] node-pty not available, falling back to pipe mode')
 
       childProc = spawn('claude', ['auth', 'login'], {
@@ -489,7 +489,7 @@ export function startClaudeLogin(
       })
     }
 
-    // ── 5 秒无输出告警 ──
+    // ── 5s no-output warning ──
     const noOutputTimer = setTimeout(() => {
       if (!urlOpened && !cancelled) {
         onStatusChange({
@@ -501,7 +501,7 @@ export function startClaudeLogin(
       }
     }, 5000)
 
-    // ── 轮询检测凭证变化 ──
+    // ── Poll for credential changes ──
     pollTimer = setInterval(() => {
       if (cancelled) return
       const creds = readClaudeCredentials()
@@ -513,7 +513,7 @@ export function startClaudeLogin(
       }
     }, LOGIN_POLL_INTERVAL)
 
-    // ── 超时处理 ──
+    // ── Timeout handling ──
     timeoutTimer = setTimeout(() => {
       if (cancelled) return
       cleanup()
@@ -529,12 +529,12 @@ export function startClaudeLogin(
   return { promise, cancel, sendInput }
 }
 
-// ─── Setup Token 验证 ──────────────────────────────
+// ─── Setup Token Validation ──────────────────────────────
 
 /**
- * 验证 setup-token 格式
+ * Validate setup-token format
  *
- * 格式要求：以 sk-ant-oat01- 开头，至少 80 个字符
+ * Format requirements: starts with sk-ant-oat01-, at least 80 characters
  */
 export function validateSetupToken(token: string): { valid: boolean; message: string } {
   const trimmed = token.trim()

@@ -1,6 +1,6 @@
 /**
  * @file store.ts
- * @description 简易 JSON 持久化存储，替代 electron-store 避免 ESM 兼容问题
+ * @description Simple JSON persistent storage, replacing electron-store to avoid ESM compatibility issues
  */
 
 import { app } from 'electron'
@@ -43,7 +43,7 @@ class SimpleStore {
         return { ...DEFAULTS, ...JSON.parse(raw) }
       }
     } catch {
-      // 文件损坏时用默认值
+      // Use defaults when file is corrupted
     }
     return { ...DEFAULTS }
   }

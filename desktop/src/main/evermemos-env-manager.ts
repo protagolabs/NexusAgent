@@ -1,9 +1,9 @@
 /**
  * @file evermemos-env-manager.ts
- * @description EverMemOS .env 文件的读写、验证与字段元数据
+ * @description EverMemOS .env file reading, writing, validation, and field metadata
  *
- * 管理 .evermemos/.env 文件，复用 env-manager 的解析工具函数。
- * 提供字段分组元数据，供设置 UI 渲染表单。
+ * Manages .evermemos/.env file, reusing parser utilities from env-manager.
+ * Provides grouped field metadata for the settings UI to render forms.
  */
 
 import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'fs'
@@ -11,12 +11,12 @@ import { join } from 'path'
 import { EVERMEMOS_DIR } from './constants'
 import { parseEnvContent, serializeEnv, EnvConfig, EnvValidation } from './env-manager'
 
-// ─── 路径 ─────────────────────────────────────────────
+// ─── Paths ─────────────────────────────────────────────
 
 const ENV_PATH = join(EVERMEMOS_DIR, '.env')
 const TEMPLATE_PATH = join(EVERMEMOS_DIR, 'env.template')
 
-// ─── 字段元数据类型 ───────────────────────────────────
+// ─── Field Metadata Types ───────────────────────────────────
 
 export interface EverMemOSEnvField {
   key: string
@@ -29,7 +29,7 @@ export interface EverMemOSEnvField {
   order: number
 }
 
-// ─── 字段定义 ─────────────────────────────────────────
+// ─── Field Definitions ─────────────────────────────────────────
 
 const FIELDS: EverMemOSEnvField[] = [
   // ── LLM ──
@@ -71,30 +71,30 @@ const FIELDS: EverMemOSEnvField[] = [
   { key: 'LOG_LEVEL', label: 'Log Level', required: false, placeholder: 'INFO', inputType: 'select', options: ['DEBUG', 'INFO', 'WARNING', 'ERROR'], group: 'other', order: 2 }
 ]
 
-/** 模板占位值，视为"未填写" */
+/** Template placeholder values, treated as "not filled" */
 const PLACEHOLDER_VALUES = ['sk-or-v1-xxxx', 'xxxxx']
 
-// ─── 内存暂存区 ─────────────────────────────────────────
-// 目录尚未 clone 时，用户填写的值暂存于此，clone 完成后 flush 到磁盘
+// ─── In-Memory Staging ─────────────────────────────────────────
+// When the directory hasn't been cloned yet, user-entered values are staged here and flushed to disk after clone completes
 
 let pendingEnv: EnvConfig = {}
 
-// ─── 公开 API ─────────────────────────────────────────
+// ─── Public API ─────────────────────────────────────────
 
 /**
- * UI 可用性：始终返回 true，SetupWizard 始终显示 EverMemOS 配置区域。
- * 实际目录是否已 clone 请使用 isCloned()。
+ * UI availability: always returns true, SetupWizard always shows the EverMemOS config section.
+ * Use isCloned() to check if the directory has actually been cloned.
  */
 export function isAvailable(): boolean {
   return true
 }
 
-/** 检测 .evermemos/ 目录是否已 clone 到本地 */
+/** Check if .evermemos/ directory has been cloned locally */
 export function isCloned(): boolean {
   return existsSync(EVERMEMOS_DIR)
 }
 
-/** 确保 .env 文件存在（从 env.template 初始化） */
+/** Ensure .env file exists (initialize from env.template) */
 export function ensureEnvFile(): void {
   if (existsSync(ENV_PATH)) return
 
@@ -105,7 +105,7 @@ export function ensureEnvFile(): void {
   }
 }
 
-/** 读取 .evermemos/.env，目录不存在时返回内存暂存值 */
+/** Read .evermemos/.env, return in-memory staged values when directory doesn't exist */
 export function readEnv(): EnvConfig {
   if (!isCloned()) return { ...pendingEnv }
   ensureEnvFile()
@@ -113,7 +113,7 @@ export function readEnv(): EnvConfig {
   return parseEnvContent(content)
 }
 
-/** 写入键值对，目录不存在时写入内存暂存区 */
+/** Write key-value pairs; write to in-memory staging when directory doesn't exist */
 export function writeEnv(updates: EnvConfig): void {
   if (!isCloned()) {
     pendingEnv = { ...pendingEnv, ...updates }
@@ -133,8 +133,8 @@ export function writeEnv(updates: EnvConfig): void {
 }
 
 /**
- * 将内存暂存值合并到磁盘 .env 文件。
- * 在 git clone 完成后调用，确保用户在 UI 填写的值不丢失。
+ * Merge in-memory staged values to the .env file on disk.
+ * Called after git clone completes to ensure user-entered values in UI are not lost.
  */
 export function flushPendingEnv(): void {
   if (Object.keys(pendingEnv).length === 0) return
@@ -158,8 +158,8 @@ export function flushPendingEnv(): void {
 }
 
 /**
- * 检查用户是否已配置 LLM_API_KEY（判断是否需要启动 EverMemOS）。
- * 同时检查内存暂存和磁盘值。
+ * Check if user has configured LLM_API_KEY (to determine whether to start EverMemOS).
+ * Checks both in-memory staged and on-disk values.
  */
 export function isConfigured(): boolean {
   const config = readEnv()
@@ -167,7 +167,7 @@ export function isConfigured(): boolean {
   return !!key && !PLACEHOLDER_VALUES.includes(key)
 }
 
-/** 验证必填字段 */
+/** Validate required fields */
 export function validateEnv(): EnvValidation {
   const config = readEnv()
   const missing: string[] = []
@@ -185,7 +185,7 @@ export function validateEnv(): EnvValidation {
   return { valid: missing.length === 0, missing, warnings }
 }
 
-/** 返回字段元数据列表 */
+/** Return field metadata list */
 export function getFields(): EverMemOSEnvField[] {
   return FIELDS
 }

@@ -1,9 +1,9 @@
 /**
  * @file index.ts
- * @description Electron 主进程入口
+ * @description Electron main process entry point
  *
- * 初始化 BrowserWindow、各 Manager 模块，
- * 管理应用生命周期（启动、关闭、托盘最小化）。
+ * Initializes BrowserWindow and Manager modules,
+ * manages application lifecycle (startup, shutdown, tray minimize).
  */
 
 import { app, BrowserWindow, shell } from 'electron'
@@ -15,14 +15,14 @@ import { HealthMonitor } from './health-monitor'
 import { TrayManager } from './tray-manager'
 import { registerIpcHandlers } from './ipc-handlers'
 
-// ─── 全局实例 ───────────────────────────────────────
+// ─── Global Instances ───────────────────────────────────────
 
 let mainWindow: BrowserWindow | null = null
 let processManager: ProcessManager | null = null
 const healthMonitor = new HealthMonitor()
 let trayManager: TrayManager | null = null
 
-// ─── 窗口创建 ───────────────────────────────────────
+// ─── Window Creation ───────────────────────────────────────
 
 function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -39,43 +39,43 @@ function createMainWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false
     },
-    show: false // 等待 ready-to-show 再显示，避免白屏闪烁
+    show: false // Wait for ready-to-show before displaying, avoid white flash
   })
 
-  // 窗口准备好后显示
+  // Show window once ready
   win.once('ready-to-show', () => {
     win.show()
   })
 
-  // 拦截外部链接，用系统浏览器打开
+  // Intercept external links, open in system browser
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }
   })
 
-  // 关闭窗口时直接退出应用
+  // Quit app when window is closed
   win.on('close', () => {
     app.isQuitting = true
     app.quit()
   })
 
-  // 加载页面
+  // Load page
   if (process.env.ELECTRON_RENDERER_URL) {
-    // 开发模式：electron-vite 注入的 dev server URL
+    // Dev mode: dev server URL injected by electron-vite
     win.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
-    // 生产模式：加载构建产物
+    // Production mode: load build artifacts
     const indexPath = join(__dirname, '../renderer/index.html')
     console.log('[main] Loading renderer from:', indexPath)
     win.loadFile(indexPath)
   }
 
-  // 捕获渲染进程加载错误
+  // Capture renderer process load errors
   win.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
     console.error('[main] Renderer failed to load:', errorCode, errorDescription)
   })
 
-  // 开发模式下打开 DevTools
+  // Open DevTools in dev mode
   if (process.env.ELECTRON_RENDERER_URL) {
     win.webContents.openDevTools({ mode: 'detach' })
   }
@@ -83,9 +83,9 @@ function createMainWindow(): BrowserWindow {
   return win
 }
 
-// ─── 应用生命周期 ───────────────────────────────────
+// ─── Application Lifecycle ───────────────────────────────────
 
-// 标记是否正在退出（用于区分关闭窗口和退出应用）
+// Flag for quitting state (to distinguish closing window from quitting app)
 declare module 'electron' {
   interface App {
     isQuitting: boolean
@@ -94,29 +94,29 @@ declare module 'electron' {
 app.isQuitting = false
 
 app.whenReady().then(async () => {
-  // 确保可写的项目目录存在（打包后首次运行时复制）
+  // Ensure writable project directory exists (copied on first packaged launch)
   ensureWritableProject()
 
-  // 解析用户登录 Shell 的完整环境变量（macOS .app 启动时必要）
+  // Resolve full env vars from user login shell (required for macOS .app launch)
   await initShellEnv()
 
-  // 初始化进程管理器（依赖 shell-env 已初始化）
+  // Initialize process manager (depends on shell-env being initialized)
   processManager = new ProcessManager()
 
-  // 创建主窗口
+  // Create main window
   mainWindow = createMainWindow()
 
-  // 注册 IPC 处理器
+  // Register IPC handlers
   registerIpcHandlers(processManager, healthMonitor, mainWindow)
 
-  // 创建系统托盘
+  // Create system tray
   trayManager = new TrayManager(healthMonitor, processManager)
   trayManager.create(mainWindow)
 
-  // 启动健康检查
+  // Start health checks
   healthMonitor.start()
 
-  // macOS: 点击 Dock 图标时重新显示窗口
+  // macOS: re-show window when Dock icon is clicked
   app.on('activate', () => {
     if (mainWindow) {
       mainWindow.show()
@@ -124,32 +124,32 @@ app.whenReady().then(async () => {
   })
 })
 
-// 所有窗口关闭时（非 macOS）
+// When all windows are closed (non-macOS)
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
 
-// 应用退出前：清理所有后台进程
-// before-quit 是同步事件，async 不会让 Electron 等待。
-// 必须用 preventDefault() 阻止退出，等清理完毕后再手动 quit。
+// Before app quit: clean up all background processes
+// before-quit is synchronous; async won't make Electron wait.
+// Must use preventDefault() to block quit, then manually quit after cleanup.
 let cleanupDone = false
 
 app.on('before-quit', (e) => {
   app.isQuitting = true
 
-  if (cleanupDone) return // 清理已完成，允许退出
+  if (cleanupDone) return // Cleanup done, allow quit
 
-  e.preventDefault() // 阻止立即退出
+  e.preventDefault() // Prevent immediate quit
 
-  // 停止健康检查
+  // Stop health checks
   healthMonitor.stop()
 
-  // 销毁托盘
+  // Destroy tray
   trayManager?.destroy()
 
-  // 停止所有服务进程，完成后再退出
+  // Stop all service processes, then quit
   const cleanup = processManager?.stopAll() ?? Promise.resolve()
   cleanup.finally(() => {
     cleanupDone = true

@@ -1,21 +1,21 @@
 /**
  * @file LogViewer.tsx
- * @description 实时日志查看器 — 展示后台服务的 stdout/stderr 输出
+ * @description Real-time log viewer — displays stdout/stderr output from backend services
  *
- * 所有日志全量存储，通过 serviceFilter 在渲染时过滤。
- * 切换 tab 时无需重新订阅，即时显示对应服务的历史日志。
+ * All logs are stored in full; filtered at render time via serviceFilter.
+ * No re-subscription needed when switching tabs; history logs are shown immediately.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 interface LogViewerProps {
-  /** 初始日志列表 */
+  /** Initial log list */
   initialLogs?: LogEntry[]
-  /** 过滤指定服务（null 显示全部） */
+  /** Filter by specific service (null shows all) */
   serviceFilter?: string | null
 }
 
-/** 服务颜色映射 */
+/** Service color mapping */
 const SERVICE_COLORS: Record<string, string> = {
   backend: 'text-blue-500',
   mcp: 'text-purple-500',
@@ -31,7 +31,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const [autoScroll, setAutoScroll] = useState(true)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // 全量订阅实时日志（不做服务过滤）
+  // Subscribe to all real-time logs (no service filtering)
   useEffect(() => {
     const unsubscribe = window.nexus.onLog((entry: LogEntry) => {
       setAllLogs((prev) => {
@@ -42,20 +42,20 @@ const LogViewer: React.FC<LogViewerProps> = ({
     return unsubscribe
   }, [])
 
-  // 渲染时按服务过滤
+  // Filter by service at render time
   const visibleLogs = useMemo(() => {
     if (!serviceFilter) return allLogs
     return allLogs.filter((e) => e.serviceId === serviceFilter)
   }, [allLogs, serviceFilter])
 
-  // 自动滚动到底部
+  // Auto-scroll to bottom
   useEffect(() => {
     if (autoScroll && containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight
     }
   }, [visibleLogs, autoScroll])
 
-  // 检测用户是否手动滚动
+  // Detect if user manually scrolled
   const handleScroll = () => {
     if (!containerRef.current) return
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current
@@ -71,7 +71,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* 工具栏 */}
+      {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gray-50">
         <span className="text-xs text-gray-500 font-medium">
           Logs ({visibleLogs.length})
@@ -101,7 +101,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
         </div>
       </div>
 
-      {/* 日志内容 */}
+      {/* Log content */}
       <div
         ref={containerRef}
         onScroll={handleScroll}

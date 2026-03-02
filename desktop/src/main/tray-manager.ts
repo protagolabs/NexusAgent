@@ -1,9 +1,9 @@
 /**
  * @file tray-manager.ts
- * @description 系统托盘图标 + 右键菜单
+ * @description System tray icon + context menu
  *
- * 提供系统托盘图标，展示服务状态概览，
- * 支持快速操作：启动/停止服务、打开设置、退出应用。
+ * Provides a system tray icon that displays a service status overview
+ * and supports quick actions: start/stop services, open settings, quit app.
  */
 
 import { Tray, Menu, nativeImage, app, BrowserWindow } from 'electron'
@@ -24,40 +24,40 @@ export class TrayManager {
     this.processManager = processManager
   }
 
-  /** 创建系统托盘图标 */
+  /** Create system tray icon */
   create(mainWindow: BrowserWindow): void {
     this.mainWindow = mainWindow
 
-    // 创建 16x16 的托盘图标（使用简单的圆形图标）
+    // Create a 16x16 tray icon (using a simple circular icon)
     const icon = this.createTrayIcon()
     this.tray = new Tray(icon)
     this.tray.setToolTip('NarraNexus')
 
-    // 点击托盘图标显示主窗口
+    // Click tray icon to show main window
     this.tray.on('click', () => {
       this.showMainWindow()
     })
 
-    // 初始化菜单
+    // Initialize menu
     this.updateMenu()
 
-    // 监听健康状态变化，更新菜单
+    // Listen for health state changes to update menu
     this.healthMonitor.on('health-update', () => {
       this.updateMenu()
     })
   }
 
-  /** 销毁托盘 */
+  /** Destroy tray */
   destroy(): void {
     this.tray?.destroy()
     this.tray = null
   }
 
-  // ─── 内部方法 ─────────────────────────────────────
+  // ─── Internal Methods ─────────────────────────────────────
 
-  /** 创建托盘图标（16x16 纯色圆形） */
+  /** Create tray icon (16x16 solid circle) */
   private createTrayIcon(): nativeImage {
-    // 使用项目 Logo 作为托盘图标
+    // Use project Logo as tray icon
     const iconPath = app.isPackaged
       ? join(process.resourcesPath, 'icon.png')
       : join(__dirname, '..', '..', 'resources', 'icon.png')
@@ -66,19 +66,19 @@ export class TrayManager {
       const icon = nativeImage.createFromPath(iconPath)
       return icon.resize({ width: 16, height: 16 })
     } catch {
-      // 如果找不到图标文件，创建一个简单的占位图标
+      // If icon file is not found, create a simple placeholder icon
       return nativeImage.createEmpty()
     }
   }
 
-  /** 更新托盘右键菜单 */
+  /** Update tray context menu */
   private updateMenu(): void {
     if (!this.tray) return
 
     const health = this.healthMonitor.getStatus()
     const processes = this.processManager.getAllStatus()
 
-    // 构建服务状态子菜单
+    // Build service status submenu
     const statusItems: Electron.MenuItemConstructorOptions[] = []
 
     // MySQL
@@ -88,7 +88,7 @@ export class TrayManager {
       enabled: false
     })
 
-    // 其他服务
+    // Other services
     for (const proc of processes) {
       const svcHealth = health.services.find((s) => s.serviceId === proc.serviceId)
       const state = svcHealth?.state ?? (proc.status === 'running' ? 'healthy' : 'unhealthy')
@@ -140,9 +140,9 @@ export class TrayManager {
       {
         label: 'Quit',
         click: () => {
-          // 通知主进程停止所有服务后退出
+          // Notify main process to stop all services before quitting
           this.mainWindow?.webContents.send('tray-action', 'quit')
-          // 延时退出，给服务停止留时间
+          // Delay exit to allow time for services to stop
           setTimeout(() => app.quit(), 3000)
         }
       }
@@ -151,7 +151,7 @@ export class TrayManager {
     this.tray.setContextMenu(contextMenu)
   }
 
-  /** 显示主窗口 */
+  /** Show main window */
   private showMainWindow(): void {
     if (!this.mainWindow) return
     if (this.mainWindow.isMinimized()) {
@@ -162,9 +162,9 @@ export class TrayManager {
   }
 }
 
-// ─── 工具函数 ───────────────────────────────────────
+// ─── Utility Functions ───────────────────────────────────────
 
-/** 状态图标映射 */
+/** State icon mapping */
 function stateIcon(state?: HealthState): string {
   switch (state) {
     case 'healthy':

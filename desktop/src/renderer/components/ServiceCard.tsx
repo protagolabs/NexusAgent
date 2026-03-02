@@ -1,6 +1,6 @@
 /**
  * @file ServiceCard.tsx
- * @description 服务状态卡片 — 展示单个服务的运行状态和端口信息
+ * @description Service status card — displays individual service runtime status and port info
  */
 
 import React from 'react'

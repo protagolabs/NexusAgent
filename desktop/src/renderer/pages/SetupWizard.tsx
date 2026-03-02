@@ -1,9 +1,9 @@
 /**
  * @file SetupWizard.tsx
- * @description 单页环境配置页面 — .env 表单 + 一键安装进度条
+ * @description Single-page environment configuration — .env form + one-click install progress bar
  *
- * 用户填写 API Keys 和数据库配置后，点击 "Apply & 启动"，
- * 自动执行全部环境安装和服务启动流程。
+ * After the user fills in API Keys and database configuration, clicking "Apply & Start",
+ * automatically executes all environment installation and service startup procedures.
  */
 
 import React, { useEffect, useState } from 'react'
@@ -13,7 +13,7 @@ interface SetupWizardProps {
   onComplete: () => void
 }
 
-/** 外部链接映射 */
+/** External link mapping */
 const KEY_LINKS: Record<string, { label: string; url: string }> = {
   OPENAI_API_KEY: { label: 'Get Key', url: 'https://platform.openai.com/api-keys' },
   GOOGLE_API_KEY: { label: 'Get Key', url: 'https://aistudio.google.com/apikey' },
@@ -22,7 +22,7 @@ const KEY_LINKS: Record<string, { label: string; url: string }> = {
   LLM_API_KEY: { label: 'Get Key', url: 'https://openrouter.ai/keys' }
 }
 
-/** NetMind 一键配置预设值（与 run.sh auto-configure 逻辑一致） */
+/** NetMind one-click configuration presets (consistent with run.sh auto-configure logic) */
 const NETMIND_PRESETS: Record<string, string> = {
   LLM_MODEL: 'deepseek-ai/DeepSeek-V3.2',
   LLM_BASE_URL: 'https://api.netmind.ai/inference-api/openai/v1',
@@ -35,7 +35,7 @@ const NETMIND_PRESETS: Record<string, string> = {
   RERANK_MODEL: ''
 }
 
-/** EverMemOS 分组配置 */
+/** EverMemOS group configuration */
 const EM_GROUP_LABELS: Record<string, string> = {
   llm: 'LLM',
   vectorize: 'Embedding',
@@ -44,7 +44,7 @@ const EM_GROUP_LABELS: Record<string, string> = {
   other: 'Other'
 }
 
-/** 将文本中的 URL 渲染为可点击链接 */
+/** Render URLs in text as clickable links */
 const renderWithLinks = (text: string): React.ReactNode => {
   const urlRegex = /(https?:\/\/[^\s]+)/g
   const parts = text.split(urlRegex)
@@ -71,38 +71,38 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   const [steps, setSteps] = useState<SetupProgress[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  // Claude Code 认证状态
+  // Claude Code authentication state
   const [claudeAuth, setClaudeAuth] = useState<ClaudeAuthInfo | null>(null)
   const [loginStatus, setLoginStatus] = useState<LoginProcessStatus>({ state: 'idle' })
   const [setupToken, setSetupToken] = useState('')
   const [tokenResult, setTokenResult] = useState<{ valid: boolean; message: string } | null>(null)
 
-  // EverMemOS 状态
+  // EverMemOS state
   const [emFields, setEmFields] = useState<EverMemOSEnvField[]>([])
   const [emValues, setEmValues] = useState<Record<string, string>>({})
   const [emAdvancedOpen, setEmAdvancedOpen] = useState(false)
   const [emMode, setEmMode] = useState<'netmind' | 'custom'>('netmind')
 
-  // 加载 .env 配置
+  // Load .env configuration
   useEffect(() => {
     window.nexus.getEnv().then(({ config, fields: f }) => {
       setFields(f)
       setValues(config)
     })
 
-    // 加载 EverMemOS .env 配置（始终显示，无需判断目录是否存在）
+    // Load EverMemOS .env configuration (always displayed, no need to check if directory exists)
     window.nexus.getEverMemOSEnv().then(({ config, fields: f }) => {
       setEmFields(f)
       setEmValues(config)
     })
   }, [])
 
-  // 加载 Claude Code 认证状态
+  // Load Claude Code authentication status
   useEffect(() => {
     window.nexus.getClaudeAuthInfo().then(setClaudeAuth)
   }, [])
 
-  // 监听 Claude Code 登录状态推送
+  // Listen for Claude Code login status updates
   useEffect(() => {
     const unsub = window.nexus.onClaudeLoginStatus((status: LoginProcessStatus) => {
       setLoginStatus(status)
@@ -113,11 +113,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     return unsub
   }, [])
 
-  // 监听安装进度
+  // Listen for installation progress
   useEffect(() => {
     const unsubscribe = window.nexus.onSetupProgress((progress: SetupProgress) => {
       setSteps((prev) => {
-        // 替换同一步骤的进度（状态更新）
+        // Replace progress for the same step (status update)
         const existing = prev.findIndex((s) => s.step === progress.step)
         if (existing >= 0) {
           const next = [...prev]
@@ -130,7 +130,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     return unsubscribe
   }, [])
 
-  /** 组装最终要写入的 EverMemOS 配置 */
+  /** Assemble the final EverMemOS configuration to be written */
   const buildFinalEmValues = (): Record<string, string> => {
     if (emMode === 'netmind') {
       return {
@@ -143,7 +143,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     return emValues
   }
 
-  /** 完整安装流程：保存 .env → 执行 autoSetup（12 步） */
+  /** Full installation flow: save .env -> execute autoSetup (12 steps) */
   const handleInstallAndStart = async () => {
     setRunning(true)
     setError(null)
@@ -163,7 +163,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     }
   }
 
-  /** 快速启动：跳过安装步骤，拉起 Docker + 服务（带进度反馈） */
+  /** Quick start: skip installation steps, bring up Docker + services (with progress feedback) */
   const handleStartOnly = async () => {
     setRunning(true)
     setError(null)
@@ -182,13 +182,13 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     }
   }
 
-  // 检查必填项是否填写
+  // Check if required fields are filled
   const PLACEHOLDER_VALUES = ['sk-or-v1-xxxx', 'xxxxx']
   const requiredFilled = fields
     .filter((f) => f.required)
     .every((f) => values[f.key]?.trim())
 
-  // 判断 EverMemOS 是否已配置
+  // Check if EverMemOS is configured
   const emConfigured = emMode === 'netmind'
     ? !!values['NETMIND_API_KEY']?.trim()
     : emFields.filter((f) => f.required).every((f) => {
@@ -197,7 +197,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
       })
   const skipEverMemOS = !emConfigured
 
-  // 分组：API Keys 和 数据库配置
+  // Group: API Keys and Database configuration
   const apiFields = fields.filter(
     (f) => f.key.includes('API_KEY') || f.key.includes('SECRET') || f.key.includes('BASE_URL')
   )
@@ -207,7 +207,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      {/* 标题栏拖拽区域 */}
+      {/* Title bar drag area */}
       <div className="h-8 titlebar-drag shrink-0" />
 
       {/* Banner */}
@@ -215,7 +215,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
         <AsciiBanner />
       </div>
 
-      {/* 表单内容 */}
+      {/* Form content */}
       <div className="flex-1 overflow-y-auto px-8 pb-6">
         {/* API Keys */}
         <div className="space-y-3">
@@ -247,11 +247,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
           ))}
         </div>
 
-        {/* Claude Code 认证面板 */}
+        {/* Claude Code authentication panel */}
         <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <p className="text-sm font-medium text-gray-700 mb-3">Claude Code Authentication</p>
 
-          {/* 状态指示 */}
+          {/* Status indicator */}
           {claudeAuth && (
             <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-xs">
               <span className="flex items-center gap-1.5">
@@ -285,11 +285,12 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
             </div>
           )}
 
-          {/* 方式一：浏览器 OAuth 登录 */}
+          {/* Option 1: Browser OAuth login */}
           <div className="mb-3">
             <p className="text-xs text-gray-500 mb-2">
               Option 1 (Recommended): Click below to open browser and authorize with your Anthropic account.
             </p>
+            {/* Button row */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -314,8 +315,20 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                   </button>
                 </>
               )}
-              {loginStatus.state === 'running' && (
-                <div className="mt-2 flex items-center gap-2">
+              {loginStatus.state === 'success' && (
+                <span className="text-xs text-green-600 font-medium">Login successful!</span>
+              )}
+              {(loginStatus.state === 'failed' || loginStatus.state === 'timeout') && (
+                <span className="text-xs text-red-500">{loginStatus.message}</span>
+              )}
+            </div>
+            {/* Running: status message + auth code input (below button row) */}
+            {loginStatus.state === 'running' && (
+              <div className="mt-2">
+                {loginStatus.message && (
+                  <p className="text-xs text-gray-500 mb-1.5">{loginStatus.message}</p>
+                )}
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     placeholder="Paste the auth code from browser here"
@@ -332,14 +345,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                   />
                   <span className="text-[10px] text-gray-400 shrink-0">Press Enter to submit</span>
                 </div>
-              )}
-              {loginStatus.state === 'success' && (
-                <span className="text-xs text-green-600 font-medium">Login successful!</span>
-              )}
-              {(loginStatus.state === 'failed' || loginStatus.state === 'timeout') && (
-                <span className="text-xs text-red-500">{loginStatus.message}</span>
-              )}
-            </div>
+              </div>
+            )}
             {!claudeAuth?.cliInstalled && (
               <p className="text-xs text-amber-600 mt-1">
                 Claude Code CLI is not installed. It will be auto-installed during setup, or use Option 2/3 below.
@@ -347,7 +354,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
             )}
           </div>
 
-          {/* 方式二：粘贴 Setup Token */}
+          {/* Option 2: Paste Setup Token */}
           <div className="mb-2">
             <p className="text-xs text-gray-500 mb-1.5">
               Option 2: Run <code className="px-1 py-0.5 bg-gray-200 rounded text-[11px]">claude setup-token</code> on
@@ -368,7 +375,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                   setTokenResult(result)
                   if (result.valid) {
                     window.nexus.getClaudeAuthInfo().then(setClaudeAuth)
-                    // 同步更新上方 API Key 输入框的值
+                    // Sync the API Key input field value above
                     setValues((v) => ({ ...v, ANTHROPIC_API_KEY: setupToken.trim() }))
                     setSetupToken('')
                   }
@@ -386,16 +393,16 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
             )}
           </div>
 
-          {/* 方式三提示 */}
+          {/* Option 3 hint */}
           <p className="text-xs text-gray-400">
             Option 3: Fill in the Anthropic API Key field above directly.
           </p>
         </div>
 
-        {/* 分隔线 */}
+        {/* Divider */}
         <div className="my-5 border-t border-gray-200" />
 
-        {/* 数据库配置 */}
+        {/* Database configuration */}
         <div>
           <p className="text-xs text-gray-400 mb-3">
             Database (defaults usually work fine)
@@ -419,7 +426,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
           </div>
         </div>
 
-        {/* EverMemOS 配置 */}
+        {/* EverMemOS configuration */}
         <>
           <div className="my-5 border-t border-gray-200" />
           <div>
@@ -427,7 +434,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                 EverMemOS Memory System
               </h2>
 
-              {/* 模式切换 */}
+              {/* Mode toggle */}
               <div className="flex gap-4 mb-4">
                 <label className="titlebar-no-drag flex items-center gap-2 cursor-pointer">
                   <input
@@ -453,7 +460,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                 </label>
               </div>
 
-              {/* NetMind 模式 */}
+              {/* NetMind mode */}
               {emMode === 'netmind' && (
                 <>
                   {skipEverMemOS ? (
@@ -472,7 +479,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                 </>
               )}
 
-              {/* Custom 模式 */}
+              {/* Custom mode */}
               {emMode === 'custom' && (
                 <>
                   {skipEverMemOS && (
@@ -484,7 +491,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                     </div>
                   )}
 
-                  {/* 按分组渲染字段 */}
+                  {/* Render fields by group */}
                   {(['llm', 'vectorize', 'rerank', 'other'] as const).map((group) => {
                     const groupFields = emFields
                       .filter((f) => f.group === group)
@@ -542,7 +549,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                     )
                   })}
 
-                  {/* 基础设施配置（可折叠） */}
+                  {/* Infrastructure configuration (collapsible) */}
                   {(() => {
                     const infraFields = emFields
                       .filter((f) => f.group === 'infrastructure')
@@ -587,7 +594,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
             </div>
         </>
 
-        {/* 操作按钮 */}
+        {/* Action buttons */}
         <div className="mt-6 flex gap-3">
           <button
             onClick={handleStartOnly}
@@ -610,14 +617,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
           </p>
         )}
 
-        {/* 安装进度 */}
+        {/* Installation progress */}
         {steps.length > 0 && (
           <div className="mt-5 p-4 bg-gray-50 rounded-lg">
             <p className="text-xs font-medium text-gray-500 mb-2">Setup Progress</p>
             <div className="space-y-1.5">
               {steps.map((s) => (
                 <div key={s.step} className="flex items-start gap-2">
-                  {/* 状态图标 */}
+                  {/* Status icon */}
                   {s.status === 'done' && (
                     <span className="text-green-500 text-sm leading-5">&#10003;</span>
                   )}
@@ -653,7 +660,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
           </div>
         )}
 
-        {/* 错误提示 */}
+        {/* Error message */}
         {error && (
           <div className="mt-4 p-3 bg-red-50 rounded-lg">
             <p className="text-sm text-red-700">{renderWithLinks(error)}</p>
