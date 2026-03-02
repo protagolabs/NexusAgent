@@ -28,6 +28,7 @@ new_task/
 /.agents
 /.claude
 /.codex
+TeamWorkflow.md
 /.gemini
 /.opencode
 /.specstory
