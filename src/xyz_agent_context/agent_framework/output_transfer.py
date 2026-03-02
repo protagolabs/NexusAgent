@@ -155,6 +155,17 @@ def _convert_assistant_to_stream_event(message: Any) -> Dict[str, Any]:
     and only emit ToolUseBlock events (needed for the Steps panel).
     """
 
+    # 检查 AssistantMessage.error 字段（认证失败、额度不足、限流等）
+    if hasattr(message, 'error') and message.error is not None:
+        error_text = f"[Claude API Error: {message.error}]"
+        return {
+            "type": "raw_response_event",
+            "data": {
+                "type": "response.text.delta",
+                "delta": error_text
+            }
+        }
+
     if not hasattr(message, 'content') or not message.content:
         return {
             "type": "raw_response_event",

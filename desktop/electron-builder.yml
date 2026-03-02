@@ -1,0 +1,44 @@
+appId: com.narranexus.desktop
+productName: NarraNexus
+directories:
+  buildResources: resources
+  output: dist
+
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch:
+        - universal
+  icon: resources/icon.icns
+  entitlementsInherit: null
+
+dmg:
+  title: "NarraNexus"
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+linux:
+  target:
+    - target: AppImage
+    - target: deb
+  category: Development
+
+# 打包整个项目源码到 Resources/project
+extraResources:
+  - from: "../"
+    to: "project"
+    filter:
+      - "**/*"
+      - "!**/node_modules/**"
+      - "!**/.venv/**"
+      - "!**/.git/**"
+      - "!**/desktop/**"
+      - "!**/__pycache__/**"
+      - "!**/*.pyc"
+      # 注意：frontend/dist/ 不排除，打包时包含预构建的前端
