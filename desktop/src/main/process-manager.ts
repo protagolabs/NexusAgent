@@ -346,7 +346,17 @@ export class ProcessManager extends EventEmitter {
     options?: { timeout?: number }
   ): Promise<{ stdout: string; stderr: string }> {
     if (process.platform === 'darwin') {
-      const escaped = script.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+      // osascript "do shell script ... with administrator privileges" 会以 root 身份
+      // 启动全新 shell，其 PATH 极度精简（仅 /usr/bin:/bin:/usr/sbin:/sbin），
+      // 导致 docker、docker-compose、docker-credential-desktop 等工具全部找不到。
+      // 只注入已知的系统工具目录（非用户可写目录），避免 PATH 劫持提权风险。
+      const extraPaths = [
+        '/usr/local/bin',                         // Intel Mac: Docker Desktop, Homebrew
+        '/opt/homebrew/bin',                       // Apple Silicon: Homebrew
+        '/Applications/Docker.app/Contents/Resources/bin', // Docker Desktop 内置工具（docker-credential-desktop 等）
+      ].join(':')
+      const fullScript = `export PATH="${extraPaths}:$PATH" && ${script}`
+      const escaped = fullScript.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
       return this.execInProject('osascript', ['-e',
         `do shell script "${escaped}" with administrator privileges`
       ], options)
@@ -747,6 +757,9 @@ export class ProcessManager extends EventEmitter {
       }
 
       // ─── Step 6: docker compose up（MySQL + EverMemOS） ──
+      // 首次启动需拉取 mysql:8.0 镜像（~500MB），给充足的超时时间（10 分钟）。
+      // 超时过短会导致拉镜像失败 → 误判为"需要提权" → 不必要地弹出密码框。
+      const COMPOSE_TIMEOUT = 600000 // 10 minutes
       emitProgress('Start database', 'running', 'Starting MySQL container...')
       try {
         const dbOnOutput = (line: string) => this.emit('setup-progress', {
@@ -756,13 +769,13 @@ export class ProcessManager extends EventEmitter {
         let composeOk = false
         // Try V2 plugin
         try {
-          await this.spawnWithProgress('docker', ['compose', 'up', '-d'], { timeout: 120000, onOutput: dbOnOutput })
+          await this.spawnWithProgress('docker', ['compose', 'up', '-d'], { timeout: COMPOSE_TIMEOUT, onOutput: dbOnOutput })
           composeOk = true
         } catch { /* V2 not available or insufficient permissions */ }
         // Try V1 standalone command
         if (!composeOk) {
           try {
-            await this.spawnWithProgress('docker-compose', ['up', '-d'], { timeout: 120000, onOutput: dbOnOutput })
+            await this.spawnWithProgress('docker-compose', ['up', '-d'], { timeout: COMPOSE_TIMEOUT, onOutput: dbOnOutput })
             composeOk = true
           } catch { /* V1 also not available */ }
         }
@@ -772,7 +785,7 @@ export class ProcessManager extends EventEmitter {
             step: currentStep, totalSteps, label: 'Start database', status: 'running',
             message: 'Retrying with elevated privileges...'
           } as SetupProgress)
-          await this.execWithPrivileges(`cd "${PROJECT_ROOT}" && (docker compose up -d || docker-compose up -d)`, { timeout: 120000 })
+          await this.execWithPrivileges(`cd "${PROJECT_ROOT}" && (docker compose up -d || docker-compose up -d)`, { timeout: COMPOSE_TIMEOUT })
         }
         this.emit('setup-progress', {
           step: currentStep, totalSteps, label: 'Start database', status: 'done', message: 'MySQL container started'
@@ -1015,6 +1028,7 @@ export class ProcessManager extends EventEmitter {
       }
 
       // ─── Step 2: docker compose up ────────────────────
+      const COMPOSE_TIMEOUT = 600000 // 10 minutes（拉镜像可能耗时较长）
       emitProgress('Start containers', 'running', 'Starting MySQL container...')
       try {
         const onOutput = (line: string) => this.emit('setup-progress', {
@@ -1022,17 +1036,17 @@ export class ProcessManager extends EventEmitter {
         } as SetupProgress)
         let composeOk = false
         try {
-          await this.spawnWithProgress('docker', ['compose', 'up', '-d'], { timeout: 120000, onOutput })
+          await this.spawnWithProgress('docker', ['compose', 'up', '-d'], { timeout: COMPOSE_TIMEOUT, onOutput })
           composeOk = true
         } catch { /* V2 not available */ }
         if (!composeOk) {
           try {
-            await this.spawnWithProgress('docker-compose', ['up', '-d'], { timeout: 120000, onOutput })
+            await this.spawnWithProgress('docker-compose', ['up', '-d'], { timeout: COMPOSE_TIMEOUT, onOutput })
             composeOk = true
           } catch { /* V1 also not available */ }
         }
         if (!composeOk) {
-          await this.execWithPrivileges(`cd "${PROJECT_ROOT}" && (docker compose up -d || docker-compose up -d)`, { timeout: 120000 })
+          await this.execWithPrivileges(`cd "${PROJECT_ROOT}" && (docker compose up -d || docker-compose up -d)`, { timeout: COMPOSE_TIMEOUT })
         }
         this.emit('setup-progress', {
           step: currentStep, totalSteps, label: 'Start containers', status: 'done', message: 'Containers started'
