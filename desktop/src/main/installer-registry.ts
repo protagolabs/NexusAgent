@@ -264,32 +264,56 @@ async function installDockerMacOS(onOutput: (line: string) => void): Promise<voi
     onOutput('[Strategy 3/4] Homebrew install failed, trying next strategy...')
   }
 
-  // Strategy 4: Privileged Homebrew install
-  onOutput('[Strategy 4/4] Installing Homebrew + Docker (admin privileges required)...')
+  // Strategy 4: Download and install Docker Desktop directly (.dmg)
+  onOutput('[Strategy 4/4] Downloading Docker Desktop installer...')
+  const dmgPath = '/tmp/NarraNexus_Docker.dmg'
   try {
-    await execWithPrivileges(
-      'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
-      { timeout: 600000 }
-    )
-    const brewPath = process.arch === 'arm64'
-      ? '/opt/homebrew/bin/brew'
-      : '/usr/local/bin/brew'
-    onOutput(`[Strategy 4/4] Installing colima + docker CLI... (brew: ${brewPath})`)
-    await execInProject('sh', ['-c',
-      `${brewPath} install colima docker docker-compose`
-    ], { timeout: 600000 })
-    const colimaPath = brewPath.replace('/brew', '/colima')
-    onOutput('[Strategy 4/4] Starting Colima VM...')
-    await execInProject('sh', ['-c', `${colimaPath} start`], { timeout: 300000 })
-    await execInProject('docker', ['info'], { timeout: 10000 })
-    onOutput('Docker installed via privileged Homebrew + Colima')
-    resetComposeDetection()
-    return
-  } catch {
-    onOutput('[Strategy 4/4] Privileged install failed or cancelled by user')
-  }
+    const arch = process.arch === 'arm64' ? 'arm64' : 'amd64'
+    const dmgUrl = `https://desktop.docker.com/mac/main/${arch}/Docker.dmg`
+    onOutput(`[Strategy 4/4] Downloading from ${dmgUrl} (this may take a few minutes)...`)
 
-  throw new Error('Docker installation failed. Please install Docker Desktop manually.')
+    await spawnWithOutput('curl', ['-fSL', '--progress-bar', '-o', dmgPath, dmgUrl], {
+      timeout: 600000, onOutput
+    })
+
+    onOutput('[Strategy 4/4] Mounting disk image and installing Docker Desktop...')
+    await execWithPrivileges(
+      `hdiutil attach "${dmgPath}" -nobrowse -quiet`
+      + ` && cp -R "/Volumes/Docker/Docker.app" /Applications/`
+      + ` && hdiutil detach "/Volumes/Docker" -quiet`,
+      { timeout: 120000 }
+    )
+
+    // Clean up dmg
+    try { await execInProject('rm', ['-f', dmgPath], { timeout: 5000 }) } catch { /* ignore */ }
+
+    onOutput('[Strategy 4/4] Launching Docker Desktop...')
+    await execInProject('open', ['-a', 'Docker'], { timeout: 10000 })
+
+    // Wait for Docker daemon to become ready
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 2000))
+      try {
+        await execInProject('docker', ['info'], { timeout: 5000 })
+        onOutput('Docker Desktop installed and ready')
+        resetComposeDetection()
+        return
+      } catch { /* not ready yet */ }
+      if (i % 5 === 4) {
+        onOutput(`[Strategy 4/4] Waiting for Docker Desktop to initialize... (${(i + 1) * 2}s)`)
+      }
+    }
+    throw new Error('Docker Desktop installed but failed to start within 120s')
+  } catch (err) {
+    // Clean up on failure
+    try {
+      await execInProject('sh', ['-c',
+        `rm -f "${dmgPath}"; hdiutil detach "/Volumes/Docker" 2>/dev/null || true`
+      ], { timeout: 5000 })
+    } catch { /* ignore */ }
+    onOutput('[Strategy 4/4] Docker Desktop download/install failed')
+    throw err
+  }
 }
 
 async function installDockerLinux(onOutput: (line: string) => void): Promise<void> {
