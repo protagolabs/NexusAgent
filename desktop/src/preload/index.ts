@@ -12,10 +12,6 @@ import { IPC } from '../shared/ipc-channels'
 // ─── Type Definitions (used by Renderer side) ────────────────────
 
 export interface NexusAPI {
-  // Dependency detection
-  checkDependencies: () => Promise<unknown[]>
-  installDependency: (depId: string) => Promise<{ success: boolean; output: string }>
-
   // Environment variables
   getEnv: () => Promise<{ config: Record<string, string>; fields: unknown[] }>
   setEnv: (updates: Record<string, string>) => Promise<{ success: boolean }>
@@ -43,10 +39,15 @@ export interface NexusAPI {
   // Database
   initDatabase: () => Promise<{ success: boolean; output: string }>
 
-  // One-click auto setup
-  autoSetup: (options?: { skipEverMemOS?: boolean }) => Promise<{ success: boolean; error?: string }>
-  quickStart: (options?: { skipEverMemOS?: boolean }) => Promise<{ success: boolean; error?: string }>
-  onSetupProgress: (callback: (progress: unknown) => void) => () => void
+  // Three-phase setup
+  runPreflight: () => Promise<unknown>
+  installDep: (id: string) => Promise<{ success: boolean; error?: string }>
+  retryDep: (id: string) => Promise<{ success: boolean; error?: string }>
+  skipDep: (id: string) => Promise<{ success: boolean }>
+  installAllDeps: (missingIds: string[]) => Promise<{ success: boolean; failedId?: string }>
+  runLaunch: (options?: { skipEverMemOS?: boolean }) => Promise<{ success: boolean; error?: string }>
+  onInstallerUpdate: (callback: (state: unknown) => void) => () => void
+  onLaunchStep: (callback: (step: unknown) => void) => () => void
 
   // Claude Code authentication
   getClaudeAuthInfo: () => Promise<unknown>
@@ -72,10 +73,6 @@ export interface NexusAPI {
 // ─── Expose API ───────────────────────────────────────
 
 const nexusAPI: NexusAPI = {
-  // ─── Dependency Detection ─────────────────────────────────────
-  checkDependencies: () => ipcRenderer.invoke(IPC.CHECK_DEPENDENCIES),
-  installDependency: (depId) => ipcRenderer.invoke(IPC.INSTALL_DEPENDENCY, depId),
-
   // ─── Environment Variables ─────────────────────────────────────
   getEnv: () => ipcRenderer.invoke(IPC.GET_ENV),
   setEnv: (updates) => ipcRenderer.invoke(IPC.SET_ENV, updates),
@@ -103,13 +100,22 @@ const nexusAPI: NexusAPI = {
   // ─── Database ───────────────────────────────────────
   initDatabase: () => ipcRenderer.invoke(IPC.INIT_DATABASE),
 
-  // ─── One-Click Auto Setup ─────────────────────────────────
-  autoSetup: (options?) => ipcRenderer.invoke(IPC.AUTO_SETUP, options),
-  quickStart: (options?) => ipcRenderer.invoke(IPC.QUICK_START, options),
-  onSetupProgress: (callback) => {
-    const handler = (_event: unknown, progress: unknown) => callback(progress)
-    ipcRenderer.on(IPC.ON_SETUP_PROGRESS, handler)
-    return () => ipcRenderer.removeListener(IPC.ON_SETUP_PROGRESS, handler)
+  // ─── Three-Phase Setup ─────────────────────────────────
+  runPreflight: () => ipcRenderer.invoke(IPC.RUN_PREFLIGHT),
+  installDep: (id) => ipcRenderer.invoke(IPC.INSTALL_DEP, id),
+  retryDep: (id) => ipcRenderer.invoke(IPC.RETRY_DEP, id),
+  skipDep: (id) => ipcRenderer.invoke(IPC.SKIP_DEP, id),
+  installAllDeps: (missingIds) => ipcRenderer.invoke(IPC.INSTALL_ALL_DEPS, missingIds),
+  runLaunch: (options?) => ipcRenderer.invoke(IPC.RUN_LAUNCH, options),
+  onInstallerUpdate: (callback) => {
+    const handler = (_event: unknown, state: unknown) => callback(state)
+    ipcRenderer.on(IPC.ON_INSTALLER_UPDATE, handler)
+    return () => ipcRenderer.removeListener(IPC.ON_INSTALLER_UPDATE, handler)
+  },
+  onLaunchStep: (callback) => {
+    const handler = (_event: unknown, step: unknown) => callback(step)
+    ipcRenderer.on(IPC.ON_LAUNCH_STEP, handler)
+    return () => ipcRenderer.removeListener(IPC.ON_LAUNCH_STEP, handler)
   },
 
   // ─── Claude Code Authentication ─────────────────────────────

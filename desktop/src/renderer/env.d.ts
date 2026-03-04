@@ -3,10 +3,66 @@
  * @description Renderer process global type declarations
  */
 
+// ─── Three-Phase Setup Types ───────────────────────────────
+
+type DockerState = 'not_installed' | 'not_running' | 'starting' | 'healthy'
+
+interface PreflightItem {
+  id: string
+  label: string
+  status: 'ok' | 'missing' | 'warning'
+  version?: string
+  hint?: string
+  canAutoInstall: boolean
+  manualUrl?: string
+  dockerState?: DockerState
+}
+
+interface SystemInfo {
+  platform: string
+  arch: string
+  freeDiskGb: number
+  networkOk: boolean
+}
+
+interface PreflightResult {
+  items: PreflightItem[]
+  systemInfo: SystemInfo
+  allReady: boolean
+}
+
+type InstallerStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped'
+
+interface InstallerState {
+  id: string
+  label: string
+  status: InstallerStatus
+  currentOutput?: string
+  error?: string
+  canSkip: boolean
+}
+
+type LaunchStepId =
+  | 'wait-docker'
+  | 'compose-up'
+  | 'wait-mysql'
+  | 'init-tables'
+  | 'wait-evermemos'
+  | 'start-services'
+
+type LaunchStepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped'
+
+interface LaunchStep {
+  id: LaunchStepId
+  label: string
+  status: LaunchStepStatus
+  message?: string
+}
+
+// ─── Nexus API ───────────────────────────────
+
 /** Nexus API types exposed by Preload */
 interface NexusAPI {
-  checkDependencies: () => Promise<DependencyStatus[]>
-  installDependency: (depId: string) => Promise<{ success: boolean; output: string }>
   getEnv: () => Promise<{ config: Record<string, string>; fields: EnvField[] }>
   setEnv: (updates: Record<string, string>) => Promise<{ success: boolean }>
   validateEnv: () => Promise<{ valid: boolean; missing: string[]; warnings: string[] }>
@@ -22,15 +78,26 @@ interface NexusAPI {
   getServiceStatus: () => Promise<ProcessInfo[]>
   getHealthStatus: () => Promise<OverallHealth>
   initDatabase: () => Promise<{ success: boolean; output: string }>
-  autoSetup: (options?: { skipEverMemOS?: boolean }) => Promise<{ success: boolean; error?: string }>
-  quickStart: (options?: { skipEverMemOS?: boolean }) => Promise<{ success: boolean; error?: string }>
-  onSetupProgress: (callback: (progress: SetupProgress) => void) => () => void
+
+  // Three-phase setup
+  runPreflight: () => Promise<PreflightResult>
+  installDep: (id: string) => Promise<{ success: boolean; error?: string }>
+  retryDep: (id: string) => Promise<{ success: boolean; error?: string }>
+  skipDep: (id: string) => Promise<{ success: boolean }>
+  installAllDeps: (missingIds: string[]) => Promise<{ success: boolean; failedId?: string }>
+  runLaunch: (options?: { skipEverMemOS?: boolean }) => Promise<{ success: boolean; error?: string }>
+  onInstallerUpdate: (callback: (state: InstallerState) => void) => () => void
+  onLaunchStep: (callback: (step: LaunchStep) => void) => () => void
+
+  // Claude Code authentication
   getClaudeAuthInfo: () => Promise<ClaudeAuthInfo>
   startClaudeLogin: () => Promise<LoginProcessStatus>
   cancelClaudeLogin: () => Promise<{ success: boolean }>
   sendClaudeLoginInput: (text: string) => Promise<{ success: boolean }>
   saveSetupToken: (token: string) => Promise<{ valid: boolean; message: string }>
   onClaudeLoginStatus: (callback: (status: LoginProcessStatus) => void) => () => void
+
+  // Miscellaneous
   openExternal: (url: string) => Promise<void>
   getSetupState: () => Promise<{ setupComplete: boolean }>
   setSetupComplete: () => Promise<{ success: boolean }>
@@ -41,17 +108,7 @@ interface NexusAPI {
   onNavigate: (callback: (page: string) => void) => () => void
 }
 
-interface DependencyStatus {
-  id: string
-  name: string
-  required: boolean
-  installed: boolean
-  version: string | null
-  minVersion: string | null
-  installHint: string
-  autoInstallCommand: string[] | null
-  downloadUrl: string | null
-}
+// ─── Other Types ───────────────────────────────
 
 interface EnvField {
   key: string
@@ -109,14 +166,6 @@ interface LogEntry {
   timestamp: number
   stream: 'stdout' | 'stderr'
   message: string
-}
-
-interface SetupProgress {
-  step: number
-  totalSteps: number
-  label: string
-  status: 'running' | 'done' | 'error' | 'skipped'
-  message?: string
 }
 
 interface ClaudeAuthStatus {

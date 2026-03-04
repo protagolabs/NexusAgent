@@ -87,6 +87,52 @@ async function composeCmd(composePath: string): Promise<{ cmd: string; baseArgs:
 
 // ─── Docker Status Detection ─────────────────────────────────
 
+export type DockerState = 'not_installed' | 'not_running' | 'starting' | 'healthy'
+
+/**
+ * Fine-grained Docker daemon state detection
+ *
+ * docker --version fail   → not_installed
+ * docker info success     → healthy
+ * docker info stderr 500  → starting (daemon initializing, need to wait)
+ * docker info other error → not_running (daemon not started)
+ */
+export async function detectDockerState(): Promise<DockerState> {
+  // Step 1: check if docker CLI is installed
+  const versionResult = await execSafe('docker', ['--version'], { timeout: 5000 })
+  if (!versionResult.success) return 'not_installed'
+
+  // Step 2: check daemon status
+  const infoResult = await execSafe('docker', ['info'], { timeout: 10000 })
+  if (infoResult.success) return 'healthy'
+
+  // Distinguish between "starting" (500 error) and "not running"
+  const errMsg = infoResult.stderr.toLowerCase()
+  if (errMsg.includes('500') || errMsg.includes('is the docker daemon running')) {
+    // Could be either starting or not running — check if Docker Desktop/containerd process exists
+    const isStarting = errMsg.includes('500')
+    return isStarting ? 'starting' : 'not_running'
+  }
+
+  return 'not_running'
+}
+
+/**
+ * Wait for Docker daemon to become healthy (poll detectDockerState)
+ * @param maxWaitMs Maximum wait time in milliseconds (default 120s)
+ * @param intervalMs Poll interval in milliseconds (default 2s)
+ */
+export async function waitForDockerReady(maxWaitMs = 120000, intervalMs = 2000): Promise<boolean> {
+  const deadline = Date.now() + maxWaitMs
+  while (Date.now() < deadline) {
+    const state = await detectDockerState()
+    if (state === 'healthy') return true
+    if (state === 'not_installed') return false
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+  return false
+}
+
 /** Check if Docker daemon is ready */
 export async function isDockerReady(): Promise<boolean> {
   const result = await execSafe('docker', ['info'], { timeout: 10000 })

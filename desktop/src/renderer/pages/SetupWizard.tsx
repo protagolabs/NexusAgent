@@ -1,17 +1,24 @@
 /**
  * @file SetupWizard.tsx
- * @description Single-page environment configuration — .env form + one-click install progress bar
+ * @description Three-phase setup wizard: Config → Preflight → Install → Launch
  *
- * After the user fills in API Keys and database configuration, clicking "Apply & Start",
- * automatically executes all environment installation and service startup procedures.
+ * Phase flow:
+ *   config → [click "Start"] → preflight → [allReady] → launch
+ *                                         → [missing]  → install → [done] → launch
+ *                                                                 → launch → [success] → done
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import AsciiBanner from '../components/AsciiBanner'
+import PreflightView from '../components/setup/PreflightView'
+import GuidedInstallView from '../components/setup/GuidedInstallView'
+import ServiceLaunchView from '../components/setup/ServiceLaunchView'
 
 interface SetupWizardProps {
   onComplete: () => void
 }
+
+type SetupPhase = 'config' | 'preflight' | 'install' | 'launch'
 
 /** External link mapping */
 const KEY_LINKS: Record<string, { label: string; url: string }> = {
@@ -22,7 +29,7 @@ const KEY_LINKS: Record<string, { label: string; url: string }> = {
   LLM_API_KEY: { label: 'Get Key', url: 'https://openrouter.ai/keys' }
 }
 
-/** NetMind one-click configuration presets (consistent with run.sh auto-configure logic) */
+/** NetMind one-click configuration presets */
 const NETMIND_PRESETS: Record<string, string> = {
   LLM_MODEL: 'deepseek-ai/DeepSeek-V3.2',
   LLM_BASE_URL: 'https://api.netmind.ai/inference-api/openai/v1',
@@ -35,7 +42,6 @@ const NETMIND_PRESETS: Record<string, string> = {
   RERANK_MODEL: ''
 }
 
-/** EverMemOS group configuration */
 const EM_GROUP_LABELS: Record<string, string> = {
   llm: 'LLM',
   vectorize: 'Embedding',
@@ -44,32 +50,24 @@ const EM_GROUP_LABELS: Record<string, string> = {
   other: 'Other'
 }
 
-/** Render URLs in text as clickable links */
-const renderWithLinks = (text: string): React.ReactNode => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g
-  const parts = text.split(urlRegex)
-  if (parts.length === 1) return text
-  return parts.map((part, i) =>
-    urlRegex.test(part) ? (
-      <a
-        key={i}
-        onClick={(e) => { e.preventDefault(); window.nexus.openExternal(part) }}
-        className="underline text-blue-600 hover:text-blue-800 cursor-pointer"
-      >
-        {part}
-      </a>
-    ) : (
-      <React.Fragment key={i}>{part}</React.Fragment>
-    )
-  )
-}
+/** Phase labels for the step indicator */
+const PHASE_LABELS: { phase: SetupPhase; label: string }[] = [
+  { phase: 'config', label: 'Configure' },
+  { phase: 'preflight', label: 'Check' },
+  { phase: 'install', label: 'Install' },
+  { phase: 'launch', label: 'Launch' }
+]
 
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
+  const [phase, setPhase] = useState<SetupPhase>('config')
+
+  // Config state
   const [fields, setFields] = useState<EnvField[]>([])
   const [values, setValues] = useState<Record<string, string>>({})
-  const [running, setRunning] = useState(false)
-  const [steps, setSteps] = useState<SetupProgress[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [emFields, setEmFields] = useState<EverMemOSEnvField[]>([])
+  const [emValues, setEmValues] = useState<Record<string, string>>({})
+  const [emAdvancedOpen, setEmAdvancedOpen] = useState(false)
+  const [emMode, setEmMode] = useState<'netmind' | 'custom'>('netmind')
 
   // Claude Code authentication state
   const [claudeAuth, setClaudeAuth] = useState<ClaudeAuthInfo | null>(null)
@@ -77,32 +75,31 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   const [setupToken, setSetupToken] = useState('')
   const [tokenResult, setTokenResult] = useState<{ valid: boolean; message: string } | null>(null)
 
-  // EverMemOS state
-  const [emFields, setEmFields] = useState<EverMemOSEnvField[]>([])
-  const [emValues, setEmValues] = useState<Record<string, string>>({})
-  const [emAdvancedOpen, setEmAdvancedOpen] = useState(false)
-  const [emMode, setEmMode] = useState<'netmind' | 'custom'>('netmind')
+  // Preflight state
+  const [preflightResult, setPreflightResult] = useState<PreflightResult | null>(null)
+  const [checking, setChecking] = useState(false)
 
-  // Load .env configuration
+  // Install state
+  const [missingIds, setMissingIds] = useState<string[]>([])
+
+  // Load .env and EverMemOS config
   useEffect(() => {
     window.nexus.getEnv().then(({ config, fields: f }) => {
       setFields(f)
       setValues(config)
     })
-
-    // Load EverMemOS .env configuration (always displayed, no need to check if directory exists)
     window.nexus.getEverMemOSEnv().then(({ config, fields: f }) => {
       setEmFields(f)
       setEmValues(config)
     })
   }, [])
 
-  // Load Claude Code authentication status
+  // Load Claude Code auth status
   useEffect(() => {
     window.nexus.getClaudeAuthInfo().then(setClaudeAuth)
   }, [])
 
-  // Listen for Claude Code login status updates
+  // Listen for Claude login status
   useEffect(() => {
     const unsub = window.nexus.onClaudeLoginStatus((status: LoginProcessStatus) => {
       setLoginStatus(status)
@@ -113,24 +110,20 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     return unsub
   }, [])
 
-  // Listen for installation progress
-  useEffect(() => {
-    const unsubscribe = window.nexus.onSetupProgress((progress: SetupProgress) => {
-      setSteps((prev) => {
-        // Replace progress for the same step (status update)
-        const existing = prev.findIndex((s) => s.step === progress.step)
-        if (existing >= 0) {
-          const next = [...prev]
-          next[existing] = progress
-          return next
-        }
-        return [...prev, progress]
-      })
-    })
-    return unsubscribe
-  }, [])
+  // Compute derived state
+  const PLACEHOLDER_VALUES = ['sk-or-v1-xxxx', 'xxxxx']
+  const requiredFilled = fields
+    .filter((f) => f.required)
+    .every((f) => values[f.key]?.trim())
 
-  /** Assemble the final EverMemOS configuration to be written */
+  const emConfigured = emMode === 'netmind'
+    ? !!values['NETMIND_API_KEY']?.trim()
+    : emFields.filter((f) => f.required).every((f) => {
+        const v = emValues[f.key]?.trim()
+        return v && !PLACEHOLDER_VALUES.includes(v)
+      })
+  const skipEverMemOS = !emConfigured
+
   const buildFinalEmValues = (): Record<string, string> => {
     if (emMode === 'netmind') {
       return {
@@ -143,67 +136,66 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     return emValues
   }
 
-  /** Full installation flow: save .env -> execute autoSetup (12 steps) */
-  const handleInstallAndStart = async () => {
-    setRunning(true)
-    setError(null)
-    setSteps([])
-
+  // Phase transitions
+  const handleStartSetup = async () => {
+    // Save config first
     await window.nexus.setEnv(values)
     await window.nexus.setEverMemOSEnv(buildFinalEmValues())
-
-    const result = await window.nexus.autoSetup({ skipEverMemOS })
-
-    if (result.success) {
-      await window.nexus.setSetupComplete()
-      onComplete()
-    } else {
-      setError(result.error ?? 'An unknown error occurred during setup')
-      setRunning(false)
-    }
+    // Move to preflight
+    setPhase('preflight')
+    runPreflight()
   }
 
-  /** Quick start: skip installation steps, bring up Docker + services (with progress feedback) */
-  const handleStartOnly = async () => {
-    setRunning(true)
-    setError(null)
-    setSteps([])
-
-    await window.nexus.setEnv(values)
-    await window.nexus.setEverMemOSEnv(buildFinalEmValues())
-
-    const result = await window.nexus.quickStart({ skipEverMemOS })
-    if (result.success) {
-      await window.nexus.setSetupComplete()
-      onComplete()
-    } else {
-      setError(result.error ?? 'Start failed. Try "Install & Start" if this is the first run.')
-      setRunning(false)
+  const runPreflight = useCallback(async () => {
+    setChecking(true)
+    try {
+      const result = await window.nexus.runPreflight() as PreflightResult
+      setPreflightResult(result)
+    } catch (err) {
+      console.error('Preflight failed:', err)
     }
+    setChecking(false)
+  }, [])
+
+  const handleProceedToInstall = (ids: string[]) => {
+    // Map preflight item IDs to installer IDs
+    // Preflight items: docker, uv, node, claude, python
+    // Installer items: docker, uv, claude, python-deps, evermemos-clone, evermemos-deps, frontend-build
+    const installerIds: string[] = []
+    if (ids.includes('docker')) installerIds.push('docker')
+    if (ids.includes('uv')) installerIds.push('uv')
+    if (ids.includes('claude')) installerIds.push('claude')
+    // Always include python-deps and frontend-build if uv is needed or python is missing
+    if (ids.includes('uv') || ids.includes('python')) installerIds.push('python-deps')
+    // Always try to build frontend and install python-deps
+    installerIds.push('python-deps', 'frontend-build')
+    if (!skipEverMemOS) {
+      installerIds.push('evermemos-clone', 'evermemos-deps')
+    }
+    // Deduplicate
+    const unique = [...new Set(installerIds)]
+    setMissingIds(unique)
+    setPhase('install')
   }
 
-  // Check if required fields are filled
-  const PLACEHOLDER_VALUES = ['sk-or-v1-xxxx', 'xxxxx']
-  const requiredFilled = fields
-    .filter((f) => f.required)
-    .every((f) => values[f.key]?.trim())
+  const handleProceedToLaunch = () => {
+    setPhase('launch')
+  }
 
-  // Check if EverMemOS is configured
-  const emConfigured = emMode === 'netmind'
-    ? !!values['NETMIND_API_KEY']?.trim()
-    : emFields.filter((f) => f.required).every((f) => {
-        const v = emValues[f.key]?.trim()
-        return v && !PLACEHOLDER_VALUES.includes(v)
-      })
-  const skipEverMemOS = !emConfigured
+  const handleInstallComplete = () => {
+    setPhase('launch')
+  }
 
-  // Group: API Keys and Database configuration
+  const handleLaunchComplete = async () => {
+    await window.nexus.setSetupComplete()
+    onComplete()
+  }
+
+  // Field groups
   const apiFields = fields.filter(
     (f) => f.key.includes('API_KEY') || f.key.includes('SECRET') || f.key.includes('BASE_URL')
   )
-  const dbFields = fields.filter(
-    (f) => f.key.startsWith('DB_')
-  )
+  const dbFields = fields.filter((f) => f.key.startsWith('DB_'))
 
   return (
     <div className="flex flex-col h-screen bg-white">
@@ -215,468 +207,451 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
         <AsciiBanner />
       </div>
 
-      {/* Form content */}
-      <div className="flex-1 overflow-y-auto px-8 pb-6">
-        {/* API Keys */}
-        <div className="space-y-3">
-          {apiFields.map((field) => (
-            <div key={field.key}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {field.label}
-                {field.required && <span className="text-red-500 ml-0.5">*</span>}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={values[field.key] || ''}
-                  onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                  placeholder={field.placeholder}
-                  disabled={running}
-                  className="titlebar-no-drag flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
-                />
-                {KEY_LINKS[field.key] && (
-                  <button
-                    onClick={() => window.nexus.openExternal(KEY_LINKS[field.key].url)}
-                    className="titlebar-no-drag px-3 py-2 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 whitespace-nowrap transition-colors"
-                  >
-                    {KEY_LINKS[field.key].label}
-                  </button>
-                )}
-              </div>
-              {(field.key === 'ANTHROPIC_API_KEY' || field.key === 'ANTHROPIC_BASE_URL') && (
-                <p className="text-xs text-gray-400 mt-1">
-                  If you have already logged in via Claude Code CLI locally, you can leave this empty.
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Claude Code authentication panel */}
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-sm font-medium text-gray-700 mb-3">Claude Code Authentication</p>
-
-          {/* Status indicator — only show when CLI is installed */}
-          {claudeAuth?.cliInstalled && (
-            <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-xs">
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
-                CLI: {claudeAuth.cliVersion || 'installed'}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className={`inline-block w-1.5 h-1.5 rounded-full ${
-                  claudeAuth.authStatus.state === 'logged_in' ? 'bg-green-500' :
-                  claudeAuth.authStatus.state === 'expired' ? 'bg-yellow-500' :
-                  'bg-gray-400'
+      {/* Phase indicator */}
+      <div className="px-8 pb-4">
+        <div className="flex gap-1">
+          {PHASE_LABELS.map(({ phase: p, label }, i) => {
+            const isActive = p === phase
+            const isPast = PHASE_LABELS.findIndex((pl) => pl.phase === phase) > i
+            return (
+              <div key={p} className="flex items-center gap-1 flex-1">
+                <div className={`h-1 flex-1 rounded-full transition-colors ${
+                  isActive ? 'bg-blue-500' : isPast ? 'bg-green-400' : 'bg-gray-200'
                 }`} />
-                {claudeAuth.authStatus.state === 'logged_in' && (
-                  <>Logged in{claudeAuth.authStatus.expiresAt
-                    ? ` (expires: ${new Date(claudeAuth.authStatus.expiresAt).toLocaleDateString()})`
-                    : ''
-                  }</>
-                )}
-                {claudeAuth.authStatus.state === 'expired' && 'Login expired'}
-                {claudeAuth.authStatus.state === 'not_logged_in' && 'Not logged in'}
-              </span>
-              {claudeAuth.hasApiKey && (
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
-                  API Key configured
+                <span className={`text-[10px] shrink-0 ${
+                  isActive ? 'text-blue-600 font-medium' : isPast ? 'text-green-600' : 'text-gray-400'
+                }`}>
+                  {label}
                 </span>
-              )}
-            </div>
-          )}
-
-          {/* Option 1: Browser OAuth login — only show when CLI is installed */}
-          {claudeAuth?.cliInstalled && (
-            <div className="mb-3">
-              <p className="text-xs text-gray-500 mb-2">
-                Option 1 (Recommended): Click below to open browser and authorize with your Anthropic account.
-              </p>
-              {/* Button row */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setLoginStatus({ state: 'running', message: 'Opening browser...' })
-                    window.nexus.startClaudeLogin()
-                  }}
-                  disabled={running || loginStatus.state === 'running'}
-                  className="titlebar-no-drag px-4 py-1.5 text-xs font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loginStatus.state === 'running' ? 'Waiting for browser...' :
-                   claudeAuth?.authStatus.state === 'logged_in' ? 'Re-login' :
-                   'Login with Claude Code'}
-                </button>
-                {loginStatus.state === 'running' && (
-                  <>
-                    <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                    <button
-                      onClick={() => window.nexus.cancelClaudeLogin()}
-                      className="titlebar-no-drag text-xs text-gray-500 hover:text-gray-700 underline"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                )}
-                {loginStatus.state === 'success' && (
-                  <span className="text-xs text-green-600 font-medium">Login successful!</span>
-                )}
-                {(loginStatus.state === 'failed' || loginStatus.state === 'timeout') && (
-                  <span className="text-xs text-red-500">{loginStatus.message}</span>
-                )}
               </div>
-              {/* Running: status message + auth code input (below button row) */}
-              {loginStatus.state === 'running' && (
-                <div className="mt-2">
-                  {loginStatus.message && (
-                    <p className="text-xs text-gray-500 mb-1.5">{loginStatus.message}</p>
-                  )}
-                  <div className="flex items-center gap-2">
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Content area */}
+      <div className="flex-1 overflow-y-auto px-8 pb-6">
+        {/* ─── Phase: Config ─────────────────────────── */}
+        {phase === 'config' && (
+          <>
+            {/* API Keys */}
+            <div className="space-y-3">
+              {apiFields.map((field) => (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                  <div className="flex gap-2">
                     <input
-                      type="text"
-                      placeholder="Paste the auth code from browser here"
-                      className="titlebar-no-drag flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          const value = (e.target as HTMLInputElement).value.trim()
-                          if (value) {
-                            window.nexus.sendClaudeLoginInput(value)
-                            ;(e.target as HTMLInputElement).value = ''
-                          }
-                        }
-                      }}
+                      type="password"
+                      value={values[field.key] || ''}
+                      onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                      placeholder={field.placeholder}
+                      className="titlebar-no-drag flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                     />
-                    <span className="text-[10px] text-gray-400 shrink-0">Press Enter to submit</span>
+                    {KEY_LINKS[field.key] && (
+                      <button
+                        onClick={() => window.nexus.openExternal(KEY_LINKS[field.key].url)}
+                        className="titlebar-no-drag px-3 py-2 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 whitespace-nowrap transition-colors"
+                      >
+                        {KEY_LINKS[field.key].label}
+                      </button>
+                    )}
                   </div>
+                  {(field.key === 'ANTHROPIC_API_KEY' || field.key === 'ANTHROPIC_BASE_URL') && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      If you have already logged in via Claude Code CLI locally, you can leave this empty.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Claude Code authentication panel */}
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-3">Claude Code Authentication</p>
+
+              {claudeAuth?.cliInstalled && (
+                <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-xs">
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
+                    CLI: {claudeAuth.cliVersion || 'installed'}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                      claudeAuth.authStatus.state === 'logged_in' ? 'bg-green-500' :
+                      claudeAuth.authStatus.state === 'expired' ? 'bg-yellow-500' :
+                      'bg-gray-400'
+                    }`} />
+                    {claudeAuth.authStatus.state === 'logged_in' && (
+                      <>Logged in{claudeAuth.authStatus.expiresAt
+                        ? ` (expires: ${new Date(claudeAuth.authStatus.expiresAt).toLocaleDateString()})`
+                        : ''
+                      }</>
+                    )}
+                    {claudeAuth.authStatus.state === 'expired' && 'Login expired'}
+                    {claudeAuth.authStatus.state === 'not_logged_in' && 'Not logged in'}
+                  </span>
+                  {claudeAuth.hasApiKey && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
+                      API Key configured
+                    </span>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Hint when CLI is not installed */}
-          {!claudeAuth?.cliInstalled && (
-            <p className="text-xs text-gray-400 mb-3">
-              OAuth login will be available after Claude Code is installed during setup. You can use Option 1/2 below for now.
-            </p>
-          )}
-
-          {/* Option: Paste Setup Token */}
-          <div className="mb-2">
-            <p className="text-xs text-gray-500 mb-1.5">
-              Option {claudeAuth?.cliInstalled ? '2' : '1'}: Run <code className="px-1 py-0.5 bg-gray-200 rounded text-[11px]">claude setup-token</code> on
-              another machine and paste the token below.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={setupToken}
-                onChange={(e) => { setSetupToken(e.target.value); setTokenResult(null) }}
-                placeholder="sk-ant-oat01-..."
-                disabled={running}
-                className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
-              />
-              <button
-                onClick={async () => {
-                  const result = await window.nexus.saveSetupToken(setupToken)
-                  setTokenResult(result)
-                  if (result.valid) {
-                    window.nexus.getClaudeAuthInfo().then(setClaudeAuth)
-                    // Sync the API Key input field value above
-                    setValues((v) => ({ ...v, ANTHROPIC_API_KEY: setupToken.trim() }))
-                    setSetupToken('')
-                  }
-                }}
-                disabled={running || !setupToken.trim()}
-                className="titlebar-no-drag px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                Save
-              </button>
-            </div>
-            {tokenResult && (
-              <p className={`text-xs mt-1 ${tokenResult.valid ? 'text-green-600' : 'text-red-500'}`}>
-                {tokenResult.valid ? 'Token saved!' : tokenResult.message}
-              </p>
-            )}
-          </div>
-
-          {/* Option: Fill API Key directly */}
-          <p className="text-xs text-gray-400">
-            Option {claudeAuth?.cliInstalled ? '3' : '2'}: Fill in the Anthropic API Key field above directly.
-          </p>
-        </div>
-
-        {/* Divider */}
-        <div className="my-5 border-t border-gray-200" />
-
-        {/* Database configuration */}
-        <div>
-          <p className="text-xs text-gray-400 mb-3">
-            Database (defaults usually work fine)
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            {dbFields.map((field) => (
-              <div key={field.key}>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
-                  {field.label}
-                </label>
-                <input
-                  type={field.key === 'DB_PASSWORD' ? 'password' : 'text'}
-                  value={values[field.key] || ''}
-                  onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                  placeholder={field.placeholder}
-                  disabled={running}
-                  className="titlebar-no-drag w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* EverMemOS configuration */}
-        <>
-          <div className="my-5 border-t border-gray-200" />
-          <div>
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">
-                EverMemOS Memory System
-              </h2>
-
-              {/* Mode toggle */}
-              <div className="flex gap-4 mb-4">
-                <label className="titlebar-no-drag flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="emMode"
-                    checked={emMode === 'netmind'}
-                    onChange={() => setEmMode('netmind')}
-                    disabled={running}
-                    className="accent-blue-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">NetMind.AI Power</span>
-                </label>
-                <label className="titlebar-no-drag flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="emMode"
-                    checked={emMode === 'custom'}
-                    onChange={() => setEmMode('custom')}
-                    disabled={running}
-                    className="accent-blue-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Custom Configuration</span>
-                </label>
-              </div>
-
-              {/* NetMind mode */}
-              {emMode === 'netmind' && (
-                <>
-                  {skipEverMemOS ? (
-                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <p className="text-xs text-amber-700">
-                        NetMind API Key is not configured above. Fill it in to enable EverMemOS memory features.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-xs text-green-700">
-                        Will use the NetMind API Key above to power: LLM (DeepSeek-V3.2), Embedding (bge-m3). Rerank disabled. No extra configuration needed.
-                      </p>
+              {/* OAuth login — only show when CLI is installed */}
+              {claudeAuth?.cliInstalled && (
+                <div className="mb-3">
+                  <p className="text-xs text-gray-500 mb-2">
+                    Option 1 (Recommended): Click below to open browser and authorize with your Anthropic account.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setLoginStatus({ state: 'running', message: 'Opening browser...' })
+                        window.nexus.startClaudeLogin()
+                      }}
+                      disabled={loginStatus.state === 'running'}
+                      className="titlebar-no-drag px-4 py-1.5 text-xs font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {loginStatus.state === 'running' ? 'Waiting for browser...' :
+                       claudeAuth?.authStatus.state === 'logged_in' ? 'Re-login' :
+                       'Login with Claude Code'}
+                    </button>
+                    {loginStatus.state === 'running' && (
+                      <>
+                        <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                        <button
+                          onClick={() => window.nexus.cancelClaudeLogin()}
+                          className="titlebar-no-drag text-xs text-gray-500 hover:text-gray-700 underline"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                    {loginStatus.state === 'success' && (
+                      <span className="text-xs text-green-600 font-medium">Login successful!</span>
+                    )}
+                    {(loginStatus.state === 'failed' || loginStatus.state === 'timeout') && (
+                      <span className="text-xs text-red-500">{loginStatus.message}</span>
+                    )}
+                  </div>
+                  {loginStatus.state === 'running' && (
+                    <div className="mt-2">
+                      {loginStatus.message && (
+                        <p className="text-xs text-gray-500 mb-1.5">{loginStatus.message}</p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Paste the auth code from browser here"
+                          className="titlebar-no-drag flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const value = (e.target as HTMLInputElement).value.trim()
+                              if (value) {
+                                window.nexus.sendClaudeLoginInput(value)
+                                ;(e.target as HTMLInputElement).value = ''
+                              }
+                            }
+                          }}
+                        />
+                        <span className="text-[10px] text-gray-400 shrink-0">Press Enter to submit</span>
+                      </div>
                     </div>
                   )}
-                </>
+                </div>
               )}
 
-              {/* Custom mode */}
-              {emMode === 'custom' && (
-                <>
-                  {skipEverMemOS && (
-                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <p className="text-xs text-amber-700">
-                        LLM API Key is not configured. EverMemOS will not be cloned, its dependencies will not be installed, and the memory system will not start.
-                        To enable memory features, fill in the LLM API Key below.
-                      </p>
-                    </div>
-                  )}
+              {!claudeAuth?.cliInstalled && (
+                <p className="text-xs text-gray-400 mb-3">
+                  OAuth login will be available after Claude Code is installed during setup. You can use Option 1/2 below for now.
+                </p>
+              )}
 
-                  {/* Render fields by group */}
-                  {(['llm', 'vectorize', 'rerank', 'other'] as const).map((group) => {
-                    const groupFields = emFields
-                      .filter((f) => f.group === group)
-                      .sort((a, b) => a.order - b.order)
-                    if (groupFields.length === 0) return null
+              {/* Paste Setup Token */}
+              <div className="mb-2">
+                <p className="text-xs text-gray-500 mb-1.5">
+                  Option {claudeAuth?.cliInstalled ? '2' : '1'}: Run <code className="px-1 py-0.5 bg-gray-200 rounded text-[11px]">claude setup-token</code> on
+                  another machine and paste the token below.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={setupToken}
+                    onChange={(e) => { setSetupToken(e.target.value); setTokenResult(null) }}
+                    placeholder="sk-ant-oat01-..."
+                    className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  />
+                  <button
+                    onClick={async () => {
+                      const result = await window.nexus.saveSetupToken(setupToken)
+                      setTokenResult(result)
+                      if (result.valid) {
+                        window.nexus.getClaudeAuthInfo().then(setClaudeAuth)
+                        setValues((v) => ({ ...v, ANTHROPIC_API_KEY: setupToken.trim() }))
+                        setSetupToken('')
+                      }
+                    }}
+                    disabled={!setupToken.trim()}
+                    className="titlebar-no-drag px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+                {tokenResult && (
+                  <p className={`text-xs mt-1 ${tokenResult.valid ? 'text-green-600' : 'text-red-500'}`}>
+                    {tokenResult.valid ? 'Token saved!' : tokenResult.message}
+                  </p>
+                )}
+              </div>
 
-                    return (
-                      <div key={group} className="mb-4">
-                        <p className="text-xs font-medium text-gray-500 mb-2">
-                          {EM_GROUP_LABELS[group]}
+              <p className="text-xs text-gray-400">
+                Option {claudeAuth?.cliInstalled ? '3' : '2'}: Fill in the Anthropic API Key field above directly.
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className="my-5 border-t border-gray-200" />
+
+            {/* Database configuration */}
+            <div>
+              <p className="text-xs text-gray-400 mb-3">
+                Database (defaults usually work fine)
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {dbFields.map((field) => (
+                  <div key={field.key}>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      {field.label}
+                    </label>
+                    <input
+                      type={field.key === 'DB_PASSWORD' ? 'password' : 'text'}
+                      value={values[field.key] || ''}
+                      onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                      placeholder={field.placeholder}
+                      className="titlebar-no-drag w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* EverMemOS configuration */}
+            <>
+              <div className="my-5 border-t border-gray-200" />
+              <div>
+                <h2 className="text-sm font-semibold text-gray-700 mb-3">
+                  EverMemOS Memory System
+                </h2>
+
+                <div className="flex gap-4 mb-4">
+                  <label className="titlebar-no-drag flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="emMode"
+                      checked={emMode === 'netmind'}
+                      onChange={() => setEmMode('netmind')}
+                      className="accent-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">NetMind.AI Power</span>
+                  </label>
+                  <label className="titlebar-no-drag flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="emMode"
+                      checked={emMode === 'custom'}
+                      onChange={() => setEmMode('custom')}
+                      className="accent-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Custom Configuration</span>
+                  </label>
+                </div>
+
+                {emMode === 'netmind' && (
+                  <>
+                    {skipEverMemOS ? (
+                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-xs text-amber-700">
+                          NetMind API Key is not configured above. Fill it in to enable EverMemOS memory features.
                         </p>
-                        <div className="space-y-2">
-                          {groupFields.map((field) => (
-                            <div key={field.key}>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                {field.label}
-                                {field.required && <span className="text-red-500 ml-0.5">*</span>}
-                              </label>
-                              <div className="flex gap-2">
-                                {field.inputType === 'select' ? (
-                                  <select
-                                    value={emValues[field.key] || ''}
-                                    onChange={(e) => setEmValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                                    disabled={running}
-                                    className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400 bg-white"
-                                  >
-                                    <option value="">{field.placeholder}</option>
-                                    {field.options?.map((opt) => (
-                                      <option key={opt} value={opt}>{opt}</option>
-                                    ))}
-                                  </select>
-                                ) : (
+                      </div>
+                    ) : (
+                      <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-xs text-green-700">
+                          Will use the NetMind API Key above to power: LLM (DeepSeek-V3.2), Embedding (bge-m3). Rerank disabled. No extra configuration needed.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {emMode === 'custom' && (
+                  <>
+                    {skipEverMemOS && (
+                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-xs text-amber-700">
+                          LLM API Key is not configured. EverMemOS will not be cloned, its dependencies will not be installed, and the memory system will not start.
+                          To enable memory features, fill in the LLM API Key below.
+                        </p>
+                      </div>
+                    )}
+
+                    {(['llm', 'vectorize', 'rerank', 'other'] as const).map((group) => {
+                      const groupFields = emFields
+                        .filter((f) => f.group === group)
+                        .sort((a, b) => a.order - b.order)
+                      if (groupFields.length === 0) return null
+
+                      return (
+                        <div key={group} className="mb-4">
+                          <p className="text-xs font-medium text-gray-500 mb-2">
+                            {EM_GROUP_LABELS[group]}
+                          </p>
+                          <div className="space-y-2">
+                            {groupFields.map((field) => (
+                              <div key={field.key}>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  {field.label}
+                                  {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                                </label>
+                                <div className="flex gap-2">
+                                  {field.inputType === 'select' ? (
+                                    <select
+                                      value={emValues[field.key] || ''}
+                                      onChange={(e) => setEmValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                                      className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
+                                    >
+                                      <option value="">{field.placeholder}</option>
+                                      {field.options?.map((opt) => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      type={field.inputType}
+                                      value={emValues[field.key] || ''}
+                                      onChange={(e) => setEmValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                                      placeholder={field.placeholder}
+                                      className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                    />
+                                  )}
+                                  {KEY_LINKS[field.key] && (
+                                    <button
+                                      onClick={() => window.nexus.openExternal(KEY_LINKS[field.key].url)}
+                                      className="titlebar-no-drag px-3 py-1.5 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 whitespace-nowrap transition-colors"
+                                    >
+                                      {KEY_LINKS[field.key].label}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {(() => {
+                      const infraFields = emFields
+                        .filter((f) => f.group === 'infrastructure')
+                        .sort((a, b) => a.order - b.order)
+                      if (infraFields.length === 0) return null
+
+                      return (
+                        <div className="mb-4">
+                          <button
+                            onClick={() => setEmAdvancedOpen((v) => !v)}
+                            className="titlebar-no-drag flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors mb-2"
+                          >
+                            <span className={`inline-block transition-transform ${emAdvancedOpen ? 'rotate-90' : ''}`}>
+                              &#9654;
+                            </span>
+                            {EM_GROUP_LABELS.infrastructure}
+                          </button>
+                          {emAdvancedOpen && (
+                            <div className="grid grid-cols-2 gap-2">
+                              {infraFields.map((field) => (
+                                <div key={field.key}>
+                                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                                    {field.label}
+                                  </label>
                                   <input
                                     type={field.inputType}
                                     value={emValues[field.key] || ''}
                                     onChange={(e) => setEmValues((v) => ({ ...v, [field.key]: e.target.value }))}
                                     placeholder={field.placeholder}
-                                    disabled={running}
-                                    className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
+                                    className="titlebar-no-drag w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                                   />
-                                )}
-                                {KEY_LINKS[field.key] && (
-                                  <button
-                                    onClick={() => window.nexus.openExternal(KEY_LINKS[field.key].url)}
-                                    className="titlebar-no-drag px-3 py-1.5 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 whitespace-nowrap transition-colors"
-                                  >
-                                    {KEY_LINKS[field.key].label}
-                                  </button>
-                                )}
-                              </div>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })()}
+                  </>
+                )}
+              </div>
+            </>
 
-                  {/* Infrastructure configuration (collapsible) */}
-                  {(() => {
-                    const infraFields = emFields
-                      .filter((f) => f.group === 'infrastructure')
-                      .sort((a, b) => a.order - b.order)
-                    if (infraFields.length === 0) return null
-
-                    return (
-                      <div className="mb-4">
-                        <button
-                          onClick={() => setEmAdvancedOpen((v) => !v)}
-                          className="titlebar-no-drag flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors mb-2"
-                        >
-                          <span className={`inline-block transition-transform ${emAdvancedOpen ? 'rotate-90' : ''}`}>
-                            &#9654;
-                          </span>
-                          {EM_GROUP_LABELS.infrastructure}
-                        </button>
-                        {emAdvancedOpen && (
-                          <div className="grid grid-cols-2 gap-2">
-                            {infraFields.map((field) => (
-                              <div key={field.key}>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">
-                                  {field.label}
-                                </label>
-                                <input
-                                  type={field.inputType}
-                                  value={emValues[field.key] || ''}
-                                  onChange={(e) => setEmValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                                  placeholder={field.placeholder}
-                                  disabled={running}
-                                  className="titlebar-no-drag w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })()}
-                </>
+            {/* Start button */}
+            <div className="mt-6">
+              <button
+                onClick={handleStartSetup}
+                disabled={!requiredFilled}
+                className="titlebar-no-drag w-full py-2.5 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Start Setup
+              </button>
+              {!requiredFilled && (
+                <p className="text-xs text-red-400 mt-1.5 text-center">
+                  Please fill in required fields (marked with *)
+                </p>
               )}
             </div>
-        </>
-
-        {/* Action buttons */}
-        <div className="mt-6 flex gap-3">
-          <button
-            onClick={handleStartOnly}
-            disabled={running || !requiredFilled}
-            className="titlebar-no-drag flex-1 py-2.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {running ? 'Starting...' : 'Start Only'}
-          </button>
-          <button
-            onClick={handleInstallAndStart}
-            disabled={running || !requiredFilled}
-            className="titlebar-no-drag flex-1 py-2.5 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {running ? 'Installing...' : 'Install & Start'}
-          </button>
-        </div>
-        {!requiredFilled && !running && (
-          <p className="text-xs text-red-400 mt-1.5 text-center">
-            Please fill in required fields (marked with *)
-          </p>
+          </>
         )}
 
-        {/* Installation progress */}
-        {steps.length > 0 && (
-          <div className="mt-5 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs font-medium text-gray-500 mb-2">Setup Progress</p>
-            <div className="space-y-1.5">
-              {steps.map((s) => (
-                <div key={s.step} className="flex items-start gap-2">
-                  {/* Status icon */}
-                  {s.status === 'done' && (
-                    <span className="text-green-500 text-sm leading-5">&#10003;</span>
-                  )}
-                  {s.status === 'running' && (
-                    <div className="w-3.5 h-3.5 mt-0.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                  )}
-                  {s.status === 'error' && (
-                    <span className="text-red-500 text-sm leading-5">&#10007;</span>
-                  )}
-                  {s.status === 'skipped' && (
-                    <span className="text-gray-400 text-sm leading-5">&#8212;</span>
-                  )}
-
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm leading-5 ${
-                      s.status === 'error' ? 'text-red-600' :
-                      s.status === 'running' ? 'text-blue-600 font-medium' :
-                      s.status === 'skipped' ? 'text-gray-400' :
-                      'text-gray-600'
-                    }`}>
-                      {s.label}
-                    </p>
-                    {s.message && s.status === 'running' && (
-                      <p className="text-xs text-gray-400 mt-0.5 truncate">{s.message}</p>
-                    )}
-                    {s.message && s.status === 'error' && (
-                      <p className="text-xs text-red-500 mt-0.5 break-words">{renderWithLinks(s.message)}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* ─── Phase: Preflight ─────────────────────────── */}
+        {phase === 'preflight' && (
+          <>
+            {preflightResult ? (
+              <PreflightView
+                result={preflightResult}
+                onProceedToInstall={handleProceedToInstall}
+                onProceedToLaunch={handleProceedToLaunch}
+                onRecheck={runPreflight}
+                checking={checking}
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-12">
+                <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-gray-500">Checking environment...</p>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Error message */}
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 rounded-lg">
-            <p className="text-sm text-red-700">{renderWithLinks(error)}</p>
-            <button
-              onClick={() => { setError(null); setSteps([]) }}
-              className="titlebar-no-drag mt-2 text-xs text-red-600 hover:text-red-800 underline"
-            >
-              Retry
-            </button>
-          </div>
+        {/* ─── Phase: Install ─────────────────────────── */}
+        {phase === 'install' && (
+          <GuidedInstallView
+            missingIds={missingIds}
+            onComplete={handleInstallComplete}
+            onBack={() => setPhase('preflight')}
+          />
+        )}
+
+        {/* ─── Phase: Launch ─────────────────────────── */}
+        {phase === 'launch' && (
+          <ServiceLaunchView
+            skipEverMemOS={skipEverMemOS}
+            onComplete={handleLaunchComplete}
+            onRetry={() => {}}
+          />
         )}
       </div>
     </div>

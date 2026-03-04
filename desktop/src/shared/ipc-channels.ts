@@ -6,10 +6,6 @@
  */
 
 export const IPC = {
-  // Dependency detection
-  CHECK_DEPENDENCIES: 'check-dependencies',
-  INSTALL_DEPENDENCY: 'install-dependency',
-
   // Environment variables
   GET_ENV: 'get-env',
   SET_ENV: 'set-env',
@@ -38,10 +34,15 @@ export const IPC = {
   // Database
   INIT_DATABASE: 'init-database',
 
-  // One-click auto setup
-  AUTO_SETUP: 'auto-setup',
-  QUICK_START: 'quick-start',
-  ON_SETUP_PROGRESS: 'on-setup-progress',
+  // Three-phase setup
+  RUN_PREFLIGHT: 'run-preflight',
+  INSTALL_DEP: 'install-dep',
+  RETRY_DEP: 'retry-dep',
+  SKIP_DEP: 'skip-dep',
+  INSTALL_ALL_DEPS: 'install-all-deps',
+  RUN_LAUNCH: 'run-launch',
+  ON_INSTALLER_UPDATE: 'on-installer-update',
+  ON_LAUNCH_STEP: 'on-launch-step',
 
   // Claude Code authentication
   CLAUDE_AUTH_INFO: 'claude-auth-info',

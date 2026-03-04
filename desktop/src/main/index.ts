@@ -13,6 +13,8 @@ import { initShellEnv } from './shell-env'
 import { ProcessManager } from './process-manager'
 import { HealthMonitor } from './health-monitor'
 import { TrayManager } from './tray-manager'
+import { InstallerRegistry } from './installer-registry'
+import { ServiceLauncher } from './service-launcher'
 import { registerIpcHandlers } from './ipc-handlers'
 
 // ─── Global Instances ───────────────────────────────────────
@@ -21,6 +23,8 @@ let mainWindow: BrowserWindow | null = null
 let processManager: ProcessManager | null = null
 const healthMonitor = new HealthMonitor()
 let trayManager: TrayManager | null = null
+let installerRegistry: InstallerRegistry | null = null
+let serviceLauncher: ServiceLauncher | null = null
 
 // ─── Window Creation ───────────────────────────────────────
 
@@ -103,11 +107,15 @@ app.whenReady().then(async () => {
   // Initialize process manager (depends on shell-env being initialized)
   processManager = new ProcessManager()
 
+  // Initialize three-phase setup modules
+  installerRegistry = new InstallerRegistry()
+  serviceLauncher = new ServiceLauncher(processManager)
+
   // Create main window
   mainWindow = createMainWindow()
 
   // Register IPC handlers
-  registerIpcHandlers(processManager, healthMonitor, mainWindow)
+  registerIpcHandlers(processManager, healthMonitor, mainWindow, installerRegistry, serviceLauncher)
 
   // Create system tray
   trayManager = new TrayManager(healthMonitor, processManager)

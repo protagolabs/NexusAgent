@@ -9,7 +9,6 @@
 import { ipcMain, shell, BrowserWindow } from 'electron'
 import { store } from './store'
 import { IPC, PROJECT_ROOT, TABLE_MGMT_DIR } from './constants'
-import { checkAllDependencies, installDependency } from './dependency-checker'
 import { readEnv, writeEnv, validateEnv, getEnvFields } from './env-manager'
 import { getClaudeAuthInfo, startClaudeLogin, validateSetupToken } from './claude-auth-manager'
 import type { LoginProcessStatus } from './claude-auth-manager'
@@ -17,6 +16,9 @@ import * as everMemOSEnv from './evermemos-env-manager'
 import * as dockerManager from './docker-manager'
 import { ProcessManager } from './process-manager'
 import { HealthMonitor } from './health-monitor'
+import { runPreflight } from './preflight-runner'
+import { InstallerRegistry } from './installer-registry'
+import { ServiceLauncher } from './service-launcher'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { join } from 'path'
@@ -29,18 +31,10 @@ const execFileAsync = promisify(execFile)
 export function registerIpcHandlers(
   processManager: ProcessManager,
   healthMonitor: HealthMonitor,
-  mainWindow: BrowserWindow
+  mainWindow: BrowserWindow,
+  installerRegistry: InstallerRegistry,
+  serviceLauncher: ServiceLauncher
 ): void {
-  // ─── Dependency Detection ─────────────────────────────────────
-
-  ipcMain.handle(IPC.CHECK_DEPENDENCIES, async () => {
-    return checkAllDependencies()
-  })
-
-  ipcMain.handle(IPC.INSTALL_DEPENDENCY, async (_event, depId: string) => {
-    return installDependency(depId)
-  })
-
   // ─── Environment Variables ─────────────────────────────────────
 
   ipcMain.handle(IPC.GET_ENV, () => {
@@ -119,24 +113,58 @@ export function registerIpcHandlers(
     return healthMonitor.getStatus()
   })
 
-  // ─── One-Click Auto Setup ─────────────────────────────────
+  // ─── Three-Phase Setup ─────────────────────────────────
 
-  ipcMain.handle(IPC.AUTO_SETUP, async (_event, options?: { skipEverMemOS?: boolean }) => {
-    return processManager.runAutoSetup(options)
+  // Phase 1: Preflight
+  ipcMain.handle(IPC.RUN_PREFLIGHT, async () => {
+    return runPreflight()
   })
 
-  ipcMain.handle(IPC.QUICK_START, async (_event, options?: { skipEverMemOS?: boolean }) => {
-    return processManager.runQuickStart(options)
+  // Phase 2: Install
+  ipcMain.handle(IPC.INSTALL_DEP, async (_event, id: string) => {
+    try {
+      await installerRegistry.install(id)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
   })
 
-  // Push setup progress in real-time
-  processManager.on('setup-progress', (progress) => {
-    mainWindow.webContents.send(IPC.ON_SETUP_PROGRESS, progress)
+  ipcMain.handle(IPC.RETRY_DEP, async (_event, id: string) => {
+    try {
+      await installerRegistry.retry(id)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle(IPC.SKIP_DEP, (_event, id: string) => {
+    installerRegistry.skip(id)
+    return { success: true }
+  })
+
+  ipcMain.handle(IPC.INSTALL_ALL_DEPS, async (_event, missingIds: string[]) => {
+    return installerRegistry.installAll(missingIds)
+  })
+
+  // Phase 3: Launch
+  ipcMain.handle(IPC.RUN_LAUNCH, async (_event, options?: { skipEverMemOS?: boolean }) => {
+    return serviceLauncher.launch(options)
+  })
+
+  // Push installer updates in real-time
+  installerRegistry.on('installer-update', (state) => {
+    mainWindow.webContents.send(IPC.ON_INSTALLER_UPDATE, state)
+  })
+
+  // Push launch step updates in real-time
+  serviceLauncher.on('launch-step', (step) => {
+    mainWindow.webContents.send(IPC.ON_LAUNCH_STEP, step)
   })
 
   // ─── Claude Code Authentication ─────────────────────────────
 
-  // Active login process handle (prevent concurrent logins)
   let activeLogin: { cancel: () => void; sendInput: (text: string) => void } | null = null
 
   ipcMain.handle(IPC.CLAUDE_AUTH_INFO, async () => {
@@ -150,7 +178,6 @@ export function registerIpcHandlers(
 
     const onStatusChange = (status: LoginProcessStatus) => {
       mainWindow.webContents.send(IPC.ON_CLAUDE_LOGIN_STATUS, status)
-      // Clean up handle after login ends
       if (status.state !== 'running') {
         activeLogin = null
       }
@@ -158,10 +185,7 @@ export function registerIpcHandlers(
 
     const handle = startClaudeLogin(
       onStatusChange,
-      (url) => {
-        // Electron natively opens browser, more reliable than CLI's xdg-open
-        shell.openExternal(url)
-      }
+      (url) => { shell.openExternal(url) }
     )
     activeLogin = handle
     return handle.promise
@@ -189,7 +213,6 @@ export function registerIpcHandlers(
     if (!validation.valid) {
       return validation
     }
-    // Token format valid, write to .env as ANTHROPIC_API_KEY
     writeEnv({ ANTHROPIC_API_KEY: token.trim() })
     return { valid: true, message: 'Setup token saved successfully' }
   })
@@ -236,12 +259,10 @@ export function registerIpcHandlers(
 
   // ─── Event Forwarding (Main → Renderer) ──────────────────
 
-  // Real-time log push
   processManager.on('log', (entry) => {
     mainWindow.webContents.send(IPC.ON_LOG, entry)
   })
 
-  // Real-time health status push
   healthMonitor.on('health-update', (status) => {
     mainWindow.webContents.send(IPC.ON_HEALTH_UPDATE, status)
   })
