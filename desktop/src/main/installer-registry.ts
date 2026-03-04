@@ -398,7 +398,7 @@ async function installDockerMacOS(onOutput: (line: string) => void): Promise<voi
     } else {
       onOutput('[Strategy 3/5] Installing Docker via Homebrew (colima + docker CLI)...')
       try {
-        await spawnWithOutput('brew', ['install', 'colima', 'docker', 'docker-compose'], {
+        await spawnWithOutput('brew', ['install', 'colima', 'docker', 'docker-compose', 'qemu'], {
           timeout: 600000, onOutput
         })
       } catch (brewErr) {
@@ -473,7 +473,7 @@ async function installDockerMacOS(onOutput: (line: string) => void): Promise<voi
     // Step 4: Install colima + docker CLI
     console.log('[installer] [Strategy 4/5] Step 4: brew install colima docker docker-compose')
     onOutput('[Strategy 4/5] Installing colima + docker via Homebrew...')
-    await spawnWithOutput(brewPath, ['install', 'colima', 'docker', 'docker-compose'], {
+    await spawnWithOutput(brewPath, ['install', 'colima', 'docker', 'docker-compose', 'qemu'], {
       timeout: 600000, onOutput
     })
     console.log('[installer] [Strategy 4/5] Step 4: brew install done')
