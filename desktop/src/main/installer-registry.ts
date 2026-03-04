@@ -264,55 +264,48 @@ async function installDockerMacOS(onOutput: (line: string) => void): Promise<voi
     onOutput('[Strategy 3/4] Homebrew install failed, trying next strategy...')
   }
 
-  // Strategy 4: Download and install Docker Desktop directly (.dmg)
-  onOutput('[Strategy 4/4] Downloading Docker Desktop installer...')
-  const dmgPath = '/tmp/NarraNexus_Docker.dmg'
+  // Strategy 4: Install Homebrew (as regular user) + colima + docker
+  // Homebrew refuses to run as root, so we CANNOT use execWithPrivileges for it.
+  // Instead: prepare /opt/homebrew with privileges, then install Homebrew as regular user.
+  onOutput('[Strategy 4/4] Installing Homebrew + Docker (admin privileges for directory setup only)...')
   try {
-    const arch = process.arch === 'arm64' ? 'arm64' : 'amd64'
-    const dmgUrl = `https://desktop.docker.com/mac/main/${arch}/Docker.dmg`
-    onOutput(`[Strategy 4/4] Downloading from ${dmgUrl} (this may take a few minutes)...`)
+    const brewPrefix = process.arch === 'arm64' ? '/opt/homebrew' : '/usr/local'
+    const brewPath = `${brewPrefix}/bin/brew`
+    const currentUser = process.env.USER || process.env.LOGNAME || 'nobody'
 
-    await spawnWithOutput('curl', ['-fSL', '--progress-bar', '-o', dmgPath, dmgUrl], {
+    // Step 1: Create Homebrew prefix directory with correct ownership (needs root)
+    if (!existsSync(brewPath)) {
+      onOutput('[Strategy 4/4] Preparing Homebrew directory (admin privileges required)...')
+      await execWithPrivileges(
+        `mkdir -p "${brewPrefix}" && chown -R ${currentUser}:admin "${brewPrefix}"`,
+        { timeout: 30000 }
+      )
+
+      // Step 2: Install Homebrew as regular user (NO root — Homebrew requires this)
+      onOutput('[Strategy 4/4] Installing Homebrew (as regular user)...')
+      await spawnWithOutput('bash', ['-c',
+        'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+      ], { timeout: 600000, onOutput })
+    } else {
+      onOutput('[Strategy 4/4] Homebrew already installed, skipping Homebrew installation')
+    }
+
+    // Step 3: Install colima + docker CLI
+    onOutput('[Strategy 4/4] Installing colima + docker CLI via Homebrew...')
+    await spawnWithOutput(brewPath, ['install', 'colima', 'docker', 'docker-compose'], {
       timeout: 600000, onOutput
     })
 
-    onOutput('[Strategy 4/4] Mounting disk image and installing Docker Desktop...')
-    await execWithPrivileges(
-      `hdiutil attach "${dmgPath}" -nobrowse -quiet`
-      + ` && cp -R "/Volumes/Docker/Docker.app" /Applications/`
-      + ` && hdiutil detach "/Volumes/Docker" -quiet`,
-      { timeout: 120000 }
-    )
-
-    // Clean up dmg
-    try { await execInProject('rm', ['-f', dmgPath], { timeout: 5000 }) } catch { /* ignore */ }
-
-    onOutput('[Strategy 4/4] Launching Docker Desktop...')
-    await execInProject('open', ['-a', 'Docker'], { timeout: 10000 })
-
-    // Wait for Docker daemon to become ready
-    for (let i = 0; i < 60; i++) {
-      await new Promise((r) => setTimeout(r, 2000))
-      try {
-        await execInProject('docker', ['info'], { timeout: 5000 })
-        onOutput('Docker Desktop installed and ready')
-        resetComposeDetection()
-        return
-      } catch { /* not ready yet */ }
-      if (i % 5 === 4) {
-        onOutput(`[Strategy 4/4] Waiting for Docker Desktop to initialize... (${(i + 1) * 2}s)`)
-      }
-    }
-    throw new Error('Docker Desktop installed but failed to start within 120s')
-  } catch (err) {
-    // Clean up on failure
-    try {
-      await execInProject('sh', ['-c',
-        `rm -f "${dmgPath}"; hdiutil detach "/Volumes/Docker" 2>/dev/null || true`
-      ], { timeout: 5000 })
-    } catch { /* ignore */ }
-    onOutput('[Strategy 4/4] Docker Desktop download/install failed')
-    throw err
+    // Step 4: Start Colima
+    const colimaPath = `${brewPrefix}/bin/colima`
+    onOutput('[Strategy 4/4] Starting Colima VM...')
+    await execInProject(colimaPath, ['start'], { timeout: 300000 })
+    await execInProject('docker', ['info'], { timeout: 10000 })
+    onOutput('Docker installed via Homebrew + Colima')
+    resetComposeDetection()
+    return
+  } catch {
+    onOutput('[Strategy 4/4] Homebrew + Docker install failed')
   }
 }
 
