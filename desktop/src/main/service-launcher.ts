@@ -92,6 +92,9 @@ function spawnWithOutput(
     })
     const processData = (data: Buffer) => {
       const lines = data.toString().split('\n').filter(l => l.trim())
+      for (const line of lines) {
+        console.log(`[launcher] ${line}`)
+      }
       if (lines.length > 0) {
         options.onOutput(lines[lines.length - 1].trim().substring(0, 200))
       }
