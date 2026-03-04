@@ -122,7 +122,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
         const v = emValues[f.key]?.trim()
         return v && !PLACEHOLDER_VALUES.includes(v)
       })
-  const lowMemory = preflightResult ? preflightResult.systemInfo.totalMemoryGb < 6 : false
+  // Docker gets ~50% of system RAM (same formula as Colima allocation, capped 2-12GB)
+  const dockerMemoryGb = preflightResult
+    ? Math.max(2, Math.min(12, Math.floor(preflightResult.systemInfo.totalMemoryGb / 2)))
+    : 0
+  const lowMemory = preflightResult ? dockerMemoryGb < 6 : false
   const skipEverMemOS = !emConfigured || lowMemory
 
   const buildFinalEmValues = (): Record<string, string> => {
@@ -452,7 +456,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                 {lowMemory && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-xs text-red-700 font-medium">
-                      System memory is too low ({preflightResult?.systemInfo.totalMemoryGb ?? '?'}GB detected, 6GB minimum required).
+                      Docker memory too low: {dockerMemoryGb}GB allocated (system {preflightResult?.systemInfo.totalMemoryGb ?? '?'}GB), EverMemOS requires at least 6GB.
                       EverMemOS will be disabled. The core Agent will still work without memory features.
                     </p>
                   </div>

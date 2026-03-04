@@ -78,9 +78,15 @@ const PreflightView: React.FC<PreflightViewProps> = ({
       {/* System info summary */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
         <span>{result.systemInfo.platform} / {result.systemInfo.arch}</span>
-        <span className={result.systemInfo.totalMemoryGb < 6 ? 'text-red-500' : ''}>
-          RAM: {result.systemInfo.totalMemoryGb} GB{result.systemInfo.totalMemoryGb < 6 ? ' (low)' : ''}
-        </span>
+        {(() => {
+          const dockerMem = Math.max(2, Math.min(12, Math.floor(result.systemInfo.totalMemoryGb / 2)))
+          const low = dockerMem < 6
+          return (
+            <span className={low ? 'text-red-500' : ''}>
+              RAM: {result.systemInfo.totalMemoryGb}GB (Docker: {dockerMem}GB){low ? ' — EverMemOS disabled' : ''}
+            </span>
+          )
+        })()}
         {result.systemInfo.freeDiskGb >= 0 && (
           <span>Free disk: {result.systemInfo.freeDiskGb} GB</span>
         )}
