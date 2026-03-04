@@ -146,6 +146,10 @@ class ClaudeAgentSDK:
         # Step 2: Create a ClaudeSDKClient instance, send the user message, and receive the response
         client = None
         message_count = 0
+        # 去重集合：include_partial_messages=True 时，partial AssistantMessage
+        # 和 complete AssistantMessage 都会携带同一个 ToolUseBlock，导致重复
+        # 的 tool_call_item。通过 tool_call_id 去重，只保留首次出现。
+        seen_tool_call_ids: set[str] = set()
         try:
             client = ClaudeSDKClient(options=options)
             logger.info("[ClaudeAgentSDK] Connecting to Claude Code CLI...")
@@ -161,7 +165,20 @@ class ClaudeAgentSDK:
                 # 检测 AssistantMessage 的 error 字段（认证失败、额度不足等）
                 if msg_type == "AssistantMessage" and hasattr(message, 'error') and message.error:
                     logger.error(f"[ClaudeAgentSDK] Claude API 返回错误: {message.error}")
-                yield output_transfer(message, transfer_type="claude_agent_sdk", streaming=streaming)
+
+                # output_transfer 返回事件列表（一条消息可能产生多个事件）
+                events = output_transfer(message, transfer_type="claude_agent_sdk", streaming=streaming)
+                for event in events:
+                    # 对 tool_call_item 按 tool_call_id 去重
+                    item = event.get("item", {}) if event.get("type") == "run_item_stream_event" else {}
+                    if item.get("type") == "tool_call_item":
+                        tool_id = item.get("tool_call_id", "")
+                        if tool_id and tool_id in seen_tool_call_ids:
+                            logger.debug(f"[ClaudeAgentSDK] Skipping duplicate tool_call: {tool_id}")
+                            continue
+                        if tool_id:
+                            seen_tool_call_ids.add(tool_id)
+                    yield event
 
             logger.info(f"[ClaudeAgentSDK] Stream ended. Total messages received: {message_count}")
             if message_count == 0:
