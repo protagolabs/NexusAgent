@@ -357,11 +357,19 @@ export async function ensureDockerDaemon(): Promise<boolean> {
 
 /** Start MySQL containers */
 export async function startMySQL(): Promise<{ success: boolean; output: string }> {
+  // 端口已通 = MySQL 已经在跑，直接当作成功
+  if (await checkPort(PORTS.MYSQL)) {
+    console.log('[docker-manager] MySQL port already reachable, skipping compose up')
+    return { success: true, output: 'MySQL already running' }
+  }
   const { cmd, baseArgs } = await composeCmd(DOCKER_COMPOSE_PATH)
-  // 先清理可能残留的旧容器，避免容器名冲突
-  await execSafe(cmd, [...baseArgs, 'down', '--remove-orphans'], { timeout: 30000 })
   // First pull may take a while, allow generous timeout (10 min)
   const result = await execSafe(cmd, [...baseArgs, 'up', '-d'], { timeout: 600000 })
+  // 容器名冲突 = 之前的容器还在，也当作成功
+  if (!result.success && result.stderr.includes('already in use')) {
+    console.warn('[docker-manager] Container name conflict, treating as success')
+    return { success: true, output: 'Container already exists' }
+  }
   return {
     success: result.success,
     output: result.success ? result.stdout : result.stderr
@@ -401,10 +409,13 @@ export async function startEverMemOS(): Promise<{ success: boolean; output: stri
     return { success: false, output: 'EverMemOS config file not found' }
   }
   const { cmd, baseArgs } = await composeCmd(EVERMEMOS_COMPOSE_PATH)
-  // 先清理可能残留的旧容器，避免容器名冲突
-  await execSafe(cmd, [...baseArgs, 'down', '--remove-orphans'], { timeout: 30000 })
   // EverMemOS includes MongoDB/ES/Milvus/Redis images, first pull needs generous timeout
   const result = await execSafe(cmd, [...baseArgs, 'up', '-d'], { timeout: 600000 })
+  // 容器名冲突 = 之前的容器还在，也当作成功
+  if (!result.success && result.stderr.includes('already in use')) {
+    console.warn('[docker-manager] EverMemOS container name conflict, treating as success')
+    return { success: true, output: 'Containers already exist' }
+  }
   return {
     success: result.success,
     output: result.success ? result.stdout : result.stderr

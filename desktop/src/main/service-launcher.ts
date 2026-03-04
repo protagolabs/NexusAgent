@@ -247,121 +247,111 @@ export class ServiceLauncher extends EventEmitter {
       console.log('[launcher] Step 1: DONE — Docker is ready')
       updateStep('wait-docker', { status: 'done', message: 'Docker is ready' })
 
-      // ─── Step 2: docker compose up (with 500 retry) ─────
+      // ─── Step 2: docker compose up ─────
       console.log('[launcher] Step 2: compose-up')
       const COMPOSE_TIMEOUT = 600000 // 10 minutes for image pull
       updateStep('compose-up', { status: 'running', message: 'Starting MySQL container...' })
 
-      // 检查 MySQL 端口是否被其他进程占用
+      // 端口已通 = MySQL 已经在跑（之前启动的容器或本地 MySQL），直接跳过 compose
       if (await isPortReachable(3306)) {
-        console.warn('[launcher] Step 2: Port 3306 is already in use by another process')
-        updateStep('compose-up', {
-          status: 'error',
-          message: 'Port 3306 is already in use. Please stop your existing MySQL service and retry.'
-        })
-        return { success: false, error: 'Port 3306 is already in use by another process. Please stop it (e.g. `brew services stop mysql`) and retry.' }
-      }
+        console.log('[launcher] Step 2: Port 3306 already reachable, skipping compose-up')
+        updateStep('compose-up', { status: 'done', message: 'MySQL already running (port 3306)' })
+      } else {
+        // Ensure Docker is truly healthy before compose
+        const preComposeState = await detectDockerState()
+        console.log(`[launcher] Step 2: preComposeState = ${preComposeState}`)
+        if (preComposeState !== 'healthy') {
+          console.log('[launcher] Step 2: Docker not fully ready, waiting 30s...')
+          updateStep('compose-up', { status: 'running', message: 'Waiting for Docker to be fully ready...' })
+          await waitForDockerReady(30000, 1000)
+        }
 
-      // Ensure Docker is truly healthy before compose
-      const preComposeState = await detectDockerState()
-      console.log(`[launcher] Step 2: preComposeState = ${preComposeState}`)
-      if (preComposeState !== 'healthy') {
-        console.log('[launcher] Step 2: Docker not fully ready, waiting 30s...')
-        updateStep('compose-up', { status: 'running', message: 'Waiting for Docker to be fully ready...' })
-        await waitForDockerReady(30000, 1000)
-      }
-
-      // Log which docker binary will be resolved
-      const env = getExecEnv()
-      console.log(`[launcher] Step 2: PATH first 5 entries: ${env.PATH?.split(':').slice(0, 5).join(':')}`)
-      // Resolve which docker binary is actually used
-      try {
-        const { stdout: whichDocker } = await execFileAsync('which', ['docker'], { env, timeout: 5000 })
-        console.log(`[launcher] Step 2: which docker = ${whichDocker.trim()}`)
-      } catch { console.log('[launcher] Step 2: which docker — not found in PATH') }
-      try {
-        const { stdout: composeVer } = await execFileAsync('docker', ['compose', 'version'], { env, timeout: 5000 })
-        console.log(`[launcher] Step 2: docker compose version = ${composeVer.trim()}`)
-      } catch (e) {
-        console.log(`[launcher] Step 2: docker compose version FAILED: ${e instanceof Error ? e.message : e}`)
-      }
-
-      // 预先检测 Docker 凭证助手是否可用（结果会缓存，供后续所有 Docker 命令使用）
-      await getDockerConfigOverride(env)
-
-      // 先清理可能残留的旧容器，避免容器名冲突
-      console.log('[launcher] compose-up: cleaning up stale containers...')
-      updateStep('compose-up', { status: 'running', message: 'Cleaning up stale containers...' })
-      try {
-        await spawnWithOutput('docker', ['compose', 'down', '--remove-orphans'], { timeout: 30000 })
-      } catch {
+        // Log which docker binary will be resolved
+        const env = getExecEnv()
+        console.log(`[launcher] Step 2: PATH first 5 entries: ${env.PATH?.split(':').slice(0, 5).join(':')}`)
         try {
-          await spawnWithOutput('docker-compose', ['down', '--remove-orphans'], { timeout: 30000 })
-        } catch { /* 清理失败不阻塞启动 */ }
-      }
-
-      let composeSuccess = false
-      for (let attempt = 0; attempt < 3; attempt++) {
+          const { stdout: whichDocker } = await execFileAsync('which', ['docker'], { env, timeout: 5000 })
+          console.log(`[launcher] Step 2: which docker = ${whichDocker.trim()}`)
+        } catch { console.log('[launcher] Step 2: which docker — not found in PATH') }
         try {
-          // Try V2 → V1 → privileged
-          let ok = false
+          const { stdout: composeVer } = await execFileAsync('docker', ['compose', 'version'], { env, timeout: 5000 })
+          console.log(`[launcher] Step 2: docker compose version = ${composeVer.trim()}`)
+        } catch (e) {
+          console.log(`[launcher] Step 2: docker compose version FAILED: ${e instanceof Error ? e.message : e}`)
+        }
+
+        // 预先检测 Docker 凭证助手是否可用（结果会缓存，供后续所有 Docker 命令使用）
+        await getDockerConfigOverride(env)
+
+        let composeSuccess = false
+        for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            console.log('[launcher] compose-up: trying docker compose (V2)...')
-            await spawnWithOutput('docker', ['compose', 'up', '-d'], {
-              timeout: COMPOSE_TIMEOUT,
-              onOutput: (line) => updateStep('compose-up', { status: 'running', message: line })
-            })
-            ok = true
-            console.log('[launcher] compose-up: docker compose (V2) succeeded')
-          } catch (e) {
-            console.log(`[launcher] compose-up: V2 failed: ${e instanceof Error ? e.message : e}`)
-          }
-
-          if (!ok) {
+            // Try V2 → V1 → privileged
+            let ok = false
             try {
-              console.log('[launcher] compose-up: trying docker-compose (V1)...')
-              await spawnWithOutput('docker-compose', ['up', '-d'], {
+              console.log('[launcher] compose-up: trying docker compose (V2)...')
+              await spawnWithOutput('docker', ['compose', 'up', '-d'], {
                 timeout: COMPOSE_TIMEOUT,
                 onOutput: (line) => updateStep('compose-up', { status: 'running', message: line })
               })
               ok = true
-              console.log('[launcher] compose-up: docker-compose (V1) succeeded')
+              console.log('[launcher] compose-up: docker compose (V2) succeeded')
             } catch (e) {
-              console.log(`[launcher] compose-up: V1 failed: ${e instanceof Error ? e.message : e}`)
+              console.log(`[launcher] compose-up: V2 failed: ${e instanceof Error ? e.message : e}`)
             }
-          }
 
-          if (!ok) {
-            console.log('[launcher] compose-up: trying with elevated privileges...')
-            updateStep('compose-up', { status: 'running', message: 'Retrying with elevated privileges...' })
-            await execWithPrivileges(
-              `cd "${PROJECT_ROOT}" && (docker compose down --remove-orphans 2>/dev/null; docker-compose down --remove-orphans 2>/dev/null; docker compose up -d || docker-compose up -d)`,
-              { timeout: COMPOSE_TIMEOUT }
-            )
-            console.log('[launcher] compose-up: privileged compose succeeded')
-          }
+            if (!ok) {
+              try {
+                console.log('[launcher] compose-up: trying docker-compose (V1)...')
+                await spawnWithOutput('docker-compose', ['up', '-d'], {
+                  timeout: COMPOSE_TIMEOUT,
+                  onOutput: (line) => updateStep('compose-up', { status: 'running', message: line })
+                })
+                ok = true
+                console.log('[launcher] compose-up: docker-compose (V1) succeeded')
+              } catch (e) {
+                console.log(`[launcher] compose-up: V1 failed: ${e instanceof Error ? e.message : e}`)
+              }
+            }
 
-          composeSuccess = true
-          break
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.message : String(err)
-          // Check if it's a 500 error (daemon still initializing)
-          if (errMsg.includes('500') && attempt < 2) {
-            updateStep('compose-up', {
-              status: 'running',
-              message: `Docker daemon not fully ready (500 error), retrying in 5s... (attempt ${attempt + 2}/3)`
-            })
-            await delay(5000)
-            continue
+            if (!ok) {
+              console.log('[launcher] compose-up: trying with elevated privileges...')
+              updateStep('compose-up', { status: 'running', message: 'Retrying with elevated privileges...' })
+              await execWithPrivileges(
+                `cd "${PROJECT_ROOT}" && (docker compose up -d || docker-compose up -d)`,
+                { timeout: COMPOSE_TIMEOUT }
+              )
+              console.log('[launcher] compose-up: privileged compose succeeded')
+            }
+
+            composeSuccess = true
+            break
+          } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err)
+            // 容器名冲突 = 之前的容器还在，当作成功
+            if (errMsg.includes('already in use')) {
+              console.warn('[launcher] compose-up: container already exists, treating as success')
+              composeSuccess = true
+              break
+            }
+            // 500 错误 = daemon 还在启动，等一下重试
+            if (errMsg.includes('500') && attempt < 2) {
+              updateStep('compose-up', {
+                status: 'running',
+                message: `Docker daemon not fully ready, retrying in 5s... (attempt ${attempt + 2}/3)`
+              })
+              await delay(5000)
+              continue
+            }
+            throw err
           }
-          throw err
         }
-      }
 
-      if (!composeSuccess) {
-        console.log('[launcher] Step 2: FAILED — compose never succeeded')
-        updateStep('compose-up', { status: 'error', message: 'Failed to start containers' })
-        return { success: false, error: 'docker compose up failed' }
+        if (!composeSuccess) {
+          console.log('[launcher] Step 2: FAILED — compose never succeeded')
+          updateStep('compose-up', { status: 'error', message: 'Failed to start containers' })
+          return { success: false, error: 'docker compose up failed' }
+        }
       }
 
       // Start EverMemOS infrastructure
