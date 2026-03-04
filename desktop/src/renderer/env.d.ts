@@ -21,6 +21,7 @@ interface PreflightItem {
 interface SystemInfo {
   platform: string
   arch: string
+  totalMemoryGb: number
   freeDiskGb: number
   networkOk: boolean
 }

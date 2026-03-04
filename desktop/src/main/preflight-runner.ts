@@ -127,6 +127,10 @@ async function checkPython(): Promise<PreflightItem> {
 // ─── System Info ───────────────────────────────────────
 
 async function getSystemInfo(): Promise<SystemInfo> {
+  // Total memory
+  const os = require('os')
+  const totalMemoryGb = Math.round(os.totalmem() / (1024 * 1024 * 1024) * 10) / 10
+
   // Disk space
   let freeDiskGb = -1
   try {
@@ -155,6 +159,7 @@ async function getSystemInfo(): Promise<SystemInfo> {
   return {
     platform: process.platform,
     arch: process.arch,
+    totalMemoryGb,
     freeDiskGb,
     networkOk
   }

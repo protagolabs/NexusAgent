@@ -27,6 +27,7 @@ export interface PreflightItem {
 export interface SystemInfo {
   platform: string
   arch: string
+  totalMemoryGb: number
   freeDiskGb: number
   networkOk: boolean
 }

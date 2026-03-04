@@ -78,6 +78,9 @@ const PreflightView: React.FC<PreflightViewProps> = ({
       {/* System info summary */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
         <span>{result.systemInfo.platform} / {result.systemInfo.arch}</span>
+        <span className={result.systemInfo.totalMemoryGb < 6 ? 'text-red-500' : ''}>
+          RAM: {result.systemInfo.totalMemoryGb} GB{result.systemInfo.totalMemoryGb < 6 ? ' (low)' : ''}
+        </span>
         {result.systemInfo.freeDiskGb >= 0 && (
           <span>Free disk: {result.systemInfo.freeDiskGb} GB</span>
         )}

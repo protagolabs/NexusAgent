@@ -122,7 +122,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
         const v = emValues[f.key]?.trim()
         return v && !PLACEHOLDER_VALUES.includes(v)
       })
-  const skipEverMemOS = !emConfigured
+  const lowMemory = preflightResult ? preflightResult.systemInfo.totalMemoryGb < 6 : false
+  const skipEverMemOS = !emConfigured || lowMemory
 
   const buildFinalEmValues = (): Record<string, string> => {
     if (emMode === 'netmind') {
@@ -447,6 +448,15 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                 <h2 className="text-sm font-semibold text-gray-700 mb-3">
                   EverMemOS Memory System
                 </h2>
+
+                {lowMemory && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-xs text-red-700 font-medium">
+                      System memory is too low ({preflightResult?.systemInfo.totalMemoryGb ?? '?'}GB detected, 6GB minimum required).
+                      EverMemOS will be disabled. The core Agent will still work without memory features.
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex gap-4 mb-4">
                   <label className="titlebar-no-drag flex items-center gap-2 cursor-pointer">
