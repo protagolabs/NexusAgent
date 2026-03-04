@@ -89,10 +89,13 @@ async function execWithPrivileges(
     const home = process.env.HOME || ''
     const fullScript = `export PATH="${extraPaths}:$PATH" && export HOME="${home}" && ${script}`
     const escaped = fullScript.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-    return execInProject('osascript', ['-e',
-      `do shell script "${escaped}" with administrator privileges`
-    ], options)
+    const osascriptCmd = `do shell script "${escaped}" with administrator privileges`
+    console.log(`[launcher] execWithPrivileges: PATH order = ${extraPaths}`)
+    console.log(`[launcher] execWithPrivileges: HOME = ${home}`)
+    console.log(`[launcher] execWithPrivileges: script = ${script}`)
+    return execInProject('osascript', ['-e', osascriptCmd], options)
   } else {
+    console.log(`[launcher] execWithPrivileges (Linux): script = ${script}`)
     return execInProject('pkexec', ['sh', '-c', script], options)
   }
 }
@@ -193,47 +196,73 @@ export class ServiceLauncher extends EventEmitter {
     }
 
     try {
+      console.log('[launcher] ========== LAUNCH STARTED ==========')
+      console.log(`[launcher] skipEverMemOS=${skipEM}, platform=${process.platform}, arch=${process.arch}`)
+
       // ─── Step 1: Wait for Docker daemon ─────────────────
+      console.log('[launcher] Step 1: wait-docker')
       updateStep('wait-docker', { status: 'running', message: 'Checking Docker daemon...' })
       const dockerState = await detectDockerState()
+      console.log(`[launcher] Step 1: dockerState = ${dockerState}`)
 
       if (dockerState === 'not_installed') {
+        console.log('[launcher] Step 1: FAILED — Docker not installed')
         updateStep('wait-docker', { status: 'error', message: 'Docker is not installed.' })
         return { success: false, error: 'Docker is not installed' }
       }
 
       if (dockerState === 'starting') {
+        console.log('[launcher] Step 1: Docker starting, waiting up to 120s...')
         updateStep('wait-docker', { status: 'running', message: 'Docker daemon is starting, waiting...' })
         const ready = await waitForDockerReady(120000, 2000)
         if (!ready) {
+          console.log('[launcher] Step 1: FAILED — Docker timed out after 120s')
           updateStep('wait-docker', { status: 'error', message: 'Docker daemon failed to become ready after 120s' })
           return { success: false, error: 'Docker daemon timeout' }
         }
+        console.log('[launcher] Step 1: Docker became ready')
       } else if (dockerState === 'not_running') {
-        // Try to start it
+        console.log('[launcher] Step 1: Docker not running, trying to start...')
         updateStep('wait-docker', { status: 'running', message: 'Starting Docker daemon...' })
         const started = await ensureDockerDaemon()
         if (!started) {
+          console.log('[launcher] Step 1: FAILED — could not start Docker')
           updateStep('wait-docker', { status: 'error', message: 'Failed to start Docker daemon. Please start Docker Desktop manually.' })
           return { success: false, error: 'Failed to start Docker' }
         }
+        console.log('[launcher] Step 1: Docker started successfully')
       }
+      console.log('[launcher] Step 1: DONE — Docker is ready')
       updateStep('wait-docker', { status: 'done', message: 'Docker is ready' })
 
       // ─── Step 2: docker compose up (with 500 retry) ─────
+      console.log('[launcher] Step 2: compose-up')
       const COMPOSE_TIMEOUT = 600000 // 10 minutes for image pull
       updateStep('compose-up', { status: 'running', message: 'Starting MySQL container...' })
 
       // Ensure Docker is truly healthy before compose
       const preComposeState = await detectDockerState()
+      console.log(`[launcher] Step 2: preComposeState = ${preComposeState}`)
       if (preComposeState !== 'healthy') {
+        console.log('[launcher] Step 2: Docker not fully ready, waiting 30s...')
         updateStep('compose-up', { status: 'running', message: 'Waiting for Docker to be fully ready...' })
         await waitForDockerReady(30000, 1000)
       }
 
       // Log which docker binary will be resolved
       const env = getExecEnv()
-      console.log(`[launcher] compose-up: PATH starts with: ${env.PATH?.split(':').slice(0, 5).join(':')}`)
+      console.log(`[launcher] Step 2: PATH first 5 entries: ${env.PATH?.split(':').slice(0, 5).join(':')}`)
+      // Resolve which docker binary is actually used
+      try {
+        const { stdout: whichDocker } = await execFileAsync('which', ['docker'], { env, timeout: 5000 })
+        console.log(`[launcher] Step 2: which docker = ${whichDocker.trim()}`)
+      } catch { console.log('[launcher] Step 2: which docker — not found in PATH') }
+      try {
+        const { stdout: composeVer } = await execFileAsync('docker', ['compose', 'version'], { env, timeout: 5000 })
+        console.log(`[launcher] Step 2: docker compose version = ${composeVer.trim()}`)
+      } catch (e) {
+        console.log(`[launcher] Step 2: docker compose version FAILED: ${e instanceof Error ? e.message : e}`)
+      }
 
       let composeSuccess = false
       for (let attempt = 0; attempt < 3; attempt++) {
@@ -294,30 +323,39 @@ export class ServiceLauncher extends EventEmitter {
       }
 
       if (!composeSuccess) {
+        console.log('[launcher] Step 2: FAILED — compose never succeeded')
         updateStep('compose-up', { status: 'error', message: 'Failed to start containers' })
         return { success: false, error: 'docker compose up failed' }
       }
 
       // Start EverMemOS infrastructure
       if (!skipEM && isEverMemOSAvailable()) {
+        console.log('[launcher] Step 2: Starting EverMemOS infrastructure...')
         updateStep('compose-up', { status: 'running', message: 'Starting EverMemOS infrastructure...' })
         const emResult = await startEverMemOS()
         if (!emResult.success) {
-          // Non-blocking, just log
-          console.error('[service-launcher] EverMemOS containers failed:', emResult.output)
+          console.error('[launcher] Step 2: EverMemOS containers failed:', emResult.output)
+        } else {
+          console.log('[launcher] Step 2: EverMemOS infrastructure started')
         }
+      } else {
+        console.log(`[launcher] Step 2: EverMemOS skipped (skipEM=${skipEM}, available=${isEverMemOSAvailable()})`)
       }
+      console.log('[launcher] Step 2: DONE — containers started')
       updateStep('compose-up', { status: 'done', message: 'Containers started' })
 
       // ─── Step 3: Wait for MySQL ─────────────────────────
+      console.log('[launcher] Step 3: wait-mysql')
       updateStep('wait-mysql', { status: 'running', message: 'Waiting for MySQL port...' })
       let mysqlReady = false
       for (let i = 0; i < 60; i++) {
         if (await isPortReachable(3306)) {
           mysqlReady = true
+          console.log(`[launcher] Step 3: MySQL port reachable after ${i + 1}s`)
           break
         }
         if (i % 5 === 4) {
+          console.log(`[launcher] Step 3: MySQL port not reachable yet (${i + 1}s)`)
           updateStep('wait-mysql', {
             status: 'running',
             message: `Waiting for MySQL port... (${i + 1}s)`
@@ -326,25 +364,32 @@ export class ServiceLauncher extends EventEmitter {
         await delay(1000)
       }
       if (!mysqlReady) {
+        console.log('[launcher] Step 3: FAILED — MySQL port timeout (60s)')
         updateStep('wait-mysql', { status: 'error', message: 'MySQL port timeout (60s)' })
         return { success: false, error: 'MySQL port timeout' }
       }
       // Extra buffer for MySQL initialization
+      console.log('[launcher] Step 3: Waiting 5s extra for MySQL initialization...')
       await delay(5000)
+      console.log('[launcher] Step 3: DONE — MySQL is ready')
       updateStep('wait-mysql', { status: 'done', message: 'MySQL is ready' })
 
       // ─── Step 4: Initialize database tables ─────────────
+      console.log('[launcher] Step 4: init-tables')
       updateStep('init-tables', { status: 'running', message: 'Creating database tables...' })
       const createScript = join(TABLE_MGMT_DIR, 'create_all_tables.py')
       let tableCreated = false
       let lastTableErr = ''
       for (let attempt = 1; attempt <= 5; attempt++) {
         try {
+          console.log(`[launcher] Step 4: create_all_tables attempt ${attempt}/5`)
           await execInProject('uv', ['run', 'python', createScript], { timeout: 60000 })
           tableCreated = true
+          console.log(`[launcher] Step 4: create_all_tables succeeded on attempt ${attempt}`)
           break
         } catch (err) {
           lastTableErr = err instanceof Error ? err.message : String(err)
+          console.log(`[launcher] Step 4: create_all_tables attempt ${attempt} failed: ${lastTableErr}`)
           updateStep('init-tables', {
             status: 'running',
             message: `Attempt ${attempt} failed, ${attempt < 5 ? 'retrying...' : 'max retries reached'}`
@@ -353,21 +398,26 @@ export class ServiceLauncher extends EventEmitter {
         }
       }
       if (!tableCreated) {
+        console.log(`[launcher] Step 4: FAILED — table creation failed after 5 attempts`)
         updateStep('init-tables', { status: 'error', message: `Table creation failed: ${lastTableErr}` })
         return { success: false, error: 'Table creation failed' }
       }
 
       // Sync table schema (non-blocking)
+      console.log('[launcher] Step 4: Syncing table schema...')
       updateStep('init-tables', { status: 'running', message: 'Syncing table schema...' })
       try {
         const syncScript = join(TABLE_MGMT_DIR, 'sync_all_tables.py')
         await execInProject('uv', ['run', 'python', syncScript], { timeout: 60000 })
-      } catch {
-        // Schema sync failure doesn't block startup
+        console.log('[launcher] Step 4: sync_all_tables succeeded')
+      } catch (syncErr) {
+        console.log(`[launcher] Step 4: sync_all_tables failed (non-blocking): ${syncErr}`)
       }
+      console.log('[launcher] Step 4: DONE — database initialized')
       updateStep('init-tables', { status: 'done', message: 'Database initialized' })
 
       // ─── Step 5: Wait for EverMemOS infrastructure ──────
+      console.log(`[launcher] Step 5: wait-evermemos (skipEM=${skipEM}, dir exists=${existsSync(EVERMEMOS_DIR)})`)
       if (!skipEM && existsSync(EVERMEMOS_DIR)) {
         updateStep('wait-evermemos', { status: 'running', message: 'Waiting for EverMemOS infrastructure...' })
         let allInfraReady = true
@@ -376,6 +426,7 @@ export class ServiceLauncher extends EventEmitter {
           for (let i = 0; i < 180; i++) {
             if (await isPortReachable(port)) { ready = true; break }
             if (i % 5 === 4) {
+              console.log(`[launcher] Step 5: Waiting for ${name}:${port}... (${i + 1}s)`)
               updateStep('wait-evermemos', {
                 status: 'running',
                 message: `Waiting for ${name}:${port}... (${i + 1}s)`
@@ -384,6 +435,7 @@ export class ServiceLauncher extends EventEmitter {
             await delay(1000)
           }
           if (!ready) {
+            console.log(`[launcher] Step 5: ${name}:${port} timeout after 180s`)
             updateStep('wait-evermemos', {
               status: 'error',
               message: `${name}:${port} timeout after 180s — EverMemOS will not start`
@@ -392,22 +444,29 @@ export class ServiceLauncher extends EventEmitter {
             skipEM = true
             break
           }
+          console.log(`[launcher] Step 5: ${name}:${port} ready`)
         }
         if (allInfraReady) {
+          console.log('[launcher] Step 5: DONE — all EverMemOS infra ready')
           updateStep('wait-evermemos', { status: 'done', message: 'EverMemOS infrastructure ready' })
         }
       } else {
+        console.log('[launcher] Step 5: SKIPPED — EverMemOS not configured')
         updateStep('wait-evermemos', { status: 'skipped', message: 'EverMemOS not configured' })
       }
 
       // ─── Step 6: Start backend services ─────────────────
+      console.log(`[launcher] Step 6: start-services (skipEverMemOS=${skipEM})`)
       updateStep('start-services', { status: 'running', message: 'Starting all services...' })
       await this.processManager.startAll({ skipEverMemOS: skipEM })
+      console.log('[launcher] Step 6: DONE — all services started')
       updateStep('start-services', { status: 'done', message: 'All services started' })
 
+      console.log('[launcher] ========== LAUNCH COMPLETED SUCCESSFULLY ==========')
       return { success: true }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
+      console.error(`[launcher] ========== LAUNCH FAILED: ${message} ==========`)
       return { success: false, error: message }
     }
   }
