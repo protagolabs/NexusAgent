@@ -157,6 +157,8 @@ function createUvInstaller(): Installer {
       await spawnWithOutput('sh', ['-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh'], {
         timeout: 300000, onOutput
       })
+      // 刷新 shell 环境缓存，让后续安装器能找到 uv
+      await initShellEnv()
     }
   }
 }
@@ -299,9 +301,13 @@ async function startColima(
 ): Promise<void> {
   const { cpu, memory } = getColimaResources()
   const colimaArgs = ['start', '--cpu', String(cpu), '--memory', String(memory)]
-  // Apple Silicon 使用 Virtualization.framework，无需安装 QEMU
-  if (process.arch === 'arm64') {
-    colimaArgs.push('--vm-type', 'vz')
+  // Apple Silicon + macOS 13+ 使用 Virtualization.framework，无需安装 QEMU
+  // Darwin 22.x = macOS 13 Ventura
+  if (process.arch === 'arm64' && process.platform === 'darwin') {
+    const darwinMajor = parseInt(require('os').release().split('.')[0], 10)
+    if (darwinMajor >= 22) {
+      colimaArgs.push('--vm-type', 'vz')
+    }
   }
 
   console.log(`[installer] ${tag} Attempting colima start as regular user: ${colimaCmd} ${colimaArgs.join(' ')}`)
@@ -402,9 +408,11 @@ async function installDockerMacOS(onOutput: (line: string) => void): Promise<voi
     } else {
       onOutput('[Strategy 3/5] Installing Docker via Homebrew (colima + docker CLI)...')
       try {
-        // Apple Silicon 用 Virtualization.framework，Intel 需要 QEMU
+        // Apple Silicon + macOS 13+ 用 Virtualization.framework，其他情况需要 QEMU
         const brewPackages = ['colima', 'docker', 'docker-compose']
-        if (process.arch !== 'arm64') brewPackages.push('qemu')
+        const darwinMajor3 = parseInt(require('os').release().split('.')[0], 10)
+        const useVz3 = process.arch === 'arm64' && darwinMajor3 >= 22
+        if (!useVz3) brewPackages.push('qemu')
         await spawnWithOutput('brew', ['install', ...brewPackages], {
           timeout: 600000, onOutput
         })
@@ -452,11 +460,20 @@ async function installDockerMacOS(onOutput: (line: string) => void): Promise<voi
     console.log(`[installer] [Strategy 4/5] brewPrefix=${brewPrefix}, user=${currentUser}, arch=${process.arch}`)
 
     if (!existsSync(brewPath)) {
+      // 检查 git 是否可用（fresh macOS 没有 Xcode CLI Tools 时 git 不存在）
+      try {
+        await execInProject('git', ['--version'], { timeout: 5000 })
+      } catch {
+        console.log('[installer] [Strategy 4/5] git not found, skipping (needs Xcode CLI Tools)')
+        onOutput('[Strategy 4/5] git not available, skipping to next strategy...')
+        throw new Error('git not found — Xcode CLI Tools not installed')
+      }
+
       // Step 1: Create directory with correct ownership (needs admin privileges)
       console.log(`[installer] [Strategy 4/5] Step 1: Creating ${brewPrefix} with admin privileges`)
       onOutput('[Strategy 4/5] Creating Homebrew directory (admin privileges required)...')
       await execWithPrivileges(
-        `mkdir -p "${brewPrefix}" && chown -R ${currentUser}:admin "${brewPrefix}"`,
+        `mkdir -p "${brewPrefix}" && chown -R ${currentUser}:staff "${brewPrefix}"`,
         { timeout: 30000 }
       )
 
@@ -479,7 +496,9 @@ async function installDockerMacOS(onOutput: (line: string) => void): Promise<voi
 
     // Step 4: Install colima + docker CLI
     const s4Packages = ['colima', 'docker', 'docker-compose']
-    if (process.arch !== 'arm64') s4Packages.push('qemu')
+    const darwinMajor4 = parseInt(require('os').release().split('.')[0], 10)
+    const useVz4 = process.arch === 'arm64' && darwinMajor4 >= 22
+    if (!useVz4) s4Packages.push('qemu')
     console.log(`[installer] [Strategy 4/5] Step 4: brew install ${s4Packages.join(' ')}`)
     onOutput('[Strategy 4/5] Installing colima + docker via Homebrew...')
     await spawnWithOutput(brewPath, ['install', ...s4Packages], {
@@ -654,6 +673,7 @@ function createFrontendBuildInstaller(): Installer {
   return {
     id: 'frontend-build',
     label: 'Build frontend',
+    dependsOn: ['node'],
     blocking: true,
     async check() {
       return existsSync(join(FRONTEND_DIR, 'dist', 'index.html'))

@@ -11,7 +11,9 @@ mac:
       arch:
         - universal
   icon: resources/icon.icns
-  entitlementsInherit: null
+  hardenedRuntime: true
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
 
 dmg:
   title: "NarraNexus"

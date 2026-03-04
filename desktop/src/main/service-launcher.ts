@@ -252,6 +252,16 @@ export class ServiceLauncher extends EventEmitter {
       const COMPOSE_TIMEOUT = 600000 // 10 minutes for image pull
       updateStep('compose-up', { status: 'running', message: 'Starting MySQL container...' })
 
+      // 检查 MySQL 端口是否被其他进程占用
+      if (await isPortReachable(3306)) {
+        console.warn('[launcher] Step 2: Port 3306 is already in use by another process')
+        updateStep('compose-up', {
+          status: 'error',
+          message: 'Port 3306 is already in use. Please stop your existing MySQL service and retry.'
+        })
+        return { success: false, error: 'Port 3306 is already in use by another process. Please stop it (e.g. `brew services stop mysql`) and retry.' }
+      }
+
       // Ensure Docker is truly healthy before compose
       const preComposeState = await detectDockerState()
       console.log(`[launcher] Step 2: preComposeState = ${preComposeState}`)

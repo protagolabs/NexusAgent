@@ -282,9 +282,13 @@ export async function ensureDockerDaemon(): Promise<boolean> {
     const colimaMemory = Math.max(2, Math.min(12, Math.floor(totalMemGB / 2)))
     const colimaCPU = Math.max(2, Math.min(8, Math.floor(totalCPU / 2)))
     const colimaArgs = ['start', '--cpu', String(colimaCPU), '--memory', String(colimaMemory)]
-    // Apple Silicon 使用 Virtualization.framework，无需安装 QEMU
+    // Apple Silicon + macOS 13+ 使用 Virtualization.framework，无需安装 QEMU
+    // Darwin 22.x = macOS 13 Ventura
     if (process.arch === 'arm64') {
-      colimaArgs.push('--vm-type', 'vz')
+      const darwinMajor = parseInt(os.release().split('.')[0], 10)
+      if (darwinMajor >= 22) {
+        colimaArgs.push('--vm-type', 'vz')
+      }
     }
     console.log(`[docker-manager] System: ${totalMemGB}GB RAM, ${totalCPU} CPUs → Colima: ${colimaMemory}GB, ${colimaCPU} CPUs`)
 

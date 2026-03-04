@@ -6,7 +6,7 @@
  * manages application lifecycle (startup, shutdown, tray minimize).
  */
 
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, dialog } from 'electron'
 import { join } from 'path'
 import { ensureWritableProject } from './constants'
 import { initShellEnv } from './shell-env'
@@ -98,11 +98,49 @@ declare module 'electron' {
 app.isQuitting = false
 
 app.whenReady().then(async () => {
-  // Ensure writable project directory exists (copied on first packaged launch)
-  ensureWritableProject()
+  // 启动初始化时显示 splash 窗口，避免用户以为 app 卡死
+  let splash: BrowserWindow | null = null
+  try {
+    if (app.isPackaged) {
+      splash = new BrowserWindow({
+        width: 360, height: 200,
+        frame: false, transparent: false, alwaysOnTop: true,
+        resizable: false, skipTaskbar: true,
+        webPreferences: { nodeIntegration: false, contextIsolation: true }
+      })
+      splash.loadURL(`data:text/html;charset=utf-8,
+        <html><body style="margin:0;display:flex;align-items:center;justify-content:center;
+          height:100vh;background:#1a1a2e;color:#e0e0e0;font-family:-apple-system,system-ui,sans-serif;
+          font-size:16px;-webkit-app-region:drag;">
+          <div style="text-align:center">
+            <div style="font-size:24px;margin-bottom:12px">NarraNexus</div>
+            <div style="color:#888">Initializing...</div>
+          </div>
+        </body></html>`)
+      splash.show()
+    }
 
-  // Resolve full env vars from user login shell (required for macOS .app launch)
-  await initShellEnv()
+    // Ensure writable project directory exists (copied on first packaged launch)
+    ensureWritableProject()
+
+    // Resolve full env vars from user login shell (required for macOS .app launch)
+    await initShellEnv()
+
+    // Close splash before showing main window
+    if (splash && !splash.isDestroyed()) {
+      splash.close()
+      splash = null
+    }
+  } catch (err) {
+    // 启动失败时显示错误对话框，而不是静默崩溃
+    if (splash && !splash.isDestroyed()) splash.close()
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[main] Startup initialization failed:', message)
+    dialog.showErrorBox('NarraNexus - Startup Error',
+      `Failed to initialize the application:\n\n${message}\n\nPlease check disk space and permissions, then try again.`)
+    app.quit()
+    return
+  }
 
   // Initialize process manager (depends on shell-env being initialized)
   processManager = new ProcessManager()
