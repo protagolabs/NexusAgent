@@ -194,7 +194,7 @@ export async function installDependency(
   try {
     const [cmd, ...args] = dep.autoInstallCommand
     const { stdout, stderr } = await execFileAsync(cmd, args, {
-      timeout: 120000,
+      timeout: 300000,
       env: getShellEnv()
     })
     return { success: true, output: stdout + stderr }

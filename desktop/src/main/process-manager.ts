@@ -464,7 +464,7 @@ export class ProcessManager extends EventEmitter {
     // Strategy 2: Start Colima (if installed)
     this.emitSetupLog('Trying colima start...')
     try {
-      await this.execInProject('colima', ['start'], { timeout: 120000 })
+      await this.execInProject('colima', ['start'], { timeout: 300000 })
       await this.execInProject('docker', ['info'], { timeout: 10000 })
       return true
     } catch { /* Colima not installed */ }
@@ -474,9 +474,9 @@ export class ProcessManager extends EventEmitter {
       await this.execInProject('brew', ['--version'], { timeout: 10000 })
       this.emitSetupLog('Installing Docker via Homebrew (colima + docker CLI)...')
       await this.execInProject('brew', ['install', 'colima', 'docker', 'docker-compose'],
-        { timeout: 300000 })
+        { timeout: 600000 })
       this.emitSetupLog('Starting Colima VM...')
-      await this.execInProject('colima', ['start'], { timeout: 120000 })
+      await this.execInProject('colima', ['start'], { timeout: 300000 })
       await this.execInProject('docker', ['info'], { timeout: 10000 })
       resetComposeDetection()
       return true
@@ -488,7 +488,7 @@ export class ProcessManager extends EventEmitter {
       // Homebrew install requires sudo; NONINTERACTIVE=1 skips "press Enter" confirmation
       await this.execWithPrivileges(
         'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"',
-        { timeout: 300000 }
+        { timeout: 600000 }
       )
       // Homebrew install path varies by arch: Apple Silicon → /opt/homebrew, Intel → /usr/local
       const brewPath = process.arch === 'arm64'
@@ -497,12 +497,12 @@ export class ProcessManager extends EventEmitter {
       this.emitSetupLog(`Installing colima + docker CLI... (brew: ${brewPath})`)
       await this.execInProject('sh', ['-c',
         `${brewPath} install colima docker docker-compose`
-      ], { timeout: 300000 })
+      ], { timeout: 600000 })
       const colimaPath = brewPath.replace('/brew', '/colima')
       this.emitSetupLog('Starting Colima VM...')
       await this.execInProject('sh', ['-c',
         `${colimaPath} start`
-      ], { timeout: 120000 })
+      ], { timeout: 300000 })
       await this.execInProject('docker', ['info'], { timeout: 10000 })
       resetComposeDetection()
       return true
@@ -539,7 +539,7 @@ export class ProcessManager extends EventEmitter {
         + '    || true)'
         + ` && usermod -aG docker ${user}`
         + ' && systemctl start docker',
-        { timeout: 300000 }
+        { timeout: 600000 }
       )
       // Reset compose command detection cache after new install
       resetComposeDetection()
@@ -615,7 +615,7 @@ export class ProcessManager extends EventEmitter {
         emitProgress('Install uv', 'running', 'Installing uv...')
         try {
           // macOS/Linux: use official install script
-          await this.execInProject('sh', ['-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh'], { timeout: 180000 })
+          await this.execInProject('sh', ['-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh'], { timeout: 300000 })
           emitProgress('Install uv', 'done', 'uv installed successfully')
           // Adjust step count (step 1 emitted twice)
           currentStep = 1
@@ -640,7 +640,7 @@ export class ProcessManager extends EventEmitter {
         // Not installed → auto install
         emitProgress('Install Claude Code', 'running', 'Installing Claude Code...')
         try {
-          await this.execInProject('sh', ['-c', 'curl -fsSL https://claude.ai/install.sh | sh'], { timeout: 180000 })
+          await this.execInProject('sh', ['-c', 'curl -fsSL https://claude.ai/install.sh | sh'], { timeout: 300000 })
           claudeInstalled = true
           this.emit('setup-progress', {
             step: currentStep, totalSteps, label: 'Install Claude Code', status: 'done', message: 'Claude Code installed successfully'
@@ -680,7 +680,7 @@ export class ProcessManager extends EventEmitter {
       emitProgress('Install Python dependencies', 'running', 'Running uv sync...')
       try {
         await this.spawnWithProgress('uv', ['sync'], {
-          timeout: 300000,
+          timeout: 600000,
           onOutput: (line) => this.emit('setup-progress', {
             step: currentStep, totalSteps, label: 'Install Python dependencies', status: 'running', message: line
           } as SetupProgress)
@@ -737,7 +737,7 @@ export class ProcessManager extends EventEmitter {
         emitProgress('Clone EverMemOS', 'running', 'Cloning EverMemOS repository...')
         try {
           await this.spawnWithProgress('git', ['clone', '--depth', '1', '--progress', EVERMEMOS_GIT_URL, '.evermemos'], {
-            timeout: 180000,
+            timeout: 600000,
             onOutput: (line) => this.emit('setup-progress', {
               step: currentStep, totalSteps, label: 'Clone EverMemOS', status: 'running', message: line
             } as SetupProgress)
@@ -896,7 +896,7 @@ export class ProcessManager extends EventEmitter {
           emitProgress('EverMemOS dependencies', 'running', 'Installing EverMemOS Python dependencies...')
           try {
             await this.spawnWithProgress('uv', ['sync'], {
-              cwd: EVERMEMOS_DIR, timeout: 300000,
+              cwd: EVERMEMOS_DIR, timeout: 600000,
               onOutput: (line) => this.emit('setup-progress', {
                 step: currentStep, totalSteps, label: 'EverMemOS dependencies', status: 'running', message: line
               } as SetupProgress)
@@ -929,13 +929,13 @@ export class ProcessManager extends EventEmitter {
             step: currentStep, totalSteps, label: 'Build frontend', status: 'running', message: line
           } as SetupProgress)
           await this.spawnWithProgress('npm', ['install', '--no-audit', '--no-fund'], {
-            cwd: FRONTEND_DIR, timeout: 120000, onOutput: feOnOutput
+            cwd: FRONTEND_DIR, timeout: 300000, onOutput: feOnOutput
           })
           this.emit('setup-progress', {
             step: currentStep, totalSteps, label: 'Build frontend', status: 'running', message: 'Compiling frontend...'
           } as SetupProgress)
           await this.spawnWithProgress('npm', ['run', 'build'], {
-            cwd: FRONTEND_DIR, timeout: 120000, onOutput: feOnOutput
+            cwd: FRONTEND_DIR, timeout: 300000, onOutput: feOnOutput
           })
           this.emit('setup-progress', {
             step: currentStep, totalSteps, label: 'Build frontend', status: 'done', message: 'Frontend build complete'

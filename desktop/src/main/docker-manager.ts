@@ -114,7 +114,7 @@ export async function ensureDockerDaemon(): Promise<boolean> {
     } catch { /* Docker Desktop not installed */ }
 
     // Strategy 2: Start Colima
-    const result = await execSafe('colima', ['start'], { timeout: 120000 })
+    const result = await execSafe('colima', ['start'], { timeout: 300000 })
     if (result.success && await isDockerReady()) return true
   } else {
     // Linux strategy 1: direct systemctl (may already be in docker group)
