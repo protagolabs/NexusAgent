@@ -16,44 +16,9 @@ Per the design document:
 from typing import Optional, Dict, Any, List
 from loguru import logger
 from datetime import datetime
-from pydantic import BaseModel, Field
 
 # Module (same package)
 from xyz_agent_context.module import XYZBaseModule
-from xyz_agent_context.agent_framework.openai_agents_sdk import OpenAIAgentsSDK
-
-
-# ===== LLM Output Schema Definitions =====
-
-class SummaryOutput(BaseModel):
-    """
-    Conversation summary output structure
-    """
-    summary: str = Field(
-        default="",
-        description="Short summary of conversation key points (one line)"
-    )
-
-
-class CompressedDescriptionOutput(BaseModel):
-    """
-    Compressed description output structure
-    """
-    compressed_summary: str = Field(
-        default="",
-        description="Compressed description (no more than 500 characters)"
-    )
-
-
-class PersonaOutput(BaseModel):
-    """
-    Persona inference output structure
-    """
-    persona: str = Field(
-        default="",
-        description="Communication persona/style guide for interacting with this entity (1-3 sentences in natural language)"
-    )
-
 
 # Schema
 from xyz_agent_context.schema import (
@@ -72,13 +37,19 @@ from xyz_agent_context.utils.embedding import get_embedding
 from xyz_agent_context.repository import SocialNetworkRepository, SocialNetworkEntity, InstanceRepository
 
 # Prompts
-from xyz_agent_context.module.social_network_module.prompts import (
-    SOCIAL_NETWORK_MODULE_INSTRUCTIONS,
-    ENTITY_SUMMARY_INSTRUCTIONS,
-    DESCRIPTION_COMPRESSION_INSTRUCTIONS,
-    PERSONA_INFERENCE_INSTRUCTIONS,
-)
+from xyz_agent_context.module.social_network_module.prompts import SOCIAL_NETWORK_MODULE_INSTRUCTIONS
 from xyz_agent_context.module.social_network_module._social_mcp_tools import create_social_network_mcp_server
+
+# Entity update pipeline (LLM-powered)
+from xyz_agent_context.module.social_network_module._entity_updater import (
+    summarize_new_entity_info,
+    append_to_entity_description,
+    update_entity_embedding,
+    update_interaction_stats,
+    should_update_persona,
+    infer_persona,
+    update_entity_persona,
+)
 
 
 class SocialNetworkModule(XYZBaseModule):
@@ -347,59 +318,49 @@ Run: `uv run python src/xyz_agent_context/utils/database_table_management/create
                     return
 
             # 1. Call LLM to summarize this round of conversation
-            new_summary = await self._summarize_new_entity_info(input_content, final_output)
+            new_summary = await summarize_new_entity_info(input_content, final_output)
 
             if not new_summary or new_summary.strip() == "":
                 logger.debug("            No new information to add")
-                await self._update_interaction_stats(user_id, instance_id)
+                await update_interaction_stats(repo, user_id, instance_id)
                 return
 
-            logger.info(f"            ✓ New summary generated: {new_summary[:100]}...")
+            logger.info(f"            New summary generated: {new_summary[:100]}...")
 
             # 2. Append to entity_description
-            await self._append_to_entity_description(user_id, instance_id, new_summary)
+            await append_to_entity_description(repo, user_id, instance_id, new_summary)
 
             # 3. Update embedding (based on latest entity_description + tags)
-            await self._update_entity_embedding(user_id, instance_id)
+            await update_entity_embedding(repo, user_id, instance_id)
 
             # 4. Update statistics
-            await self._update_interaction_stats(user_id, instance_id)
+            await update_interaction_stats(repo, user_id, instance_id)
 
             # 5. Check and update Persona (if needed)
-            # Re-fetch entity to get the latest interaction_count
             entity = await repo.get_entity(entity_id=user_id, instance_id=instance_id)
-            if entity and self._should_update_persona(entity, final_output):
-                logger.info(f"            🎭 Updating persona for {user_id}...")
+            if entity and should_update_persona(entity, final_output):
+                logger.info(f"            Updating persona for {user_id}...")
 
-                # Get awareness and job_info (if available)
                 awareness = ""
-                job_info = ""
+                job_info_str = ""
                 if params.ctx_data:
-                    # awareness may be in ctx_data's extra_data
                     awareness = getattr(params.ctx_data, 'awareness', '') or ''
-                    # job_info may be in extra_data
                     if hasattr(params.ctx_data, 'extra_data') and params.ctx_data.extra_data:
                         related_jobs = params.ctx_data.extra_data.get('related_jobs_context', [])
                         if related_jobs:
-                            job_info = str(related_jobs)
+                            job_info_str = str(related_jobs)
 
-                # Build recent conversation
                 recent_conversation = f"User: {input_content}\nAgent: {final_output}"
 
-                # Infer new persona
-                new_persona = await self._infer_persona(
+                new_persona = await infer_persona(
                     entity=entity,
                     awareness=awareness,
-                    job_info=job_info,
+                    job_info=job_info_str,
                     recent_conversation=recent_conversation
                 )
 
                 if new_persona:
-                    await self._update_entity_persona(
-                        entity_id=user_id,
-                        instance_id=instance_id,
-                        new_persona=new_persona
-                    )
+                    await update_entity_persona(repo, user_id, instance_id, new_persona)
 
             logger.success(f"            ✅ Entity description updated for {user_id}")
 
@@ -640,192 +601,6 @@ Run: `uv run python src/xyz_agent_context/utils/database_table_management/create
             logger.error(f"Error getting agent stats: {e}")
             return []
 
-    async def _update_interaction_stats(self, entity_id: str, instance_id: str) -> None:
-        """
-        Update interaction statistics (internal use)
-
-        Args:
-            entity_id: Entity ID
-            instance_id: Instance ID
-        """
-        try:
-            # Use repository's increment_interaction method, more efficient
-            await self._get_repo().increment_interaction(
-                entity_id=entity_id,
-                instance_id=instance_id
-            )
-        except Exception as e:
-            logger.error(f"Error updating interaction stats: {e}")
-
-    async def _summarize_new_entity_info(self, input_content: str, final_output: str) -> str:
-        """
-        Call LLM to summarize key points of this round of conversation
-
-        Args:
-            input_content: User input
-            final_output: Agent response
-
-        Returns:
-            Short summary of conversation key points
-        """
-        try:
-            instructions = ENTITY_SUMMARY_INSTRUCTIONS
-
-            user_input = f"""User: {input_content}
-Agent: {final_output}
-
-Summary (one line only):"""
-
-            # Use OpenAIAgentsSDK's llm_function
-            sdk = OpenAIAgentsSDK()
-            result = await sdk.llm_function(
-                instructions=instructions,
-                user_input=user_input,
-                output_type=SummaryOutput,
-            )
-
-            # result is RunResult, get parsed Pydantic object via .final_output
-            output: SummaryOutput = result.final_output
-            return output.summary.strip()
-
-        except Exception as e:
-            logger.error(f"Error summarizing entity info: {e}")
-            return ""
-
-    async def _append_to_entity_description(self, entity_id: str, instance_id: str, new_info: str) -> None:
-        """
-        Append information to entity_description (cumulative, not overwriting)
-
-        Args:
-            entity_id: Entity ID
-            instance_id: Instance ID
-            new_info: New information
-        """
-        try:
-            # Get existing entity
-            repo = self._get_repo()
-            entity = await repo.get_entity(
-                entity_id=entity_id,
-                instance_id=instance_id
-            )
-
-            if not entity:
-                logger.warning(f"Entity {entity_id} not found, cannot append description")
-                return
-
-            # Append information
-            existing_desc = entity.entity_description or ""
-
-            # If description already exists, append with separator
-            if existing_desc:
-                new_description = f"{existing_desc}\n- {new_info}"
-            else:
-                new_description = new_info
-
-            # Check length, compress if exceeding threshold
-            if len(new_description) > 2000:
-                logger.info(f"Description too long ({len(new_description)} chars), compressing...")
-                new_description = await self._compress_description(new_description)
-
-            # Update database
-            await repo.update_entity_info(
-                entity_id=entity_id,
-                instance_id=instance_id,
-                updates={"entity_description": new_description}
-            )
-
-            logger.info(f"✓ Appended to entity_description: {new_info[:50]}...")
-
-        except Exception as e:
-            logger.error(f"Error appending to entity_description: {e}")
-
-    async def _update_entity_embedding(self, entity_id: str, instance_id: str) -> None:
-        """
-        Update entity's embedding vector (based on entity_name + entity_description + tags)
-
-        Args:
-            entity_id: Entity ID
-            instance_id: Instance ID
-        """
-        try:
-            repo = self._get_repo()
-            entity = await repo.get_entity(
-                entity_id=entity_id,
-                instance_id=instance_id
-            )
-
-            if not entity:
-                logger.warning(f"Entity {entity_id} not found, cannot update embedding")
-                return
-
-            # Build text for embedding generation
-            # Format: entity_name + entity_description + tags
-            text_parts = []
-
-            if entity.entity_name:
-                text_parts.append(f"Name: {entity.entity_name}")
-
-            if entity.entity_description:
-                text_parts.append(f"Description: {entity.entity_description}")
-
-            if entity.tags:
-                text_parts.append(f"Tags: {', '.join(entity.tags)}")
-
-            embedding_text = "\n".join(text_parts)
-
-            if not embedding_text.strip():
-                logger.debug("No content for embedding generation, skipping")
-                return
-
-            # Generate embedding
-            embedding = await get_embedding(embedding_text)
-
-            # Update database
-            await repo.update_entity_info(
-                entity_id=entity_id,
-                instance_id=instance_id,
-                updates={"embedding": embedding}
-            )
-
-            logger.info(f"✓ Updated embedding for entity {entity_id} (dim={len(embedding)})")
-
-        except Exception as e:
-            logger.error(f"Error updating entity embedding: {e}")
-
-    async def _compress_description(self, long_description: str) -> str:
-        """
-        Compress overly long description (call LLM to re-summarize)
-
-        Args:
-            long_description: Overly long description
-
-        Returns:
-            Compressed description
-        """
-        try:
-            instructions = DESCRIPTION_COMPRESSION_INSTRUCTIONS
-
-            user_input = f"""{long_description}
-
-Compressed summary:"""
-
-            # Use OpenAIAgentsSDK's llm_function
-            sdk = OpenAIAgentsSDK()
-            result = await sdk.llm_function(
-                instructions=instructions,
-                user_input=user_input,
-                output_type=CompressedDescriptionOutput,
-            )
-
-            # result is RunResult, get parsed Pydantic object via .final_output
-            output: CompressedDescriptionOutput = result.final_output
-            return output.compressed_summary.strip()
-
-        except Exception as e:
-            logger.error(f"Error compressing description: {e}")
-            # If compression fails, at least truncate
-            return long_description[:1000] + "..."
-
     # ============================================================================= Public API (for MCP Server)
 
     async def extract_and_update_entity_info(
@@ -1027,150 +802,3 @@ Compressed summary:"""
                 "results": []
             }
 
-    # ============================================================================= Persona Methods
-
-    def _should_update_persona(
-        self,
-        entity: SocialNetworkEntity,
-        response_content: str = ""
-    ) -> bool:
-        """
-        Determine if Persona needs to be updated
-
-        Update conditions (triggered if any is met):
-        1. First interaction (persona is empty)
-        2. Forced re-evaluation every 10 conversation rounds
-        3. Significant change signal detected in conversation
-
-        Args:
-            entity: SocialNetworkEntity entity
-            response_content: Conversation content (for detecting change signals)
-
-        Returns:
-            bool: Whether Persona needs to be updated
-        """
-        # 1. First interaction, must initialize
-        if entity.persona is None:
-            logger.debug("            Persona update needed: first interaction (persona is None)")
-            return True
-
-        # 2. Forced re-evaluation every 10 rounds
-        if entity.interaction_count > 0 and entity.interaction_count % 10 == 0:
-            logger.debug(f"            Persona update needed: periodic re-evaluation (turn {entity.interaction_count})")
-            return True
-
-        # 3. Detect if there are significant change signals in the conversation
-        # Note: signals should be lowercase since we compare with response_content.lower()
-        change_signals = [
-            "i changed my mind", "actually i care more about", "budget changed", "decision process changed",
-            "change my mind", "our needs changed", "our requirements changed"
-        ]
-        if response_content and any(signal in response_content.lower() for signal in change_signals):
-            logger.debug("            Persona update needed: change signal detected in conversation")
-            return True
-
-        return False
-
-    async def _infer_persona(
-        self,
-        entity: SocialNetworkEntity,
-        awareness: str = "",
-        job_info: str = "",
-        recent_conversation: str = ""
-    ) -> str:
-        """
-        Infer Persona using LLM
-
-        Args:
-            entity: SocialNetworkEntity entity
-            awareness: Agent's awareness (Master's guidance)
-            job_info: Related Job information
-            recent_conversation: Recent conversation content
-
-        Returns:
-            str: Inferred Persona description
-        """
-        try:
-            instructions = PERSONA_INFERENCE_INSTRUCTIONS
-
-            # Build entity info
-            entity_context = f"""Contact Information:
-- Name: {entity.entity_name or 'Unknown'}
-- Type: {entity.entity_type}
-- Description: {entity.entity_description or 'No description yet'}
-- Tags: {', '.join(entity.tags) if entity.tags else 'None'}
-- Interaction count: {entity.interaction_count}"""
-
-            if entity.identity_info:
-                entity_context += f"\n- Identity info: {entity.identity_info}"
-
-            # Build user input
-            user_input_parts = [entity_context]
-
-            if awareness:
-                user_input_parts.append(f"\nAgent Awareness (Master's Instructions):\n{awareness}")
-
-            if job_info:
-                user_input_parts.append(f"\nRelated Job Information:\n{job_info}")
-
-            if recent_conversation:
-                user_input_parts.append(f"\nRecent Conversation:\n{recent_conversation}")
-
-            # If persona already exists, provide as reference
-            if entity.persona:
-                user_input_parts.append(f"\nCurrent Persona (for reference):\n{entity.persona}")
-
-            user_input_parts.append("\nGenerate a concise communication persona for this contact:")
-
-            user_input = "\n".join(user_input_parts)
-
-            # Call LLM
-            sdk = OpenAIAgentsSDK()
-            result = await sdk.llm_function(
-                instructions=instructions,
-                user_input=user_input,
-                output_type=PersonaOutput,
-            )
-
-            output: PersonaOutput = result.final_output
-            persona = output.persona.strip()
-
-            if persona:
-                logger.info(f"            ✓ Persona inferred: {persona[:50]}...")
-                return persona
-            else:
-                logger.warning("            ⚠ LLM returned empty persona")
-                return entity.persona or ""
-
-        except Exception as e:
-            logger.error(f"            ❌ Error inferring persona: {e}")
-            return entity.persona or ""
-
-    async def _update_entity_persona(
-        self,
-        entity_id: str,
-        instance_id: str,
-        new_persona: str
-    ) -> None:
-        """
-        Update entity's Persona
-
-        Args:
-            entity_id: Entity ID
-            instance_id: Instance ID
-            new_persona: New Persona
-        """
-        try:
-            repo = self._get_repo()
-
-            # Update database
-            await repo.update_entity_info(
-                entity_id=entity_id,
-                instance_id=instance_id,
-                updates={"persona": new_persona}
-            )
-
-            logger.info("            ✓ Entity persona updated")
-
-        except Exception as e:
-            logger.error(f"            ❌ Error updating entity persona: {e}")
