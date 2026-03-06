@@ -55,7 +55,6 @@ import json
 from typing import Optional, List, Dict, Any
 
 from loguru import logger
-from mcp.server.fastmcp import FastMCP
 from fastmcp import Client
 
 # Module (same package)

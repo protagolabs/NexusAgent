@@ -16,8 +16,6 @@ Per the design document:
 from typing import Optional, Dict, Any, List
 from loguru import logger
 from datetime import datetime
-from mcp.server.fastmcp import FastMCP
-
 from pydantic import BaseModel, Field
 
 # Module (same package)
