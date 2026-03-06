@@ -83,11 +83,7 @@ export function Sidebar() {
     if (agentId) {
       try {
         const result = await api.clearHistory(agentId, userId);
-        if (result.success) {
-          console.log(
-            `Cleared history: ${result.narratives_count} narratives, ${result.events_count} events deleted`
-          );
-        } else {
+        if (!result.success) {
           console.error('Failed to clear history:', result.error);
         }
       } catch (err) {

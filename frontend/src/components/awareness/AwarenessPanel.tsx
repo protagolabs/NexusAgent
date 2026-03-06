@@ -66,18 +66,12 @@ export function AwarenessPanel() {
     if (!agentId) return;
 
     setIsSaving(true);
-    console.log('[AwarenessPanel] Saving awareness for agent:', agentId);
-    console.log('[AwarenessPanel] New awareness content (first 100 chars):', editedAwareness.slice(0, 100));
 
     try {
       const response = await api.updateAwareness(agentId, editedAwareness);
-      console.log('[AwarenessPanel] Update response:', response);
 
       if (response.success) {
-        console.log('[AwarenessPanel] Update successful, returned awareness:', response.awareness?.slice(0, 100));
-        // Refresh awareness data
         await refreshAwareness(agentId);
-        console.log('[AwarenessPanel] Refreshed awareness from store:', awareness?.slice(0, 100));
         setIsEditModalOpen(false);
       } else {
         console.error('[AwarenessPanel] Failed to update awareness:', response.error);
