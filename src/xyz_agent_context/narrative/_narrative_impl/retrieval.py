@@ -853,7 +853,7 @@ class NarrativeRetrieval:
                 )
 
         # 5. No match, create new Narrative
-        logger.info(f"LLM determined no match with any Narrative, creating new topic")
+        logger.info("LLM determined no match with any Narrative, creating new topic")
         new_narrative = await self._create_with_embedding(
             query=query,
             query_embedding=query_embedding,

@@ -183,7 +183,7 @@ class GeminiRAGTrigger:
                 content=content,
                 wait_seconds=wait_seconds
             )
-            logger.info(f"[GeminiRAGTrigger] Text upload successful")
+            logger.info("[GeminiRAGTrigger] Text upload successful")
             return result
 
         except Exception as e:

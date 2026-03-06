@@ -245,7 +245,7 @@ note: Your query should combine the user's question with the existing keywords a
         Returns:
             Updated ContextData
         """
-        logger.debug(f"          → GeminiRAGModule.hook_data_gathering() started")
+        logger.debug("          → GeminiRAGModule.hook_data_gathering() started")
 
         try:
             repo = RAGStoreRepository(self.db)
@@ -263,7 +263,7 @@ note: Your query should combine the user's question with the existing keywords a
                     agent_id=self.agent_id,
                     user_id=None
                 )
-                logger.debug(f"          Using agent_id for RAG keywords")
+                logger.debug("          Using agent_id for RAG keywords")
 
             if not keywords:
                 logger.debug("          No RAG keywords found, knowledge base may be empty")
@@ -286,7 +286,7 @@ note: Your query should combine the user's question with the existing keywords a
             # Also save keywords to ctx_data (for other modules to use)
             ctx_data.rag_keywords = keywords
 
-            logger.debug(f"          ← GeminiRAGModule.hook_data_gathering() completed")
+            logger.debug("          ← GeminiRAGModule.hook_data_gathering() completed")
 
         except Exception as e:
             logger.error(f"Error in GeminiRAGModule.hook_data_gathering: {e}")

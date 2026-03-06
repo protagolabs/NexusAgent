@@ -189,13 +189,13 @@ class ClaudeAgentSDK:
                     "  3. API 认证失败或额度耗尽"
                 )
                 if cli_stderr_lines:
-                    logger.error(f"[ClaudeAgentSDK] CLI stderr 输出:\n" + "\n".join(cli_stderr_lines))
+                    logger.error("[ClaudeAgentSDK] CLI stderr 输出:\n" + "\n".join(cli_stderr_lines))
         except GeneratorExit:
             logger.warning(f"Agent loop generator was closed early (client disconnected). Messages received: {message_count}")
         except Exception as e:
             logger.error(f"Error in agent_loop: {e}")
             if cli_stderr_lines:
-                logger.error(f"[ClaudeAgentSDK] CLI stderr 输出:\n" + "\n".join(cli_stderr_lines))
+                logger.error("[ClaudeAgentSDK] CLI stderr 输出:\n" + "\n".join(cli_stderr_lines))
             raise
         finally:
             if client is not None:

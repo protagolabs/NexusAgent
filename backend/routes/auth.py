@@ -179,7 +179,7 @@ async def create_agent(request: CreateAgentRequest):
         agent_id = f"agent_{uuid4().hex[:12]}"
 
         # Set default name if not provided
-        agent_name = request.agent_name or f"New Agent"
+        agent_name = request.agent_name or "New Agent"
         agent_description = request.agent_description or "A new agent ready for configuration"
 
         # Add agent to database

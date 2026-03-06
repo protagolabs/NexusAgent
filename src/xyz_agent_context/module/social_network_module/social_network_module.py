@@ -174,7 +174,7 @@ class SocialNetworkModule(XYZBaseModule):
         Returns:
             Enriched ContextData
         """
-        logger.debug(f"          → SocialNetworkModule.hook_data_gathering() started")
+        logger.debug("          → SocialNetworkModule.hook_data_gathering() started")
 
         try:
             # Get instance_id
@@ -247,7 +247,7 @@ Adapt your communication style according to this persona."""
                     Remember to call `extract_entity_info` immediately when they introduce themselves or share personal information."""
             else:
                 # Case where user_id is empty (e.g., anonymous user or system call)
-                logger.debug(f"            ℹ No user_id in ctx_data, skipping social network lookup")
+                logger.debug("            ℹ No user_id in ctx_data, skipping social network lookup")
                 ctx_data.social_network_current_entity = """**No user context available.**
 
                     Social network features are available when interacting with identified users."""
@@ -256,7 +256,7 @@ Adapt your communication style according to this persona."""
             # TODO: Detect if other entities are mentioned in input
             # TODO: Detect if expert search is needed
 
-            logger.debug(f"          ← SocialNetworkModule.hook_data_gathering() completed")
+            logger.debug("          ← SocialNetworkModule.hook_data_gathering() completed")
 
         except Exception as e:
             logger.error(f"            ❌ Error in hook_data_gathering: {e}")
@@ -297,7 +297,7 @@ Run: `uv run python src/xyz_agent_context/utils/database_table_management/create
                 - trace: Execution trace (event_log, agent_loop_response)
                 - ctx_data: Complete context data
         """
-        logger.debug(f"          → SocialNetworkModule.hook_after_event_execution() started")
+        logger.debug("          → SocialNetworkModule.hook_after_event_execution() started")
 
         try:
             # Get instance_id
@@ -350,7 +350,7 @@ Run: `uv run python src/xyz_agent_context/utils/database_table_management/create
             new_summary = await self._summarize_new_entity_info(input_content, final_output)
 
             if not new_summary or new_summary.strip() == "":
-                logger.debug(f"            No new information to add")
+                logger.debug("            No new information to add")
                 await self._update_interaction_stats(user_id, instance_id)
                 return
 
@@ -407,7 +407,7 @@ Run: `uv run python src/xyz_agent_context/utils/database_table_management/create
             logger.error(f"            ❌ Error in hook_after_event_execution: {e}")
             logger.exception(e)
 
-        logger.debug(f"          ← SocialNetworkModule.hook_after_event_execution() completed")
+        logger.debug("          ← SocialNetworkModule.hook_after_event_execution() completed")
 
     # ============================================================================= MCP Server
 
@@ -774,7 +774,7 @@ Summary (one line only):"""
             embedding_text = "\n".join(text_parts)
 
             if not embedding_text.strip():
-                logger.debug(f"No content for embedding generation, skipping")
+                logger.debug("No content for embedding generation, skipping")
                 return
 
             # Generate embedding
@@ -886,8 +886,8 @@ Compressed summary:"""
                     # entity_description should only be cumulatively updated by hook_after_event_execution
                     if "entity_description" in updates:
                         logger.warning(
-                            f"Attempted to update entity_description via extract_entity_info. "
-                            f"This field is managed by hook_after_event_execution only. Ignoring."
+                            "Attempted to update entity_description via extract_entity_info. "
+                            "This field is managed by hook_after_event_execution only. Ignoring."
                         )
                         updates.pop("entity_description")
 
@@ -911,8 +911,8 @@ Compressed summary:"""
                 # Ignore entity_description, managed only by hook
                 if "entity_description" in updates:
                     logger.warning(
-                        f"Ignoring entity_description in updates during entity creation. "
-                        f"This field is managed by hook_after_event_execution only."
+                        "Ignoring entity_description in updates during entity creation. "
+                        "This field is managed by hook_after_event_execution only."
                     )
                     updates.pop("entity_description")
 
@@ -1170,7 +1170,7 @@ Compressed summary:"""
                 updates={"persona": new_persona}
             )
 
-            logger.info(f"            ✓ Entity persona updated")
+            logger.info("            ✓ Entity persona updated")
 
         except Exception as e:
             logger.error(f"            ❌ Error updating entity persona: {e}")

@@ -431,7 +431,7 @@ class ModulePoller:
             if newly_activated:
                 logger.info(f"Newly activated instances (will be executed by JobTrigger): {newly_activated}")
             else:
-                logger.debug(f"No new instances activated")
+                logger.debug("No new instances activated")
 
             # 4. Update callback_processed and last_polled_status
             await self._mark_callback_processed(info.instance_id, status_str)

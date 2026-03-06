@@ -483,7 +483,7 @@ class JobRepository(BaseRepository[JobModel]):
             query += " AND status = %s"
             params.append(status.value)
 
-        query += f" ORDER BY updated_at DESC LIMIT %s"
+        query += " ORDER BY updated_at DESC LIMIT %s"
         params.append(limit)
 
         rows = await self._db.execute(query, params=tuple(params), fetch=True)
@@ -724,7 +724,7 @@ class JobRepository(BaseRepository[JobModel]):
         Returns:
             List of JobModel ready for execution
         """
-        logger.debug(f"    → JobRepository.get_due_jobs()")
+        logger.debug("    → JobRepository.get_due_jobs()")
 
         query = f"""
             SELECT * FROM {self.table_name}

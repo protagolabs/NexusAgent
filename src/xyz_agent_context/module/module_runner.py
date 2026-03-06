@@ -432,7 +432,7 @@ class ModuleRunner:
         logger.info(f"   Agent: {agent_name}")
         logger.info(f"   Host: {host}")
         logger.info(f"   Port: {port}")
-        logger.info(f"   Protocol: A2A/0.3 (Google Agent-to-Agent)")
+        logger.info("   Protocol: A2A/0.3 (Google Agent-to-Agent)")
         logger.info("=" * 80)
 
         server = A2AServer(
@@ -645,7 +645,7 @@ Supported JSON-RPC Methods:
             for name in runner.list_available_modules():
                 is_default = "✓" if name in DEFAULT_MCP_MODULES else " "
                 print(f"   [{is_default}] {name}")
-            print(f"\n   ✓ = Included in default MCP deployment\n")
+            print("\n   ✓ = Included in default MCP deployment\n")
         elif command == "help" or command == "-h" or command == "--help":
             print_usage()
         else:

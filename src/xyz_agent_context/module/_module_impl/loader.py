@@ -324,7 +324,7 @@ class ModuleLoader:
         try:
             changes_explanation_dict = json.loads(decision_output.changes_explanation)
         except json.JSONDecodeError:
-            logger.warning(f"Unable to parse changes_explanation JSON, using empty dict")
+            logger.warning("Unable to parse changes_explanation JSON, using empty dict")
             changes_explanation_dict = {}
 
         logger.success(
@@ -656,7 +656,7 @@ class ModuleLoader:
                 temp_instance = ModuleInstance(
                     instance_id=instance_id,
                     module_class=module_name,
-                    description=f"Always-loaded module (no database record)",
+                    description="Always-loaded module (no database record)",
                     status=InstanceStatus.ACTIVE,
                     agent_id=self.agent_id,
                     dependencies=[],

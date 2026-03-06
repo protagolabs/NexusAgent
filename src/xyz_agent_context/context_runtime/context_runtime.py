@@ -131,7 +131,7 @@ class ContextRuntime:
         # )
         messages = []  # Temporarily set to empty; ChatModule.hook_data_gathering() will populate ctx_data.chat_history
         selected_events = []  # Temporarily not selecting Events
-        logger.success(f"    │ ✅ Narrative data extracted (Event selection disabled, using ChatModule for history)")
+        logger.success("    │ ✅ Narrative data extracted (Event selection disabled, using ChatModule for history)")
 
         # Step 2: Gather data from Modules (executed for each instance)
         logger.info("    │ Step 1-2: Gathering information from Module Instances")
@@ -535,7 +535,7 @@ class ContextRuntime:
         - Long-term memory (long_term): Complete conversation history of current Narrative -> as normal messages
         - Short-term memory (short_term): Cross-Narrative recent conversations -> added to system prompt
         """
-        logger.debug(f"      → build_input_for_framework() called")
+        logger.debug("      → build_input_for_framework() called")
         logger.debug(f"        Input: {len(messages)} event messages, {len(active_instances)} instances")
 
         # Get chat_history

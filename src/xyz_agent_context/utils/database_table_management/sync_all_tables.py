@@ -280,7 +280,7 @@ async def test_database_connection() -> bool:
         is_connected = await db.ping()
 
         if is_connected:
-            print(f"Database connection successful")
+            print("Database connection successful")
             return True
         else:
             print("Database connection failed")

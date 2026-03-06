@@ -539,7 +539,7 @@ Example: A sales follow-up task's end_condition is "customer shows purchase inte
         Returns:
             HookCallbackResult if one_off job completed/failed, otherwise None
         """
-        logger.debug(f"          → JobModule.hook_after_event_execution()")
+        logger.debug("          → JobModule.hook_after_event_execution()")
 
         # 1. Check trigger conditions (2026-01-21 update: also handle Job updates on CHAT trigger)
         # Get currently active JobModule instance IDs
@@ -556,7 +556,7 @@ Example: A sales follow-up task's end_condition is "customer shows purchase inte
 
         # If not JOB-triggered and no active Job instances, skip
         if params.working_source != WorkingSource.JOB and not active_job_instance_ids:
-            logger.debug(f"Not a job and no active job instances, skipping job status update")
+            logger.debug("Not a job and no active job instances, skipping job status update")
             return None
 
         # 2. Update related ONGOING Jobs on CHAT trigger (added 2026-01-21)
@@ -577,7 +577,7 @@ Example: A sales follow-up task's end_condition is "customer shows purchase inte
         # 2. Get instance (for callback's instance_id)
         instance = params.instance
         if not instance:
-            logger.warning(f"            ⚠ No instance available, cannot trigger callback")
+            logger.warning("            ⚠ No instance available, cannot trigger callback")
             # Continue LLM analysis and database update, but don't return callback
         else:
             logger.info(f"            → Instance: {instance.instance_id}")
@@ -691,7 +691,7 @@ Example: A sales follow-up task's end_condition is "customer shows purchase inte
         else:
             # Scheduled job continues running, or no instance to trigger callback
             if not instance:
-                logger.warning(f"            → Job completed but no instance to trigger callback")
+                logger.warning("            → Job completed but no instance to trigger callback")
             else:
                 logger.info(f"            → Scheduled job, no callback (status={result.status.value})")
             return None
