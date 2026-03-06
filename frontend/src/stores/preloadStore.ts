@@ -13,6 +13,7 @@
 import { create } from 'zustand';
 import { api } from '@/lib/api';
 import type {
+  ApiResponse,
   InboxMessage,
   AgentInboxMessage,
   Job,
@@ -96,7 +97,7 @@ type GetFn = () => PreloadState;
  * - Data is compared with current state; set() is skipped if unchanged (no wasted re-renders)
  * - Errors are silently swallowed (transient network blips shouldn't disrupt UI)
  */
-async function loadDomain<T>(
+async function loadDomain<T extends ApiResponse>(
   set: SetFn,
   get: GetFn,
   loadingKey: keyof PreloadState,
@@ -111,8 +112,7 @@ async function loadDomain<T>(
   }
   try {
     const result = await fetcher();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((result as any).success) {
+    if (result.success) {
       const updates = onSuccess(result);
       if (silent) {
         // Skip set() entirely if data hasn't changed
@@ -126,8 +126,7 @@ async function loadDomain<T>(
         set({ ...updates, [loadingKey]: false } as Partial<PreloadState>);
       }
     } else if (!silent) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      set({ [loadingKey]: false, [errorKey]: (result as any).error || fallbackError } as Partial<PreloadState>);
+      set({ [loadingKey]: false, [errorKey]: result.error || fallbackError } as Partial<PreloadState>);
     }
   } catch (error) {
     if (!silent) {
@@ -137,7 +136,7 @@ async function loadDomain<T>(
 }
 
 /** Extract success data or error info from a single Promise.allSettled result */
-function extractSettled<T>(
+function extractSettled<T extends ApiResponse>(
   result: PromiseSettledResult<T>,
   onFulfilled: (val: T) => Partial<PreloadState>,
   loadingKey: keyof PreloadState,
@@ -145,14 +144,12 @@ function extractSettled<T>(
   fallbackError: string,
 ): Partial<PreloadState> {
   if (result.status === 'fulfilled') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((result.value as any).success) {
+    if (result.value.success) {
       return { ...onFulfilled(result.value), [loadingKey]: false };
     }
     return {
       [loadingKey]: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      [errorKey]: (result.value as any).error || fallbackError,
+      [errorKey]: result.value.error || fallbackError,
     };
   }
   return { [loadingKey]: false, [errorKey]: String(result.reason) };

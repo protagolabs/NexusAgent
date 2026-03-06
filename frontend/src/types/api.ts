@@ -2,6 +2,12 @@
  * API response type definitions
  */
 
+/** 所有 API 响应的基础接口 */
+export interface ApiResponse {
+  success: boolean;
+  error?: string;
+}
+
 // Job types
 export type JobStatus = 'pending' | 'active' | 'running' | 'paused' | 'completed' | 'failed' | 'blocked' | 'cancelled';
 export type JobType = 'one_off' | 'scheduled' | 'ongoing';
