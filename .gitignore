@@ -251,3 +251,6 @@ benchmark_test/gaia/validation
 benchmark_test/gaia/test
 benchmark_test/gaia/results
 benchmark_test/gaia
+
+# Locomo benchmark docs
+docs/AGENT_WORKFLOW_DETAILED.md
