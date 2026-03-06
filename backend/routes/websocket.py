@@ -28,8 +28,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ValidationError
 from loguru import logger
 
-# Heartbeat interval (seconds) to prevent proxy/SSH idle timeout disconnections
-WS_HEARTBEAT_INTERVAL = 15
+from backend.config import settings
 
 from xyz_agent_context.agent_runtime import AgentRuntime
 from xyz_agent_context.schema import WorkingSource
@@ -109,7 +108,7 @@ async def websocket_agent_run(websocket: WebSocket):
             """Periodically send heartbeat messages to keep WebSocket connection alive"""
             while not heartbeat_stop.is_set():
                 try:
-                    await asyncio.wait_for(heartbeat_stop.wait(), timeout=WS_HEARTBEAT_INTERVAL)
+                    await asyncio.wait_for(heartbeat_stop.wait(), timeout=settings.ws_heartbeat_interval)
                     break  # stop event was set, exit
                 except asyncio.TimeoutError:
                     try:
