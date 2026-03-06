@@ -35,41 +35,14 @@ import type {
   RAGFileDeleteResponse,
   CreateJobComplexRequest,
   CreateJobComplexResponse,
+  LoginResponse,
+  AgentListResponse,
+  CreateUserResponse,
+  UpdateTimezoneResponse,
   SkillListResponse,
   SkillOperationResponse,
   SkillStudyResponse,
 } from '@/types';
-
-// Auth types
-export interface LoginResponse {
-  success: boolean;
-  user_id?: string;
-  error?: string;
-}
-
-export interface AgentInfo {
-  agent_id: string;
-  name?: string;
-  description?: string;
-  status?: string;
-  created_at?: string;
-  is_public?: boolean;
-  created_by?: string;
-  bootstrap_active?: boolean;
-}
-
-export interface AgentListResponse {
-  success: boolean;
-  agents: AgentInfo[];
-  count: number;
-  error?: string;
-}
-
-export interface CreateUserResponse {
-  success: boolean;
-  user_id?: string;
-  error?: string;
-}
 
 // In development, use relative paths (Vite proxy handles it)
 // In production, can be configured via environment variable
@@ -252,8 +225,8 @@ class ApiClient {
     });
   }
 
-  async updateTimezone(userId: string, timezone: string): Promise<{ success: boolean; timezone?: string; error?: string }> {
-    return this.request<{ success: boolean; timezone?: string; error?: string }>('/api/auth/timezone', {
+  async updateTimezone(userId: string, timezone: string): Promise<UpdateTimezoneResponse> {
+    return this.request<UpdateTimezoneResponse>('/api/auth/timezone', {
       method: 'POST',
       body: JSON.stringify({
         user_id: userId,

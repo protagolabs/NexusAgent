@@ -235,6 +235,27 @@ export interface AgentInfo {
   description?: string;
   status?: string;
   created_at?: string;
+  is_public?: boolean;
+  created_by?: string;
+  bootstrap_active?: boolean;
+}
+
+// Auth types
+export interface LoginResponse extends ApiResponse {
+  user_id?: string;
+}
+
+export interface CreateUserResponse extends ApiResponse {
+  user_id?: string;
+}
+
+export interface AgentListResponse extends ApiResponse {
+  agents: AgentInfo[];
+  count: number;
+}
+
+export interface UpdateTimezoneResponse extends ApiResponse {
+  timezone?: string;
 }
 
 export interface CreateAgentResponse extends ApiResponse {
