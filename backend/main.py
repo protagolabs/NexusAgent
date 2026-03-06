@@ -11,6 +11,7 @@ Usage:
     uvicorn backend.main:app --reload --port 8000
 """
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -54,17 +55,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS
+# 默认 CORS origins（本地开发用）
+_DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5173,"   # Vite dev server
+    "http://localhost:3000,"   # Alternative dev port
+    "http://localhost:8000,"   # Backend serves frontend
+    "http://127.0.0.1:5173,"
+    "http://127.0.0.1:3000,"
+    "http://127.0.0.1:8000"
+)
+
+# 通过环境变量 CORS_ORIGINS 覆盖，逗号分隔
+_cors_origins = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", _DEFAULT_CORS_ORIGINS).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # Alternative dev port
-        "http://localhost:8000",  # Backend serves frontend
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:8000",
-    ],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
