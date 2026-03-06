@@ -6,24 +6,19 @@
  * retried or skipped. Logic extracted from process-manager.ts runAutoSetup.
  */
 
-import { spawn, execFile } from 'child_process'
 import { join } from 'path'
 import { existsSync } from 'fs'
-import { promisify } from 'util'
 import { EventEmitter } from 'events'
 import {
-  PROJECT_ROOT,
   FRONTEND_DIR,
   EVERMEMOS_DIR,
   EVERMEMOS_GIT_URL
 } from './constants'
-import { getShellEnv, initShellEnv } from './shell-env'
-import { readEnv } from './env-manager'
+import { initShellEnv } from './shell-env'
 import { resetComposeDetection } from './docker-manager'
 import * as everMemOSEnv from './evermemos-env-manager'
+import { execInProject, execWithPrivileges, spawnWithOutput } from './exec-utils'
 import type { InstallerState, InstallerStatus } from '../shared/setup-types'
-
-const execFileAsync = promisify(execFile)
 
 // ─── Types ───────────────────────────────────────
 
@@ -40,102 +35,6 @@ export interface Installer {
   install(onOutput: (line: string) => void): Promise<void>
   /** Manual install URL for fallback */
   manualUrl?: string
-}
-
-// ─── Execution Environment ───────────────────────────
-
-function getExecEnv(): Record<string, string> {
-  const shellEnv = getShellEnv()
-  const dotEnv = readEnv()
-  const nonEmptyDotEnv: Record<string, string> = {}
-  for (const [key, value] of Object.entries(dotEnv)) {
-    if (value.trim()) nonEmptyDotEnv[key] = value
-  }
-  const noProxyHosts = 'localhost,127.0.0.1'
-  return { ...shellEnv, ...nonEmptyDotEnv, NO_PROXY: noProxyHosts, no_proxy: noProxyHosts }
-}
-
-async function execInProject(
-  cmd: string,
-  args: string[],
-  options?: { cwd?: string; timeout?: number }
-): Promise<{ stdout: string; stderr: string }> {
-  return execFileAsync(cmd, args, {
-    cwd: options?.cwd ?? PROJECT_ROOT,
-    timeout: options?.timeout ?? 120000,
-    env: getExecEnv()
-  })
-}
-
-/**
- * Execute sudo-required commands via system native privilege elevation dialog
- * (macOS: osascript, Linux: pkexec)
- */
-async function execWithPrivileges(
-  script: string,
-  options?: { timeout?: number }
-): Promise<{ stdout: string; stderr: string }> {
-  if (process.platform === 'darwin') {
-    // Docker Desktop bin MUST come first — on Intel Mac, Homebrew's /usr/local/bin/docker
-    // is a CLI-only binary without compose plugin; Docker Desktop's docker has compose built in.
-    const extraPaths = [
-      '/Applications/Docker.app/Contents/Resources/bin',
-      '/usr/local/bin',
-      '/opt/homebrew/bin',
-    ].join(':')
-    // Set HOME so root shell can find user's ~/.docker/cli-plugins/
-    const home = process.env.HOME || ''
-    const fullScript = `export PATH="${extraPaths}:$PATH" && export HOME="${home}" && ${script}`
-    const escaped = fullScript.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-    return execInProject('osascript', ['-e',
-      `do shell script "${escaped}" with administrator privileges`
-    ], options)
-  } else {
-    return execInProject('pkexec', ['sh', '-c', script], options)
-  }
-}
-
-function spawnWithOutput(
-  cmd: string,
-  args: string[],
-  options: { cwd?: string; timeout?: number; onOutput: (line: string) => void }
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(cmd, args, {
-      cwd: options.cwd ?? PROJECT_ROOT,
-      env: getExecEnv(),
-      stdio: ['ignore', 'pipe', 'pipe']
-    })
-
-    const processData = (data: Buffer) => {
-      const lines = data.toString().split('\n').filter(l => l.trim())
-      for (const line of lines) {
-        console.log(`[installer] ${line}`)
-      }
-      if (lines.length > 0) {
-        options.onOutput(lines[lines.length - 1].trim().substring(0, 200))
-      }
-    }
-
-    proc.stdout?.on('data', processData)
-    proc.stderr?.on('data', processData)
-
-    const timer = setTimeout(() => {
-      proc.kill('SIGTERM')
-      reject(new Error(`Command timed out after ${(options.timeout ?? 120000) / 1000}s`))
-    }, options.timeout ?? 120000)
-
-    proc.on('close', (code) => {
-      clearTimeout(timer)
-      if (code === 0) resolve()
-      else reject(new Error(`Process exited with code ${code}`))
-    })
-
-    proc.on('error', (err) => {
-      clearTimeout(timer)
-      reject(err)
-    })
-  })
 }
 
 // ─── Installer Definitions ───────────────────────────

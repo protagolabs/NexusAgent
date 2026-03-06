@@ -86,7 +86,7 @@ from xyz_agent_context.utils import DatabaseClient, get_db_client, utc_now, form
 
 # Repository
 from xyz_agent_context.repository import JobRepository, InboxRepository, UserRepository
-from xyz_agent_context.repository.job_repository import calculate_next_run_time
+from xyz_agent_context.module.job_module._job_scheduling import calculate_next_run_time
 
 # Context builder (extracted: dependency outputs, social network, narrative, prompt assembly)
 from xyz_agent_context.module.job_module._job_context_builder import build_execution_prompt
