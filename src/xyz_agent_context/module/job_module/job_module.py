@@ -60,8 +60,6 @@ from fastmcp import Client
 # Module (same package)
 from xyz_agent_context.module import XYZBaseModule
 
-from xyz_agent_context.agent_framework.openai_agents_sdk import OpenAIAgentsSDK
-
 # Schema
 from xyz_agent_context.schema import (
     ModuleConfig,
@@ -70,40 +68,21 @@ from xyz_agent_context.schema import (
     HookAfterExecutionParams,
     WorkingSource,
 )
-from xyz_agent_context.schema.module_schema import (
-    HookCallbackResult,
-    InstanceStatus,
-)
-from xyz_agent_context.schema.job_schema import (
-    JobType,
-    JobStatus,
-    JobModel,
-    TriggerConfig,
-    JobExecutionResult,
-    OngoingExecutionResult,
-)
+from xyz_agent_context.schema.module_schema import HookCallbackResult
+from xyz_agent_context.schema.job_schema import JobModel
 
 # Utils
-from xyz_agent_context.utils import DatabaseClient, get_db_client, utc_now
-from xyz_agent_context.utils.embedding import get_embedding, prepare_job_text_for_embedding
-
-from datetime import datetime
-from uuid import uuid4
+from xyz_agent_context.utils import DatabaseClient, get_db_client
 
 # Repository
 from xyz_agent_context.repository import JobRepository
-from xyz_agent_context.repository.job_repository import format_jobs_for_display, calculate_next_run_time
-
-# Module Instance Factory
-from xyz_agent_context.module._module_impl.instance_factory import InstanceFactory
 
 # Extracted sub-modules
-from xyz_agent_context.module.job_module._job_analysis import (
-    extract_execution_trace,
-    extract_context_info,
-    build_job_analysis_prompt,
-)
 from xyz_agent_context.module.job_module._job_mcp_tools import create_job_mcp_server
+from xyz_agent_context.module.job_module._job_lifecycle import (
+    handle_job_execution_result,
+    update_ongoing_jobs_from_chat,
+)
 
 
 class JobModule(XYZBaseModule):
@@ -517,458 +496,52 @@ Example: A sales follow-up task's end_condition is "customer shows purchase inte
         """
         Post-Job execution processing - Use LLM to analyze results and determine completion status
 
-        Trigger conditions (updated 2026-01-21):
-        1. working_source == JOB: Job-triggered execution
-        2. working_source == CHAT with active JobModule instances: CHAT-triggered but needs to update related Jobs
+        Trigger conditions:
+        1. working_source == JOB: Job-triggered execution -> LLM analysis
+        2. working_source == CHAT with active JobModule instances -> update ONGOING jobs
 
-        Execution flow:
-        1. Check trigger conditions (JOB or CHAT with active Jobs)
-        2. If JOB-triggered: Use LLM to analyze results and update Job status
-        3. If CHAT-triggered: Update related ONGOING Job progress
-        4. If one_off job completed/failed, return HookCallbackResult to trigger dependency chain
-        5. TODO: Send Inbox notification
-
-        Args:
-            params: HookAfterExecutionParams, containing:
-                - execution_ctx: Execution context (event_id, agent_id, user_id, working_source)
-                - io_data: Input/output (input_content, final_output)
-                - trace: Execution trace (event_log, agent_loop_response)
-                - ctx_data: Complete context data
-                - instance: ModuleInstance (for getting instance_id)
-
-        Returns:
-            HookCallbackResult if one_off job completed/failed, otherwise None
+        Delegates heavy lifting to _job_lifecycle module.
         """
-        logger.debug("          → JobModule.hook_after_event_execution()")
+        logger.debug("          JobModule.hook_after_event_execution()")
 
-        # 1. Check trigger conditions (2026-01-21 update: also handle Job updates on CHAT trigger)
-        # Get currently active JobModule instance IDs
-        # Bug fix #1: Use self.instance_ids instead of ctx_data.active_instances (the latter doesn't exist)
-        active_job_instance_ids = []
-        if self.instance_ids:
-            # self.instance_ids contains all instance IDs associated with the current Narrative
-            # We need to filter out instances belonging to JobModule (prefixed with "job_")
-            active_job_instance_ids = [
-                inst_id for inst_id in self.instance_ids
-                if inst_id.startswith("job_")
-            ]
-            logger.debug(f"          → Found {len(active_job_instance_ids)} job instances from self.instance_ids")
+        # Collect active JobModule instance IDs from the current Narrative
+        active_job_instance_ids = [
+            inst_id for inst_id in (self.instance_ids or [])
+            if inst_id.startswith("job_")
+        ]
 
-        # If not JOB-triggered and no active Job instances, skip
+        # Skip if not JOB-triggered and no active Job instances
         if params.working_source != WorkingSource.JOB and not active_job_instance_ids:
-            logger.debug("Not a job and no active job instances, skipping job status update")
+            logger.debug("Not a job and no active job instances, skipping")
             return None
 
-        # 2. Update related ONGOING Jobs on CHAT trigger (added 2026-01-21)
+        # CHAT trigger: update ONGOING jobs
         if params.working_source == WorkingSource.CHAT and active_job_instance_ids:
-            logger.info(f"          → CHAT trigger with {len(active_job_instance_ids)} active job instances")
-            await self._update_ongoing_jobs_from_chat(
+            logger.info(f"          CHAT trigger with {len(active_job_instance_ids)} active job instances")
+            await update_ongoing_jobs_from_chat(
                 active_job_instance_ids=active_job_instance_ids,
                 chat_content=params.final_output,
-                ctx_data=params.ctx_data
+                ctx_data=params.ctx_data,
+                agent_id=self.agent_id,
+                repo=self._get_repo(),
+                get_job_by_instance_id=self.get_job_instance_object_by_id,
             )
-            # CHAT trigger doesn't return callback, continue normal flow
             return None
 
-        # 3. Original logic for JOB-triggered execution
+        # JOB trigger: LLM analysis of execution results
         if params.working_source != WorkingSource.JOB:
             return None
 
-        # 2. Get instance (for callback's instance_id)
-        instance = params.instance
-        if not instance:
-            logger.warning("            ⚠ No instance available, cannot trigger callback")
-            # Continue LLM analysis and database update, but don't return callback
-        else:
-            logger.info(f"            → Instance: {instance.instance_id}")
-
-        # 3. Collect execution info (via convenience properties)
-        final_output = params.final_output
-        ctx_data = params.ctx_data
-        agent_loop_response = params.agent_loop_response
-
-        # 4. Extract information
-        execution_trace = self._extract_execution_trace(agent_loop_response)
-
-        # 5. Get Job's full info (via instance_id)
-        current_time = utc_now()
-        input_content = params.input_content
-        job_info = await self._get_job_info_for_analysis(instance)
-
-        # 6. Build LLM analysis Prompt (different guidance for different job_types)
-        prompts = self._build_job_analysis_prompt(
-            current_time=current_time,
-            input_content=input_content,
-            job_info=job_info,
-            execution_trace=execution_trace,
-            final_output=final_output,
-            ctx_data=ctx_data,
-        )
-
-        # 6. Call LLM to analyze execution results (retained for detailed info)
-        llm_result: JobExecutionResult = await OpenAIAgentsSDK().llm_function(
-            instructions=prompts,
-            user_input="Please analysis it!",
-            output_type=JobExecutionResult,
-        )
-
-        # Null check: ensure LLM returned valid results
-        if not llm_result or not llm_result.final_output:
-            logger.warning("            → LLM returned empty result, skipping job update")
-            return None
-
-        result = llm_result.final_output
-
-        logger.info(f"            → LLM analysis result: \n\t{json.dumps(result.model_dump(mode='json'), indent=4)}")
-
-        # 7. Assemble all update data at once, access database only once
-        job_id = result.job_id
-        if job_id:
-            logger.info(f"            → Updating job: {job_id}")
-            logger.info(f"            → LLM analysis: status={result.status}, next_run={result.next_run_time}")
-
-            try:
-                # 7.1 Get existing job's process list
-                existing_job = await self._get_repo().get_job(job_id)
-                existing_process = existing_job.process if existing_job and existing_job.process else []
-
-                # 7.2 Extend with new execution records
-                updated_process = existing_process + result.process
-
-                # 7.3 Assemble all fields to update (next_run_time intelligently determined by LLM)
-                now = utc_now()
-                updates = {
-                    "status": result.status.value,
-                    "process": updated_process,
-                    "last_run_time": now,
-                    "last_error": result.last_error if result.status == JobStatus.FAILED else None,
-                    "updated_at": now,
-                    "next_run_time": result.next_run_time,  # LLM intelligent adjustment
-                }
-
-                # 7.4 Execute database update in one shot
-                await self._update_job_fields(job_id, updates)
-                logger.info(f"            ✓ Job {job_id} updated: status={result.status.value}, next_run={result.next_run_time}")
-
-                # 7.5 TODO: Send Inbox notification (if should_notify=True)
-                if result.should_notify:
-                    logger.info(f"            → Should notify user: {result.notification_summary}")
-                    # TODO: Call Inbox module to send notification. For example, notify when errors occur or issues arise.
-
-            except Exception as e:
-                logger.error(f"            ❌ Failed to update job {job_id}: {e}")
-
-        # 8. Determine whether to trigger callback based on LLM analysis results
-        # Only one_off job's completed/failed triggers callback (activating dependency chain)
-        # scheduled job's active status means single execution succeeded, no callback triggered
-        is_terminal = result.status in [JobStatus.COMPLETED, JobStatus.FAILED]
-
-        if is_terminal and instance:
-            # One-off Job completed or failed, trigger callback to activate dependency chain
-            instance_status = (
-                InstanceStatus.COMPLETED if result.status == JobStatus.COMPLETED
-                else InstanceStatus.FAILED
-            )
-
-            callback_result = HookCallbackResult(
-                instance_id=instance.instance_id,  # Required: identifies which instance completed
-                trigger_callback=True,
-                instance_status=instance_status,
-                output_data={
-                    "job_id": result.job_id,
-                    "status": result.status.value,
-                    "process": result.process,
-                    "notification_summary": result.notification_summary,
-                },
-                notification_message=result.notification_summary if result.should_notify else None
-            )
-
-            logger.info(
-                f"            ✅ Job terminal state, returning callback: "
-                f"instance_id={instance.instance_id}, status={instance_status.value}"
-            )
-            return callback_result
-        else:
-            # Scheduled job continues running, or no instance to trigger callback
-            if not instance:
-                logger.warning("            → Job completed but no instance to trigger callback")
-            else:
-                logger.info(f"            → Scheduled job, no callback (status={result.status.value})")
-            return None
-
-    # =========================================================================
-    # CHAT Trigger - ONGOING Job Update (2026-01-21 P0-3)
-    # =========================================================================
-
-    async def _update_ongoing_jobs_from_chat(
-        self,
-        active_job_instance_ids: List[str],
-        chat_content: str,
-        ctx_data: ContextData
-    ) -> None:
-        """
-        Update related ONGOING Jobs on CHAT trigger
-
-        When a user chats with the Agent, if the current Narrative has active ONGOING Jobs,
-        need to check whether the conversation satisfies the Job's end condition (end_condition).
-
-        Flow:
-        1. Iterate through active_job_instance_ids
-        2. Filter job_type == ONGOING and status == ACTIVE
-        3. LLM analyzes this interaction's impact on the Job (whether end_condition is met)
-        4. Update status based on OngoingExecutionResult
-
-        Args:
-            active_job_instance_ids: Currently active JobModule instance IDs
-            chat_content: Agent's final output (conversation content)
-            ctx_data: Complete context data
-        """
-        if not active_job_instance_ids:
-            return
-
-        logger.info(f"          → Checking {len(active_job_instance_ids)} active job instances for ONGOING updates")
-
-        for instance_id in active_job_instance_ids:
-            try:
-                # 1. Get Job object
-                job = await self.get_job_instance_object_by_id(self.agent_id, instance_id)
-                if not job:
-                    logger.debug(f"            → Instance {instance_id}: No job found, skipping")
-                    continue
-
-                # 1.5 [Fix 2026-01-22] Only process Jobs where current user is the target user
-                # Each ONGOING Job has related_entity_id specifying the target user
-                # Only analyze this Job when current conversation user == Job's target user
-                current_user_id = ctx_data.user_id if ctx_data else None
-                job_target_user = job.related_entity_id
-
-                if job_target_user and current_user_id and job_target_user != current_user_id:
-                    logger.info(
-                        f"            → Job {job.job_id}: skipping - target user({job_target_user}) != "
-                        f"current user({current_user_id})"
-                    )
-                    continue
-
-                # 2. Filter: only process ONGOING type Jobs with ACTIVE or RUNNING status
-                # ONGOING Job status flow:
-                #   - ACTIVE: Waiting for user interaction (initial state)
-                #   - RUNNING: Job has been triggered, waiting for user response (after JobTrigger trigger)
-                # Both statuses need to check end_condition
-                if job.job_type != JobType.ONGOING:
-                    logger.debug(f"            → Job {job.job_id}: Not ONGOING type ({job.job_type}), skipping")
-                    continue
-
-                valid_statuses = {JobStatus.ACTIVE, JobStatus.RUNNING}
-                if job.status not in valid_statuses:
-                    logger.debug(f"            → Job {job.job_id}: Status {job.status} not in {valid_statuses}, skipping")
-                    continue
-
-                # 3. Get end_condition
-                end_condition = None
-                if job.trigger_config:
-                    end_condition = job.trigger_config.end_condition
-
-                if not end_condition:
-                    logger.debug(f"            → Job {job.job_id}: No end_condition defined, skipping LLM analysis")
-                    continue
-
-                logger.info(f"            → Analyzing ONGOING Job {job.job_id} against chat interaction")
-
-                # 4. Build LLM analysis Prompt
-                current_time = utc_now()
-                user_query = ctx_data.input_content if ctx_data else ""
-
-                prompt = f"""
-Analyze if the current chat interaction satisfies the end condition of an ONGOING job.
-
-## Job Information
-
-**Job ID**: {job.job_id}
-**Title**: {job.title}
-**Description**: {job.description}
-**Payload**: {job.payload[:500] if job.payload else 'N/A'}...
-
-**End Condition**: {end_condition}
-
-**Current Iteration**: {job.iteration_count}
-**Max Iterations**: {job.trigger_config.max_iterations if job.trigger_config and job.trigger_config.max_iterations else 'No limit'}
-
-## Current Chat Interaction
-
-**User Query**: {user_query}
-
-**Agent Response**: {chat_content[:1000] if chat_content else 'N/A'}...
-
-## Your Task
-
-Determine if this chat interaction indicates that the job's end condition has been met.
-
-For example, if the end condition is "customer shows purchase intent or explicit rejection":
-- Customer says "I'll buy it" -> end condition MET
-- Customer says "No thanks, I don't need it" -> end condition MET
-- Customer asks "What's the price?" -> end condition NOT MET (still interested, continuing conversation)
-
-## Return Fields
-
-1. **job_id**: "{job.job_id}"
-
-2. **is_end_condition_met**: true/false - Does this interaction satisfy the end condition?
-
-3. **end_condition_reason**: Detailed explanation of why the condition is/isn't met
-
-4. **should_continue**: true/false - Should the job continue?
-   - false if end_condition is met
-   - false if max_iterations reached (current: {job.iteration_count}, max: {job.trigger_config.max_iterations if job.trigger_config and job.trigger_config.max_iterations else 'unlimited'})
-   - true otherwise
-
-5. **progress_summary**: 1-2 sentence summary of what happened in this interaction
-
-6. **process**: 2-3 concise descriptions of actions taken
-"""
-
-                # 5. Call LLM analysis
-                llm_result = await OpenAIAgentsSDK().llm_function(
-                    instructions=prompt,
-                    user_input="Please analyze this interaction.",
-                    output_type=OngoingExecutionResult,
-                )
-
-                if not llm_result or not llm_result.final_output:
-                    logger.warning(f"            → LLM returned empty result for job {job.job_id}")
-                    continue
-
-                result = llm_result.final_output
-                logger.info(f"            → LLM analysis: is_end_condition_met={result.is_end_condition_met}, should_continue={result.should_continue}")
-
-                # 6. Update Job status
-                updates = {
-                    "updated_at": current_time,
-                }
-
-                # Accumulate process records
-                existing_process = job.process if job.process else []
-                if result.process:
-                    updates["process"] = existing_process + result.process
-
-                # If end condition is met or should_continue=False
-                if result.is_end_condition_met or not result.should_continue:
-                    updates["status"] = JobStatus.COMPLETED.value
-                    logger.info(f"            ✓ Job {job.job_id} completed: {result.end_condition_reason}")
-                else:
-                    # Continue execution, increment iteration_count
-                    updates["iteration_count"] = job.iteration_count + 1
-
-                    # Check if max_iterations reached
-                    max_iter = job.trigger_config.max_iterations if job.trigger_config else None
-                    if max_iter and updates["iteration_count"] >= max_iter:
-                        updates["status"] = JobStatus.COMPLETED.value
-                        logger.info(f"            ✓ Job {job.job_id} completed: max iterations reached")
-
-                # Execute update
-                await self._update_job_fields(job.job_id, updates)
-                logger.info(f"            ✓ Job {job.job_id} updated: {list(updates.keys())}")
-
-            except Exception as e:
-                logger.error(f"            ❌ Error processing job instance {instance_id}: {e}")
-                continue
-
-    # =========================================================================
-    # Database Operations (Internal - for hook_after_event_execution)
-    # =========================================================================
-
-    async def _update_job_fields(self, job_id: str, updates: Dict[str, Any]) -> int:
-        """
-        Update multiple fields of a Job at once
-
-        Uses JobRepository.update_job() for data access, following the Repository pattern.
-
-        Args:
-            job_id: Job ID
-            updates: Dictionary of fields to update, supports:
-                - status: str | JobStatus
-                - process: List[str]
-                - last_run_time: datetime
-                - next_run_time: datetime | None
-                - last_error: str | None
-
-        Returns:
-            Number of affected rows
-        """
-        if not updates:
-            return 0
-
-        # Use JobRepository to update
-        return await self._get_repo().update_job(job_id, updates)
-
-    def _extract_execution_trace(self, agent_loop_response: List[Any]) -> str:
-        """Delegate to _job_analysis module"""
-        return extract_execution_trace(agent_loop_response)
-
-    def _extract_context_info(self, ctx_data: Any) -> str:
-        """Delegate to _job_analysis module"""
-        return extract_context_info(ctx_data)
-
-    async def _get_job_info_for_analysis(self, instance: Optional[Any]) -> Dict[str, Any]:
-        """
-        Get complete Job information for LLM analysis
-
-        Retrieves the Job object via instance_id and extracts key information:
-        - job_id, job_type, title, description
-        - trigger_config (contains end_condition, interval_seconds, max_iterations, etc.)
-        - iteration_count, process (historical execution records)
-
-        Args:
-            instance: ModuleInstance instance
-
-        Returns:
-            Dictionary containing complete Job information
-        """
-        if not instance or not instance.instance_id:
-            return {}
-
-        try:
-            job = await self.get_job_instance_object_by_id(self.agent_id, instance.instance_id)
-            if not job:
-                return {}
-
-            # Extract trigger_config information
-            trigger_info = {}
-            if job.trigger_config:
-                trigger_info = {
-                    "end_condition": job.trigger_config.end_condition,
-                    "interval_seconds": job.trigger_config.interval_seconds,
-                    "max_iterations": job.trigger_config.max_iterations,
-                    "cron": job.trigger_config.cron,
-                }
-
-            return {
-                "job_id": job.job_id,
-                "job_type": job.job_type.value if job.job_type else None,
-                "title": job.title,
-                "description": job.description,
-                "payload": job.payload[:500] if job.payload else None,
-                "trigger_config": trigger_info,
-                "iteration_count": job.iteration_count or 0,
-                "process": job.process or [],  # Historical execution records
-                "status": job.status.value if job.status else None,
-            }
-        except Exception as e:
-            logger.error(f"Failed to get job info for analysis: {e}")
-            return {}
-
-    def _build_job_analysis_prompt(
-        self,
-        current_time: Any,
-        input_content: str,
-        job_info: Dict[str, Any],
-        execution_trace: str,
-        final_output: str,
-        ctx_data: Any,
-    ) -> str:
-        """Delegate to _job_analysis module"""
-        return build_job_analysis_prompt(
-            current_time, input_content, job_info,
-            execution_trace, final_output, ctx_data,
+        async def _get_job_via_instance(instance_obj):
+            """Adapter: get job by instance object's instance_id"""
+            if not instance_obj or not instance_obj.instance_id:
+                return None
+            return await self.get_job_instance_object_by_id(self.agent_id, instance_obj.instance_id)
+
+        return await handle_job_execution_result(
+            params=params,
+            repo=self._get_repo(),
+            get_job_by_instance_id=_get_job_via_instance,
         )
 
     # =========================================================================
@@ -1002,225 +575,6 @@ For example, if the end condition is "customer shows purchase intent or explicit
 
 
     # =========================================================================
-    # Database Operations (Internal)
-    # =========================================================================
-
-    async def _create_job(
-        self,
-        title: str,
-        description: str,
-        job_type: str,
-        trigger_config: dict,
-        payload: str,
-        notification_method: str = "inbox"
-    ) -> Dict[str, Any]:
-        """
-        Create a new Job (internal method).
-
-        This method is called by the job_create MCP tool. It validates parameters,
-        creates the job record with embedding, and returns the result.
-
-        Args:
-            title: Job title
-            description: Job description
-            job_type: Job type ("one_off" or "scheduled")
-            trigger_config: Trigger configuration dict
-            payload: Execution instruction
-            notification_method: Notification method
-
-        Returns:
-            Dict with success status, job_id, and message
-        """
-        try:
-            # Validate job_type
-            try:
-                job_type_enum = JobType(job_type.lower())
-            except ValueError:
-                return {
-                    "success": False,
-                    "error": f"Invalid job_type: {job_type}. Must be 'one_off' or 'scheduled'"
-                }
-
-            # Parse trigger_config
-            trigger = TriggerConfig(**trigger_config)
-
-            # Validate trigger config based on job type
-            if job_type_enum == JobType.ONE_OFF and not trigger.run_at:
-                return {
-                    "success": False,
-                    "error": "one_off job requires 'run_at' in trigger_config"
-                }
-
-            if job_type_enum == JobType.SCHEDULED:
-                if not trigger.cron and not trigger.interval_seconds:
-                    return {
-                        "success": False,
-                        "error": "scheduled job requires 'cron' or 'interval_seconds' in trigger_config"
-                    }
-
-            # Generate job_id
-            job_id = f"job_{uuid4().hex[:12]}"
-
-            # Calculate next run time (using unified calculation function)
-            logger.debug(f"trigger_config: {trigger_config}")
-            logger.debug(f"trigger.run_at: {trigger.run_at}, type: {type(trigger.run_at)}")
-            logger.debug(f"trigger.cron: {trigger.cron}")
-            logger.debug(f"trigger.interval_seconds: {trigger.interval_seconds}")
-
-            next_run_time = calculate_next_run_time(job_type_enum, trigger)
-            logger.debug(f"Calculated next_run_time: {next_run_time}")
-
-            # Generate embedding (for semantic search)
-            embedding_text = prepare_job_text_for_embedding(title, description, payload)
-            embedding = await get_embedding(embedding_text)
-
-            # Create JobModule Instance (each Job has its own instance, task-level isolation)
-            instance_factory = InstanceFactory(self.db)
-            job_info = {
-                "job_id": job_id,
-                "title": title,
-                "description": description,
-                "job_type": job_type,
-                "payload": payload,
-            }
-            job_instance = await instance_factory.create_job_instance(
-                agent_id=self.agent_id,
-                user_id=self.user_id or "unknown",
-                job_info=job_info
-            )
-            instance_id = job_instance.instance_id
-            logger.debug(f"Created job instance: {instance_id}")
-
-            # Use repository to create job
-            await self._get_repo().create_job(
-                agent_id=self.agent_id,
-                user_id=self.user_id or "unknown",
-                job_id=job_id,
-                title=title,
-                description=description,
-                job_type=job_type_enum,
-                trigger_config=trigger,
-                payload=payload,
-                instance_id=instance_id,
-                notification_method=notification_method,
-                next_run_time=next_run_time,
-                embedding=embedding
-            )
-
-            logger.info(f"Created job: {job_id} with instance: {instance_id}")
-
-            return {
-                "success": True,
-                "job_id": job_id,
-                "message": f"Job '{title}' created successfully. It will be executed according to the schedule."
-            }
-
-        except Exception as e:
-            logger.error(f"Error creating job: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
-
-    async def _get_user_active_jobs(self, user_id: str) -> List[JobModel]:
-        """
-        Get active jobs for a user.
-
-        Returns jobs with status PENDING or ACTIVE.
-
-        Args:
-            user_id: User ID
-
-        Returns:
-            List of active JobModel instances
-        """
-        try:
-            repo = self._get_repo()
-
-            # Get pending jobs
-            pending_jobs = await repo.get_jobs_by_user(
-                user_id=user_id,
-                status=JobStatus.PENDING,
-                limit=50
-            )
-
-            # Get active jobs
-            active_jobs = await repo.get_jobs_by_user(
-                user_id=user_id,
-                status=JobStatus.ACTIVE,
-                limit=50
-            )
-
-            return pending_jobs + active_jobs
-
-        except Exception as e:
-            logger.error(f"Error getting active jobs: {e}")
-            return []
-
-    async def _update_job_status(
-        self,
-        job_id: str,
-        status: JobStatus,
-        error_message: Optional[str] = None
-    ) -> bool:
-        """
-        Update job status.
-
-        Args:
-            job_id: Job ID
-            status: New status
-            error_message: Error message (if failed)
-
-        Returns:
-            True if successful
-        """
-        try:
-            affected = await self._get_repo().update_job_status(
-                job_id=job_id,
-                status=status,
-                error_message=error_message
-            )
-            return affected > 0
-
-        except Exception as e:
-            logger.error(f"Error updating job status: {e}")
-            return False
-
-    # =========================================================================
-    # Helper Methods
-    # =========================================================================
-
-    def _format_jobs_for_display(self, jobs: List[JobModel]) -> str:
-        """
-        Format job list for display in agent instructions.
-
-        Shows a brief summary of active jobs so the Agent knows what
-        tasks are running. Only shows first 10 jobs with essential info.
-
-        Args:
-            jobs: List of JobModel instances
-
-        Returns:
-            Markdown formatted string
-        """
-        if not jobs:
-            return "*No active jobs.*"
-
-        # Convert to summary format
-        summaries = []
-        for job in jobs[:10]:
-            next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M") if job.next_run_time else "N/A"
-            summaries.append({
-                "job_id": job.job_id,
-                "title": job.title,
-                "next_run_time": next_run,
-                "job_type": job.job_type.value,
-                "status": job.status.value,
-            })
-
-        return format_jobs_for_display(summaries, max_display=10)
-    
-    # ========================================================================= 
     # Instance Parts
     # =========================================================================
 
