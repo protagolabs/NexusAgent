@@ -8,7 +8,7 @@
 # Flow:
 #   1. Read version from desktop/version.json
 #   2. Build frontend (bundled into desktop app)
-#   3. Build & package Electron app (macOS DMG + Linux AppImage/deb)
+#   3. Build & package Electron app (macOS DMG)
 #   4. Create GitHub Release with version tag
 #
 # Signing:
@@ -164,58 +164,10 @@ jobs:
             desktop/dist/latest-mac.yml
           retention-days: 5
 
-  # ── Build Linux ───────────────────────────────────────────────────────────
-  build-linux:
-    name: Build Linux
-    needs: [prepare, build-frontend]
-    if: needs.prepare.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Download frontend dist
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
-
-      - name: Sync version to package.json
-        working-directory: desktop
-        run: |
-          VERSION=${{ needs.prepare.outputs.version }}
-          jq --arg v "$VERSION" '.version = $v' package.json > tmp.json && mv tmp.json package.json
-
-      - name: Install dependencies
-        working-directory: desktop
-        run: npm install
-
-      - name: Build Electron
-        working-directory: desktop
-        run: npx electron-vite build
-
-      - name: Package AppImage & deb
-        working-directory: desktop
-        run: npx electron-builder --linux --publish never
-
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: desktop-linux
-          path: |
-            desktop/dist/*.AppImage
-            desktop/dist/*.deb
-            desktop/dist/latest-linux.yml
-          retention-days: 5
-
   # ── Create GitHub Release ─────────────────────────────────────────────────
   release:
     name: Create Release
-    needs: [prepare, build-macos, build-linux]
+    needs: [prepare, build-macos]
     if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -227,12 +179,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: desktop-macos
-          path: release-assets/
-
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: desktop-linux
           path: release-assets/
 
       - name: List release assets
@@ -248,7 +194,6 @@ jobs:
 
             ### Downloads
             - **macOS**: `NarraNexus-${{ needs.prepare.outputs.version }}-universal.dmg`
-            - **Linux**: `NarraNexus-${{ needs.prepare.outputs.version }}.AppImage` / `.deb`
 
             > ⚠️ macOS: App is not signed yet. Right-click → Open to bypass Gatekeeper.
 

@@ -74,7 +74,7 @@ export const PORTS = {
   MYSQL: 3306,
   BACKEND: 8000,
   MCP_START: 7801,
-  MCP_END: 7805,
+  MCP_END: 7810,
   NEXUS_MATRIX: 8953,
   EVERMEMOS: 1995
 } as const
