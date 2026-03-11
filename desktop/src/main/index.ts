@@ -17,6 +17,7 @@ import { InstallerRegistry } from './installer-registry'
 import { ServiceLauncher } from './service-launcher'
 import { registerIpcHandlers } from './ipc-handlers'
 import { tryOpenExternalUrl } from './external-links'
+import { initUpdater } from './updater'
 
 // ─── Global Instances ───────────────────────────────────────
 
@@ -162,6 +163,9 @@ app.whenReady().then(async () => {
 
   // Start health checks
   healthMonitor.start()
+
+  // Initialize auto-updater (checks GitHub Releases)
+  initUpdater(mainWindow)
 
   // macOS: re-show window when Dock icon is clicked
   app.on('activate', () => {

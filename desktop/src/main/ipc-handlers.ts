@@ -25,6 +25,7 @@ import { promisify } from 'util'
 import { join } from 'path'
 import { getShellEnv } from './shell-env'
 import { tryOpenExternalUrl } from './external-links'
+import { checkForUpdates, downloadUpdate, installUpdate } from './updater'
 
 const execFileAsync = promisify(execFile)
 
@@ -268,6 +269,11 @@ export function registerIpcHandlers(
   ipcMain.handle(IPC.GET_LOGS, (_event, serviceId?: string) => {
     return processManager.getLogs(serviceId)
   })
+
+  // ─── Auto-Updater ──────────────────────────────────────
+  ipcMain.handle(IPC.CHECK_FOR_UPDATES, () => checkForUpdates())
+  ipcMain.handle(IPC.DOWNLOAD_UPDATE, () => downloadUpdate())
+  ipcMain.handle(IPC.INSTALL_UPDATE, () => installUpdate())
 
   // ─── Event Forwarding (Main → Renderer) ──────────────────
 

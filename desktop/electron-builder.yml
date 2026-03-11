@@ -4,6 +4,12 @@ directories:
   buildResources: resources
   output: dist
 
+# Auto-updater: check GitHub Releases for new versions
+publish:
+  provider: github
+  owner: protagolabs
+  repo: NexusAgent
+
 mac:
   category: public.app-category.developer-tools
   target:
