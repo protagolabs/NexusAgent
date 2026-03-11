@@ -33,7 +33,7 @@ const tabs: { id: ContextTab; icon: typeof Activity; label: string }[] = [
 ];
 
 export function ContextPanelHeader({ activeTab, onTabChange }: ContextPanelHeaderProps) {
-  const { agentInboxUnrespondedCount } = usePreloadStore();
+  const { agentInboxUnreadCount } = usePreloadStore();
   const { agentId, awarenessUpdatedAgents } = useConfigStore();
   const hasAwarenessUpdate = awarenessUpdatedAgents.includes(agentId);
 
@@ -45,7 +45,7 @@ export function ContextPanelHeader({ activeTab, onTabChange }: ContextPanelHeade
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            const hasNotification = tab.id === 'inbox' && agentInboxUnrespondedCount > 0;
+            const hasNotification = tab.id === 'inbox' && agentInboxUnreadCount > 0;
             const hasAwarenessDot = tab.id === 'awareness' && hasAwarenessUpdate;
 
             return (
@@ -75,7 +75,7 @@ export function ContextPanelHeader({ activeTab, onTabChange }: ContextPanelHeade
                 {/* Notification badge */}
                 {hasNotification && (
                   <span className="h-4 min-w-4 px-1 flex items-center justify-center text-[9px] font-bold bg-[var(--color-error)] text-white rounded-full">
-                    {agentInboxUnrespondedCount > 9 ? '9+' : agentInboxUnrespondedCount}
+                    {agentInboxUnreadCount > 9 ? '9+' : agentInboxUnreadCount}
                   </span>
                 )}
 

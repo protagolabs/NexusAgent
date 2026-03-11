@@ -15,7 +15,8 @@ import { api } from '@/lib/api';
 import type {
   ApiResponse,
   InboxMessage,
-  AgentInboxMessage,
+  MatrixRoom,
+  RoomMessage,
   Job,
   SocialNetworkEntity,
   ChatHistoryEvent,
@@ -31,8 +32,8 @@ interface PreloadState {
   // Data
   inbox: InboxMessage[];
   inboxUnreadCount: number;
-  agentInbox: AgentInboxMessage[];
-  agentInboxUnrespondedCount: number;
+  agentInboxRooms: MatrixRoom[];
+  agentInboxUnreadCount: number;
   jobs: Job[];
   awareness: string | null;
   awarenessCreateTime: string | null;
@@ -77,7 +78,7 @@ interface PreloadState {
   refreshRAGFiles: (agentId: string, userId: string, silent?: boolean) => Promise<void>;
   addChatHistoryEvent: (event: ChatHistoryEvent) => void;
   updateInboxMessage: (messageId: string, updates: Partial<InboxMessage>) => void;
-  updateAgentInboxMessage: (messageId: string, updates: Partial<AgentInboxMessage>) => void;
+  updateAgentInboxMessage: (messageId: string, updates: Partial<RoomMessage>) => void;
   markAllInboxRead: () => void;
   clearAll: () => void;
 }
@@ -163,8 +164,8 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
   // Initial data
   inbox: [],
   inboxUnreadCount: 0,
-  agentInbox: [],
-  agentInboxUnrespondedCount: 0,
+  agentInboxRooms: [],
+  agentInboxUnreadCount: 0,
   jobs: [],
   awareness: null,
   awarenessCreateTime: null,
@@ -227,7 +228,7 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
         (r) => ({ inbox: r.messages, inboxUnreadCount: r.unread_count }),
         'inboxLoading', 'inboxError', 'Failed to load inbox'),
       ...extractSettled(agentInbox,
-        (r) => ({ agentInbox: r.messages, agentInboxUnrespondedCount: r.unresponded_count }),
+        (r) => ({ agentInboxRooms: r.rooms, agentInboxUnreadCount: r.total_unread }),
         'agentInboxLoading', 'agentInboxError', 'Failed to load agent inbox'),
       ...extractSettled(jobs,
         (r) => ({ jobs: r.jobs }),
@@ -258,7 +259,7 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
   refreshAgentInbox: (agentId, silent?) => loadDomain(set, get,
     'agentInboxLoading', 'agentInboxError',
     () => api.getAgentInbox(agentId),
-    (r) => ({ agentInbox: r.messages, agentInboxUnrespondedCount: r.unresponded_count }),
+    (r) => ({ agentInboxRooms: r.rooms, agentInboxUnreadCount: r.total_unread }),
     'Failed to load agent inbox', silent),
 
   refreshJobs: (agentId, _userId?, status?, silent?) => loadDomain(set, get,
@@ -312,10 +313,18 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
 
   updateAgentInboxMessage: (messageId, updates) => {
     set((state) => ({
-      agentInbox: state.agentInbox.map((m) => m.message_id === messageId ? { ...m, ...updates } : m),
-      agentInboxUnrespondedCount: updates.if_response === true
-        ? Math.max(0, state.agentInboxUnrespondedCount - 1)
-        : state.agentInboxUnrespondedCount,
+      agentInboxRooms: state.agentInboxRooms.map((room) => ({
+        ...room,
+        messages: room.messages.map((m) =>
+          m.message_id === messageId ? { ...m, ...updates } : m
+        ),
+        unread_count: updates.is_read === true
+          ? Math.max(0, room.unread_count - (room.messages.some((m) => m.message_id === messageId && !m.is_read) ? 1 : 0))
+          : room.unread_count,
+      })),
+      agentInboxUnreadCount: updates.is_read === true
+        ? Math.max(0, state.agentInboxUnreadCount - 1)
+        : state.agentInboxUnreadCount,
     }));
   },
 
@@ -329,7 +338,7 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
   clearAll: () => {
     set({
       inbox: [], inboxUnreadCount: 0,
-      agentInbox: [], agentInboxUnrespondedCount: 0,
+      agentInboxRooms: [], agentInboxUnreadCount: 0,
       jobs: [],
       awareness: null, awarenessCreateTime: null, awarenessUpdateTime: null,
       socialNetworkList: [],

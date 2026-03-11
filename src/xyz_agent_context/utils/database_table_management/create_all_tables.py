@@ -51,6 +51,7 @@ try:
     from xyz_agent_context.utils.database_table_management.create_instance_narrative_links_table import InstanceNarrativeLinksTableManager
     from xyz_agent_context.utils.database_table_management.create_instance_awareness_table import InstanceAwarenessTableManager
     from xyz_agent_context.utils.database_table_management.create_instance_event_memory_table import InstanceModuleReportMemoryTableManager, InstanceJsonFormatMemoryTableManager
+    from xyz_agent_context.utils.database_table_management.create_matrix_table import MatrixCredentialsTableManager
     from xyz_agent_context.utils.database_table_management.create_table_base import (
         create_table,
         check_table_exists,
@@ -74,6 +75,7 @@ except ImportError:
     from xyz_agent_context.utils.database_table_management.create_instance_narrative_links_table import InstanceNarrativeLinksTableManager
     from xyz_agent_context.utils.database_table_management.create_instance_awareness_table import InstanceAwarenessTableManager
     from xyz_agent_context.utils.database_table_management.create_instance_event_memory_table import InstanceModuleReportMemoryTableManager, InstanceJsonFormatMemoryTableManager
+    from xyz_agent_context.utils.database_table_management.create_matrix_table import MatrixCredentialsTableManager
     from xyz_agent_context.utils.database_table_management.create_table_base import (
         create_table,
         check_table_exists,
@@ -197,6 +199,14 @@ TABLE_CONFIGS: Dict[str, Tuple[Type, List[Tuple[str, List[str], bool]]]] = {
     "instance_json_format_memory": (
         InstanceJsonFormatMemoryTableManager,
         []
+    ),
+    # ===== Matrix Tables =====
+    "matrix_credentials": (
+        MatrixCredentialsTableManager,
+        [
+            ("idx_is_active", ["is_active"], False),
+            ("idx_next_poll_time", ["next_poll_time"], False),
+        ]
     ),
 }
 

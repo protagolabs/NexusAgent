@@ -273,7 +273,7 @@ async def build_execution_prompt(
     Returns:
         Complete execution prompt string with enriched context
     """
-    from xyz_agent_context.utils.timezone_utils import format_for_llm, utc_now
+    from xyz_agent_context.utils.timezone import format_for_llm, utc_now
 
     current_time_str = format_for_llm(utc_now(), user_timezone)
     created_str = format_for_llm(job.created_at, user_timezone) if job.created_at else "Unknown"

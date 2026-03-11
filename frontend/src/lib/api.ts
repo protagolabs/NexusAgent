@@ -10,7 +10,6 @@ import type {
   InboxListResponse,
   MarkReadResponse,
   AgentInboxListResponse,
-  MarkRespondedResponse,
   AwarenessResponse,
   ClearHistoryResponse,
   SocialNetworkResponse,
@@ -123,21 +122,18 @@ class ApiClient {
     );
   }
 
-  // Agent Inbox API
-  async getAgentInbox(agentId: string, sourceType?: string, ifResponse?: boolean): Promise<AgentInboxListResponse> {
+  // Agent Inbox API (Matrix channel messages)
+  async getAgentInbox(agentId: string, isRead?: boolean): Promise<AgentInboxListResponse> {
     let url = `/api/agent-inbox?agent_id=${encodeURIComponent(agentId)}`;
-    if (sourceType) url += `&source_type=${encodeURIComponent(sourceType)}`;
-    if (ifResponse !== undefined) url += `&if_response=${ifResponse}`;
+    if (isRead !== undefined) url += `&is_read=${isRead}`;
     return this.request<AgentInboxListResponse>(url);
   }
 
-  async markAgentMessageResponded(messageId: string, narrativeId?: string, eventId?: string): Promise<MarkRespondedResponse> {
-    let url = `/api/agent-inbox/${encodeURIComponent(messageId)}/respond`;
-    const params: string[] = [];
-    if (narrativeId) params.push(`narrative_id=${encodeURIComponent(narrativeId)}`);
-    if (eventId) params.push(`event_id=${encodeURIComponent(eventId)}`);
-    if (params.length > 0) url += `?${params.join('&')}`;
-    return this.request<MarkRespondedResponse>(url, { method: 'PUT' });
+  async markAgentMessageRead(messageId: string): Promise<MarkReadResponse> {
+    return this.request<MarkReadResponse>(
+      `/api/agent-inbox/${encodeURIComponent(messageId)}/read`,
+      { method: 'PUT' }
+    );
   }
 
   // Agents API

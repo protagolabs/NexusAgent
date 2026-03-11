@@ -75,6 +75,7 @@ export const PORTS = {
   BACKEND: 8000,
   MCP_START: 7801,
   MCP_END: 7805,
+  NEXUS_MATRIX: 8953,
   EVERMEMOS: 1995
 } as const
 
@@ -167,6 +168,25 @@ export const SERVICES: ServiceDef[] = [
     order: 4
   },
   {
+    id: 'nexus-matrix',
+    label: 'NexusMatrix Server',
+    command: 'uv',
+    args: ['run', 'python', '-m', 'nexus_matrix.main'],
+    cwd: 'related_project/NetMind-AI-RS-NexusMatrix',
+    port: PORTS.NEXUS_MATRIX,
+    healthUrl: 'http://localhost:8953/health',
+    order: 5
+  },
+  {
+    id: 'matrix-trigger',
+    label: 'Matrix Trigger',
+    command: 'uv',
+    args: ['run', 'python', '-m', 'xyz_agent_context.module.matrix_module.matrix_trigger'],
+    port: null,
+    healthUrl: null,
+    order: 6
+  },
+  {
     id: 'evermemos',
     label: 'EverMemOS',
     command: 'uv',
@@ -174,7 +194,7 @@ export const SERVICES: ServiceDef[] = [
     cwd: '.evermemos',
     port: PORTS.EVERMEMOS,
     healthUrl: null,
-    order: 5,
+    order: 7,
     optional: true
   }
 ]

@@ -9,7 +9,6 @@ keeping the module focused on Hook lifecycle and memory management.
 
 Tools:
 - agent_send_content_to_user_inbox: Send message to user's Inbox
-- agent_send_content_to_agent_inbox: Send message to another Agent
 - get_inbox_status: Get user Inbox status
 - get_chat_history: Get chat history for a Chat Instance
 - send_message_to_user_directly: Agent speaks to user (real-time)
@@ -21,8 +20,7 @@ from loguru import logger
 from mcp.server.fastmcp import FastMCP
 
 from xyz_agent_context.schema import InboxMessageType
-from xyz_agent_context.schema.agent_message_schema import MessageSourceType
-from xyz_agent_context.repository import InboxRepository, AgentMessageRepository
+from xyz_agent_context.repository import InboxRepository
 
 
 def create_chat_mcp_server(port: int, get_db_client_fn) -> FastMCP:
@@ -95,50 +93,6 @@ def create_chat_mcp_server(port: int, get_db_client_fn) -> FastMCP:
         logger.info(f"ChatModule: Sent message to user inbox - user={user_id}, title={title}, message_id={msg_id}")
 
         return f"Message sent successfully! Message ID: {msg_id}"
-
-    @mcp.tool()
-    async def agent_send_content_to_agent_inbox(target_agent_id: str, content: str, self_agent_id: str) -> str:
-        """
-        Send a message to another agent's inbox (agent_messages table).
-
-        Use this tool when you want to communicate with another agent.
-        The message will be stored in the target agent's message queue,
-        and the target agent can process it later.
-
-        Args:
-            target_agent_id: The agent ID to send the message to (the receiver).
-            content: The content of the message you want to send.
-            self_agent_id: Your own agent ID (the sender).
-
-        Returns:
-            A confirmation message with the created message ID.
-
-        Example:
-            agent_send_content_to_agent_inbox(
-                target_agent_id="agent_456",
-                content="Please help me analyze this data...",
-                self_agent_id="agent_123"
-            )
-        """
-        db = await get_db_client_fn()
-        repo = AgentMessageRepository(db)
-
-        message_id = await repo.create_message(
-            agent_id=target_agent_id,
-            source_type=MessageSourceType.AGENT,
-            source_id=self_agent_id,
-            content=content,
-            if_response=False,
-            narrative_id=None,
-            event_id=None,
-        )
-
-        logger.info(
-            f"ChatModule: Sent message to agent inbox - "
-            f"from={self_agent_id}, to={target_agent_id}, message_id={message_id}"
-        )
-
-        return f"Message sent successfully to agent {target_agent_id}! Message ID: {message_id}"
 
     @mcp.tool()
     async def get_inbox_status(user_id: str) -> str:

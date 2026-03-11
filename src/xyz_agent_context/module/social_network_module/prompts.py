@@ -86,6 +86,18 @@ Use when the user needs the contact method of a known entity.
 Use to report your interaction patterns:
 recent interactions, most active contacts, strongest relationships, tag-filtered lists, etc.
 
+###### 5. `contact_agent` — Send Message to Another Entity
+Routes messages through the best available channel (Matrix, Slack, etc.).
+Automatically selects channel based on entity's contact_info.
+
+###### 6. `check_channel_updates` — Cross-Channel Status Check
+Check for recent updates across all registered communication channels.
+Use when user asks "any new messages?" or "check my channels".
+
+###### 7. `merge_entities` — Merge Duplicate Entities
+When you detect duplicate entity records (e.g., same person from different channels),
+use this to merge them into one consolidated record.
+
 ---
 
 ##### 4. Tagging Rules
@@ -181,3 +193,37 @@ Focus on:
 - Things to avoid
 
 The persona should be actionable and specific, not generic."""
+
+# ============================================================================
+# Batch entity extraction LLM instructions
+# Used by extract_mentioned_entities() to find all entities in a conversation
+# ============================================================================
+BATCH_ENTITY_EXTRACTION_INSTRUCTIONS = """Extract all people, agents, or organizations mentioned in the conversation.
+
+Rules:
+- EXCLUDE the primary speaker (the user/entity directly talking)
+- IGNORE channel source tags formatted like [Channel · Name · ID] or [Channel · Name · ID · RoomID] — these are system metadata markers, not conversation participants to extract
+- Only extract entities explicitly named or described in the conversation content
+- Do NOT infer entities that are not mentioned
+- For each entity: provide name, type (user/agent/organization), a brief summary, and relevant tags
+- If no other entities are mentioned, return an empty list
+
+Deduplication & Naming Rules (IMPORTANT):
+- Use the entity's CANONICAL name (e.g., "千里眼" not "千里眼agent" or "千里眼兄弟")
+- Do NOT extract Matrix IDs (e.g., @username:server.org) as separate entities — they refer to an already-named entity
+- Do NOT extract pronouns ("他", "她", "they", "him") or vague references ("兄弟", "那个人", "the other agent") as entities
+- If the same entity is referred to by multiple names/aliases, output it ONCE using the most recognizable name
+- Do NOT extract the agent itself (the one generating the response) as an entity
+
+Examples of what to extract:
+- "My colleague Bob is a frontend expert" -> Bob (user, expert:frontend)
+- "We use products from Google" -> Google (organization)
+- "Agent Research-01 helped me" -> Research-01 (agent)
+- "Talk to Alice about this" -> Alice (user)
+
+Examples of what NOT to extract:
+- "@bob:matrix.org said hello" -> Do NOT extract "@bob:matrix.org" (use "Bob" if identifiable)
+- "他很厉害" -> Do NOT extract "他" (pronoun)
+- "那个兄弟 agent" -> Do NOT extract (vague reference)
+
+If the conversation is purely between the primary speaker and the agent with no mention of anyone else, return an empty entities list."""

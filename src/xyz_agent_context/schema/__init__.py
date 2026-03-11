@@ -74,6 +74,9 @@ from .hook_schema import (
     HookAfterExecutionParams,
 )
 
+# ===== Channel Tag Schema =====
+from .channel_tag import ChannelTag
+
 # ===== RAG Store Schema =====
 from .rag_store_schema import (
     RAGStoreModel,
@@ -273,6 +276,9 @@ __all__ = [
     "HookIOData",
     "HookExecutionTrace",
     "HookAfterExecutionParams",
+
+    # Channel Tag Schema
+    "ChannelTag",
 
     # RAG Store Schema
     "RAGStoreModel",

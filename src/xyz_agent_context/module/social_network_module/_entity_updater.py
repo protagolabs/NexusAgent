@@ -18,7 +18,7 @@ Contains:
 - update_entity_persona: Persona DB write
 """
 
-from typing import Optional
+from typing import List, Optional
 
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -30,6 +30,7 @@ from xyz_agent_context.module.social_network_module.prompts import (
     ENTITY_SUMMARY_INSTRUCTIONS,
     DESCRIPTION_COMPRESSION_INSTRUCTIONS,
     PERSONA_INFERENCE_INSTRUCTIONS,
+    BATCH_ENTITY_EXTRACTION_INSTRUCTIONS,
 )
 
 
@@ -51,6 +52,77 @@ class PersonaOutput(BaseModel):
         default="",
         description="Communication persona/style guide for interacting with this entity (1-3 sentences in natural language)"
     )
+
+
+class ExtractedEntity(BaseModel):
+    """A single entity mentioned in the conversation"""
+    name: str = Field(..., description="Entity name as mentioned in the conversation")
+    entity_type: str = Field(default="user", description="Entity type: user | agent | organization")
+    summary: str = Field(default="", description="Brief summary of what was said about this entity")
+    tags: List[str] = Field(default_factory=list, description="Relevant tags for the entity")
+
+
+class BatchExtractionOutput(BaseModel):
+    """Output of batch entity extraction from conversation"""
+    entities: List[ExtractedEntity] = Field(
+        default_factory=list,
+        description="All entities mentioned in the conversation (excluding the primary speaker)"
+    )
+
+
+# ── Batch Entity Extraction Pipeline ────────────────────────────────────────
+
+
+async def extract_mentioned_entities(
+    input_content: str,
+    final_output: str,
+    primary_entity_name: str = "",
+) -> List[ExtractedEntity]:
+    """
+    Extract all entities mentioned in a conversation (besides the primary speaker).
+
+    Uses LLM to detect mentions of other people, agents, or organizations
+    in the conversation, so SocialNetworkModule can auto-create or update them.
+
+    Args:
+        input_content: User input
+        final_output: Agent output
+        primary_entity_name: Name of the primary interaction entity (excluded from results)
+
+    Returns:
+        List of extracted entities (may be empty if no others are mentioned)
+    """
+    try:
+        user_input = f"""Conversation:
+User: {input_content}
+Agent: {final_output}
+
+Primary speaker name (EXCLUDE from results): {primary_entity_name or 'unknown'}
+
+Extract all OTHER entities mentioned:"""
+
+        sdk = OpenAIAgentsSDK()
+        result = await sdk.llm_function(
+            instructions=BATCH_ENTITY_EXTRACTION_INSTRUCTIONS,
+            user_input=user_input,
+            output_type=BatchExtractionOutput,
+        )
+        output: BatchExtractionOutput = result.final_output
+
+        # Filter out empty or primary entity matches
+        filtered = [
+            e for e in output.entities
+            if e.name.strip()
+            and e.name.lower() != primary_entity_name.lower()
+        ]
+
+        if filtered:
+            logger.info(f"Batch extraction found {len(filtered)} mentioned entities")
+        return filtered
+
+    except Exception as e:
+        logger.warning(f"Batch entity extraction failed (non-critical): {e}")
+        return []
 
 
 # ── Entity Description Pipeline ─────────────────────────────────────────────

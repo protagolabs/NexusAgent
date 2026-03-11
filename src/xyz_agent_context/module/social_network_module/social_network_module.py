@@ -49,6 +49,7 @@ from xyz_agent_context.module.social_network_module._entity_updater import (
     should_update_persona,
     infer_persona,
     update_entity_persona,
+    extract_mentioned_entities,
 )
 
 
@@ -161,10 +162,15 @@ class SocialNetworkModule(XYZBaseModule):
             if ctx_data.user_id:
                 logger.debug(f"            Loading entity info for user_id: {ctx_data.user_id}, instance_id: {instance_id}")
 
+                # Primary: exact entity_id match
                 entity = await self._get_repo().get_entity(
                     entity_id=ctx_data.user_id,
                     instance_id=instance_id
                 )
+
+                # Fallback: fuzzy match by sender_name from channel_tag or keyword search
+                if not entity:
+                    entity = await self._fuzzy_find_entity(ctx_data, instance_id)
 
                 if entity:
                     logger.debug(f"            ✓ Found entity: {entity.entity_name}")
@@ -364,6 +370,75 @@ Run: `uv run python src/xyz_agent_context/utils/database_table_management/create
 
             logger.success(f"            ✅ Entity description updated for {user_id}")
 
+            # 6. Batch extraction: detect other entities mentioned in conversation
+            try:
+                primary_name = ""
+                entity = await repo.get_entity(entity_id=user_id, instance_id=instance_id)
+                if entity:
+                    primary_name = entity.entity_name or user_id
+
+                mentioned = await extract_mentioned_entities(
+                    input_content=input_content,
+                    final_output=final_output,
+                    primary_entity_name=primary_name,
+                )
+
+                for mentioned_entity in mentioned:
+                    # Generate a stable entity_id from name
+                    entity_id_candidate = f"entity_{mentioned_entity.name.lower().replace(' ', '_')}"
+                    existing = await repo.get_entity(
+                        entity_id=entity_id_candidate,
+                        instance_id=instance_id,
+                    )
+
+                    # Fuzzy fallback: keyword search if exact ID match fails
+                    matched_entity_id = entity_id_candidate
+                    if not existing:
+                        fuzzy_results = await repo.keyword_search(
+                            instance_id=instance_id,
+                            keyword=mentioned_entity.name,
+                            limit=3,
+                        )
+                        if fuzzy_results:
+                            # Pick the best match (highest interaction count)
+                            existing = max(fuzzy_results, key=lambda e: e.interaction_count or 0)
+                            matched_entity_id = existing.entity_id
+                            logger.info(
+                                f"            Fuzzy matched '{mentioned_entity.name}' "
+                                f"to existing entity: {existing.entity_name} ({matched_entity_id})"
+                            )
+
+                    if existing:
+                        # Append to description
+                        if mentioned_entity.summary:
+                            await append_to_entity_description(
+                                repo, matched_entity_id, instance_id, mentioned_entity.summary
+                            )
+                        # Merge tags
+                        if mentioned_entity.tags:
+                            merged_tags = list(set(existing.tags or []) | set(mentioned_entity.tags))
+                            await repo.update_entity_info(
+                                entity_id=matched_entity_id,
+                                instance_id=instance_id,
+                                updates={"tags": merged_tags},
+                            )
+                    else:
+                        # Create new entity
+                        await repo.add_entity(
+                            entity_id=entity_id_candidate,
+                            entity_type=mentioned_entity.entity_type,
+                            instance_id=instance_id,
+                            entity_name=mentioned_entity.name,
+                            entity_description=mentioned_entity.summary,
+                            tags=mentioned_entity.tags,
+                        )
+                        logger.info(
+                            f"            Auto-created entity from conversation: "
+                            f"{mentioned_entity.name} ({entity_id_candidate})"
+                        )
+            except Exception as e:
+                logger.warning(f"            Batch entity extraction failed (non-critical): {e}")
+
         except Exception as e:
             logger.error(f"            ❌ Error in hook_after_event_execution: {e}")
             logger.exception(e)
@@ -402,6 +477,64 @@ Run: `uv run python src/xyz_agent_context/utils/database_table_management/create
         )
 
     # ============================================================================= Helper Methods
+
+    async def _fuzzy_find_entity(
+        self,
+        ctx_data: ContextData,
+        instance_id: str,
+    ) -> Optional[SocialNetworkEntity]:
+        """
+        Fuzzy match entity when exact entity_id lookup fails.
+
+        Strategy:
+        1. Extract sender_name from channel_tag (if available)
+        2. Keyword search across entity_name and entity_description
+        3. Return the best match (highest interaction_count)
+
+        Args:
+            ctx_data: Context data (may contain channel_tag in extra_data)
+            instance_id: SocialNetworkModule instance ID
+
+        Returns:
+            Best matching SocialNetworkEntity, or None
+        """
+        # Collect candidate search keywords
+        keywords = []
+
+        # From channel_tag sender_name
+        if ctx_data.extra_data:
+            channel_tag = ctx_data.extra_data.get("channel_tag")
+            if channel_tag:
+                # Handle both dict and ChannelTag object
+                if isinstance(channel_tag, dict):
+                    sender_name = channel_tag.get("sender_name", "")
+                elif hasattr(channel_tag, "sender_name"):
+                    sender_name = channel_tag.sender_name
+                else:
+                    sender_name = ""
+                if sender_name and sender_name != ctx_data.user_id:
+                    keywords.append(sender_name)
+
+        if not keywords:
+            return None
+
+        repo = self._get_repo()
+        for keyword in keywords:
+            results = await repo.keyword_search(
+                instance_id=instance_id,
+                keyword=keyword,
+                limit=3,
+            )
+            if results:
+                # Return the entity with the highest interaction count
+                best = max(results, key=lambda e: e.interaction_count or 0)
+                logger.info(
+                    f"            Fuzzy match found: '{keyword}' -> {best.entity_name} "
+                    f"(entity_id={best.entity_id})"
+                )
+                return best
+
+        return None
 
     async def _load_entity_info(self, entity_id: str, instance_id: str) -> Optional[Dict[str, Any]]:
         """

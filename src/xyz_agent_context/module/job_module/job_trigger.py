@@ -847,6 +847,7 @@ The task was executed but produced no text output.
             # Send error notification to user's inbox
             await self._get_inbox_repo().create_message(
                 user_id=job.user_id,
+                message_id=f"msg_{uuid4().hex[:16]}",
                 title=f"Job Failed: {job.title}",
                 content=f"""## Job Execution Failed
 

@@ -14,7 +14,6 @@ Core concept - Thinking vs Speaking:
 Included MCP Tools:
 - send_message_to_user_directly: Agent speaks to user (real-time conversation, must be called for user to see response)
 - agent_send_content_to_user_inbox: Agent proactively sends message to user's Inbox (async notification)
-- agent_send_content_to_agent_inbox: Agent sends message to other Agents
 - get_inbox_status: Get user Inbox status
 
 Note: ChatModule itself does not include "multi-turn conversation" capability; multi-turn conversation requires Social-Network/Memory modules
@@ -65,7 +64,6 @@ class ChatModule(XYZBaseModule):
     2. **Tools** (via MCP):
        - send_message_to_user_directly: Real-time response to user (must be called for user to see response)
        - agent_send_content_to_user_inbox: Async notification to Inbox
-       - agent_send_content_to_agent_inbox: Inter-Agent communication
        - get_inbox_status: Query Inbox status
     3. **Data** - User's Inbox unread message count
 
@@ -486,16 +484,28 @@ class ChatModule(XYZBaseModule):
         # Get working_source (execution source: chat/job/a2a)
         working_source = params.execution_ctx.working_source.value if params.execution_ctx else "unknown"
 
+        # Build shared meta_data fields
+        shared_meta = {
+            "event_id": params.event_id,
+            "timestamp": utc_now().isoformat(),
+            "instance_id": instance_id,
+            "working_source": working_source,
+        }
+
+        # Inject channel_tag if available (set by Triggers for source tracking)
+        if params.ctx_data and params.ctx_data.extra_data:
+            channel_tag_data = params.ctx_data.extra_data.get("channel_tag")
+            if channel_tag_data:
+                # Ensure channel_tag is always stored as dict (not ChannelTag object)
+                if hasattr(channel_tag_data, "to_dict"):
+                    channel_tag_data = channel_tag_data.to_dict()
+                shared_meta["channel_tag"] = channel_tag_data
+
         # User message
         messages.append({
             "role": "user",
             "content": params.input_content,
-            "meta_data": {
-                "event_id": params.event_id,
-                "timestamp": utc_now().isoformat(),
-                "instance_id": instance_id,
-                "working_source": working_source
-            }
+            "meta_data": {**shared_meta},
         })
 
         # Assistant message - Extract actual reply content from send_message_to_user_directly tool call
@@ -505,12 +515,7 @@ class ChatModule(XYZBaseModule):
         messages.append({
             "role": "assistant",
             "content": assistant_content,
-            "meta_data": {
-                "event_id": params.event_id,
-                "timestamp": utc_now().isoformat(),
-                "instance_id": instance_id,
-                "working_source": working_source
-            }
+            "meta_data": {**shared_meta},
         })
 
         # Save updated history (using instance_id)

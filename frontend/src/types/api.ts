@@ -87,30 +87,37 @@ export interface MarkReadResponse extends ApiResponse {
   marked_count: number;
 }
 
-// Agent Inbox types
-export type AgentMessageSourceType = 'user' | 'agent' | 'system';
-
-export interface AgentInboxMessage {
-  message_id: string;
+// Agent Inbox types (Matrix channel messages, room-grouped)
+export interface RoomMember {
   agent_id: string;
-  source_type: AgentMessageSourceType;
-  source_id: string;
+  agent_name: string;
+  matrix_user_id: string;
+}
+
+export interface RoomMessage {
+  message_id: string;
+  sender_id: string;
+  sender_name: string;
   content: string;
-  if_response: boolean;
-  narrative_id?: string;
-  event_id?: string;
+  is_read: boolean;
   created_at?: string;
 }
 
-export interface AgentInboxListResponse extends ApiResponse {
-  messages: AgentInboxMessage[];
-  count: number;
-  unresponded_count: number;
+export interface MatrixRoom {
+  room_id: string;
+  room_name: string;
+  members: RoomMember[];
+  unread_count: number;
+  messages: RoomMessage[];
+  latest_at?: string;
 }
 
-export interface MarkRespondedResponse extends ApiResponse {
-  marked_count: number;
+export interface AgentInboxListResponse extends ApiResponse {
+  rooms: MatrixRoom[];
+  total_unread: number;
 }
+
+// MarkReadResponse is reused for both user inbox and agent inbox (defined above)
 
 // Awareness types
 export interface AwarenessResponse extends ApiResponse {

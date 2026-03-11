@@ -131,6 +131,10 @@ class ClaudeAgentSDK:
         cli_env["NO_PROXY"] = no_proxy_hosts
         cli_env["no_proxy"] = no_proxy_hosts
 
+        # 清除 CLAUDECODE 环境变量，避免嵌套会话检测导致子进程拒绝启动。
+        # 当后端从 Claude Code 终端内启动时，子进程会继承此变量。
+        cli_env["CLAUDECODE"] = ""
+
         options = ClaudeAgentOptions(
             system_prompt=system_prompt,
             cwd=self.working_path,

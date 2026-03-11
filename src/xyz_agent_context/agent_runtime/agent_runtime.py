@@ -16,7 +16,7 @@ Architecture:
 - The concrete implementation of each Step is in the _agent_runtime_steps/ directory
 """
 
-from typing import AsyncGenerator, Optional, Union, Dict
+from typing import Any, AsyncGenerator, Dict, Optional, Union
 from loguru import logger
 
 # Type alias for database client
@@ -144,6 +144,7 @@ class AgentRuntime:
         pass_mcp_urls: dict = {},
         job_instance_id: Optional[str] = None,
         forced_narrative_id: Optional[str] = None,
+        trigger_extra_data: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator:
         """
         Execute the main flow of the Agent runtime
@@ -190,6 +191,7 @@ class AgentRuntime:
             pass_mcp_urls: Externally provided MCP Server URLs
             job_instance_id: Instance ID when executing a Job
             forced_narrative_id: Forced Narrative ID (used for Job triggers, skips Narrative selection)
+            trigger_extra_data: Trigger 层传入的附加数据（如 channel_tag），会合并到 ctx_data.extra_data
 
         Yields:
             ProgressMessage: Progress messages for each step
@@ -236,6 +238,7 @@ class AgentRuntime:
             pass_mcp_urls=pass_mcp_urls,
             job_instance_id=job_instance_id,
             forced_narrative_id=forced_narrative_id,
+            trigger_extra_data=trigger_extra_data or {},
         )
 
         # =============================================================================

@@ -52,13 +52,14 @@ class ModuleLoader:
 
     # Default static module list
     DEFAULT_MODULE_LIST = [
-        "MemoryModule",  
+        "MemoryModule",
         "AwarenessModule",
         "ChatModule",
         "BasicInfoModule",
         "SocialNetworkModule",
         "JobModule",
         "GeminiRAGModule",
+        "MatrixModule",
     ]
 
     # Always-loaded modules (no Instance record needed, loaded directly)
@@ -364,6 +365,9 @@ class ModuleLoader:
             return []
 
         try:
+            # Ensure agent-level instances exist (auto-creates missing ones like MatrixModule)
+            await self.instance_factory.ensure_agent_instances_exist(self.agent_id)
+
             # Attempt to load from database
             db_instances = await self.instance_factory.load_instances_for_narrative(
                 agent_id=self.agent_id,

@@ -86,6 +86,7 @@ class ContextRuntime:
         query_embedding: Optional[List[float]] = None,  # Used for intelligent Event selection
         created_job_ids: Optional[List[str]] = None,  # Job IDs created this turn (to distinguish "created this turn" from "previously existing")
         evermemos_memories: Optional[Dict[str, Any]] = None,  # Phase 2: EverMemOS cache
+        trigger_extra_data: Optional[Dict[str, Any]] = None,  # Trigger 层附加数据（channel_tag 等）
     ) -> ContextRuntimeOutput:
         logger.info("    ┌─ ContextRuntime.run() started")
         logger.info(f"    │ Narratives: {len(narrative_list)}, Instances: {len(active_instances)}")
@@ -104,8 +105,12 @@ class ContextRuntime:
             model_name="sonnet-4",
             working_source=working_source
         )
-        # Pass the Top-K Narrative ID list to Module (used for merging conversation history)
+        # Merge Trigger 层传入的附加数据（如 channel_tag）
         ctx_data.extra_data = ctx_data.extra_data or {}
+        if trigger_extra_data:
+            ctx_data.extra_data.update(trigger_extra_data)
+
+        # Pass the Top-K Narrative ID list to Module (used for merging conversation history)
         if narrative_list:
             ctx_data.extra_data["narrative_ids"] = [n.id for n in narrative_list]
             logger.debug(f"    │ ContextData initialized with narrative_id={main_narrative_id}, narrative_ids={len(narrative_list)}")
@@ -671,7 +676,17 @@ class ContextRuntime:
                 except Exception:
                     time_ago = "Recently"
 
-            prompt += f"\n**[{time_ago}]**\n"
+            # Build source label from channel_tag if available
+            source_label = ""
+            for msg in msgs:
+                ct = msg.get("meta_data", {}).get("channel_tag")
+                if ct and isinstance(ct, dict):
+                    ch = ct.get("channel", "").capitalize()
+                    name = ct.get("sender_name", "")
+                    source_label = f" via {ch}" + (f" ({name})" if name else "")
+                    break
+
+            prompt += f"\n**[{time_ago}{source_label}]**\n"
 
             # Add conversation content
             for msg in msgs:

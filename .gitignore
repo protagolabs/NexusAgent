@@ -9,8 +9,7 @@
 # =============================================================================
 
 # ── Runtime data (never committed) ──────────────────────────────────────────
-/agent_workspace/*
-!/agent_workspace/.gitkeep
+/agent_workspace/
 /agent-workspace/
 /data/
 /logs/
@@ -29,6 +28,11 @@
 CLAUDE.md
 AGENT.md
 TeamWorkflow.md
+DESIGN_AGENT_COMMUNICATION.md
+MATRIX_MODULE_SUMMARY.md
+OPTIMIZATION_PLAN_CN.md
+PRODUCT_FEATURE_UI_ROADMAP.md
+SCENARIO_WALKTHROUGH.md
 
 # ── Experiment & benchmark data ────────────────────────────────────────────
 /drafts/
