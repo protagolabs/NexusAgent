@@ -200,14 +200,24 @@ class AgentRuntime:
         # =============================================================================
         # Initialization
         # =============================================================================
-        # Save current running agent_id and user_id (used for callbacks)
-        self._current_agent_id = agent_id
-        self._current_user_id = user_id
-
         self._logging_service.setup(agent_id)
 
         # Ensure database client is initialized (lazy-load AsyncDatabaseClient)
         db_client = await self._ensure_database_client()
+
+        # Override user_id with agent's creator — all triggers share a single workspace
+        # so that Matrix conversations, Job triggers, etc. see the same narratives/jobs.
+        from xyz_agent_context.repository.agent_repository import AgentRepository
+        _agent = await AgentRepository(db_client).get_agent(agent_id)
+        if _agent and _agent.created_by:
+            original_user_id = user_id
+            user_id = _agent.created_by
+            if original_user_id != user_id:
+                logger.info(f"user_id overridden: {original_user_id} -> {user_id} (agent creator)")
+
+        # Save current running agent_id and user_id (used for callbacks)
+        self._current_agent_id = agent_id
+        self._current_user_id = user_id
 
         # Initialize the three major Services
         self.session_service = SessionService()

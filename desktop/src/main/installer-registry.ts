@@ -659,11 +659,15 @@ export class InstallerRegistry extends EventEmitter {
   async installAll(missingIds: string[]): Promise<{ success: boolean; failedId?: string }> {
     // Filter to only known installers, preserving registry order
     const toInstall = this.installers.filter((inst) => missingIds.includes(inst.id))
+    console.log(`[installer] installAll: ${toInstall.length} installers to process: [${toInstall.map(i => i.id).join(', ')}]`)
 
     for (const inst of toInstall) {
       // Check if already done
       const current = this.states.get(inst.id)
-      if (current?.status === 'done' || current?.status === 'skipped') continue
+      if (current?.status === 'done' || current?.status === 'skipped') {
+        console.log(`[installer] ${inst.id}: already ${current.status}, skipping`)
+        continue
+      }
 
       // Check dependencies
       if (inst.dependsOn) {
@@ -674,27 +678,34 @@ export class InstallerRegistry extends EventEmitter {
         if (unmet.length > 0) {
           // Skip if dependencies not met and installer is non-blocking
           if (!inst.blocking) {
+            console.log(`[installer] ${inst.id}: unmet deps [${unmet.join(', ')}], skipping (non-blocking)`)
             this.skip(inst.id)
             continue
           }
-          // For blocking ones, dependencies should have been installed before
+          console.log(`[installer] ${inst.id}: unmet deps [${unmet.join(', ')}] but blocking, proceeding anyway`)
         }
       }
 
       try {
         // First check if already ready (might have been installed externally)
+        console.log(`[installer] ${inst.id}: running check()...`)
         if (await inst.check()) {
+          console.log(`[installer] ${inst.id}: check passed, marking done`)
           this.updateState(inst.id, { status: 'done' })
           continue
         }
+        console.log(`[installer] ${inst.id}: check failed, running install()...`)
         await this.install(inst.id)
-      } catch {
+        console.log(`[installer] ${inst.id}: install completed`)
+      } catch (err) {
+        console.error(`[installer] ${inst.id}: failed:`, err instanceof Error ? err.message : err)
         if (inst.blocking) {
           return { success: false, failedId: inst.id }
         }
         // Non-blocking: continue with others
       }
     }
+    console.log(`[installer] installAll: finished`)
     return { success: true }
   }
 

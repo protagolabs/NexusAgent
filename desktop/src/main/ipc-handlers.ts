@@ -148,7 +148,10 @@ export function registerIpcHandlers(
   })
 
   ipcMain.handle(IPC.INSTALL_ALL_DEPS, async (_event, missingIds: string[]) => {
-    return installerRegistry.installAll(missingIds)
+    console.log(`[ipc] INSTALL_ALL_DEPS called with missingIds:`, missingIds)
+    const result = await installerRegistry.installAll(missingIds)
+    console.log(`[ipc] INSTALL_ALL_DEPS completed:`, result)
+    return result
   })
 
   // Phase 3: Launch

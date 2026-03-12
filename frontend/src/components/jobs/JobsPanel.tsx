@@ -295,11 +295,11 @@ export function JobsPanel() {
                   const isCancelling = cancellingJobId === job.job_id;
 
                   return (
-                    <button
+                    <div
                       key={job.job_id}
                       onClick={() => setExpandedId(isExpanded ? null : job.job_id)}
                       className={cn(
-                        'w-full text-left p-4 rounded-xl transition-all duration-300 group',
+                        'w-full text-left p-4 rounded-xl transition-all duration-300 group cursor-pointer',
                         'border bg-[var(--bg-elevated)]',
                         isExpanded
                           ? 'border-[var(--accent-primary)]/30 shadow-[0_0_20px_var(--accent-glow)]'
@@ -363,7 +363,7 @@ export function JobsPanel() {
                           )}
                         </div>
                       </div>
-                    </button>
+                    </div>
                   );
                 };
 

@@ -226,43 +226,44 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
       chatHistoryError: null, ragFilesError: null, costError: null,
     });
 
-    const [inbox, agentInbox, jobs, awareness, social, history, rag, cost] = await Promise.allSettled([
-      api.getInbox(userId),
-      api.getAgentInbox(agentId),
-      api.getJobs(agentId),
-      api.getAwareness(agentId),
-      api.getSocialNetworkList(agentId),
-      api.getChatHistory(agentId, userId),
-      api.listRAGFiles(agentId, userId),
-      api.getCosts(agentId),
-    ]);
-
-    set({
-      ...extractSettled(inbox,
+    // Fire all domains independently — each updates UI as soon as it resolves,
+    // so fast APIs (awareness ~2ms) don't wait for slow ones (chat-history ~7MB).
+    const tasks = [
+      loadDomain(set, get, 'inboxLoading', 'inboxError',
+        () => api.getInbox(userId),
         (r) => ({ inbox: r.messages, inboxUnreadCount: r.unread_count, inboxTotalCount: r.total_count, inboxPage: 1 }),
-        'inboxLoading', 'inboxError', 'Failed to load inbox'),
-      ...extractSettled(agentInbox,
+        'Failed to load inbox'),
+      loadDomain(set, get, 'agentInboxLoading', 'agentInboxError',
+        () => api.getAgentInbox(agentId),
         (r) => ({ agentInboxRooms: r.rooms, agentInboxUnreadCount: r.total_unread }),
-        'agentInboxLoading', 'agentInboxError', 'Failed to load agent inbox'),
-      ...extractSettled(jobs,
+        'Failed to load agent inbox'),
+      loadDomain(set, get, 'jobsLoading', 'jobsError',
+        () => api.getJobs(agentId),
         (r) => ({ jobs: r.jobs }),
-        'jobsLoading', 'jobsError', 'Failed to load jobs'),
-      ...extractSettled(awareness,
+        'Failed to load jobs'),
+      loadDomain(set, get, 'awarenessLoading', 'awarenessError',
+        () => api.getAwareness(agentId),
         (r) => ({ awareness: r.awareness || null, awarenessCreateTime: r.create_time || null, awarenessUpdateTime: r.update_time || null }),
-        'awarenessLoading', 'awarenessError', 'Failed to load awareness'),
-      ...extractSettled(social,
+        'Failed to load awareness'),
+      loadDomain(set, get, 'socialNetworkLoading', 'socialNetworkError',
+        () => api.getSocialNetworkList(agentId),
         (r) => ({ socialNetworkList: r.entities || [] }),
-        'socialNetworkLoading', 'socialNetworkError', 'No social network data'),
-      ...extractSettled(history,
+        'No social network data'),
+      loadDomain(set, get, 'chatHistoryLoading', 'chatHistoryError',
+        () => api.getChatHistory(agentId, userId),
         (r) => ({ chatHistoryEvents: r.events || [], chatHistoryNarratives: r.narratives || [] }),
-        'chatHistoryLoading', 'chatHistoryError', 'No chat history'),
-      ...extractSettled(rag,
+        'No chat history'),
+      loadDomain(set, get, 'ragFilesLoading', 'ragFilesError',
+        () => api.listRAGFiles(agentId, userId),
         (r) => ({ ragFiles: r.files || [], ragCompletedCount: r.completed_count || 0, ragPendingCount: r.pending_count || 0 }),
-        'ragFilesLoading', 'ragFilesError', 'Failed to load RAG files'),
-      ...extractSettled(cost,
+        'Failed to load RAG files'),
+      loadDomain(set, get, 'costLoading', 'costError',
+        () => api.getCosts(agentId),
         (r) => ({ costSummary: r.summary || null }),
-        'costLoading', 'costError', 'Failed to load cost data'),
-    } as Partial<PreloadState>);
+        'Failed to load cost data'),
+    ];
+
+    await Promise.allSettled(tasks);
   },
 
   // ── Individual refresh methods ────────────────────

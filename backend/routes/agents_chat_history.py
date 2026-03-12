@@ -88,7 +88,8 @@ def _parse_json_field(value: Any, default: Any) -> Any:
 @router.get("/{agent_id}/chat-history", response_model=ChatHistoryResponse)
 async def get_chat_history(
     agent_id: str,
-    user_id: Optional[str] = Query(None, description="Optional user ID to filter")
+    user_id: Optional[str] = Query(None, description="Optional user ID to filter"),
+    event_limit: int = Query(default=50, description="Maximum number of recent events to return (0=unlimited)")
 ):
     """
     Get all Narratives and Events as chat history
@@ -237,6 +238,10 @@ async def get_chat_history(
             events_raw.extend(narrative_events)
 
         events_raw.sort(key=lambda e: e.get("created_at", ""))
+
+        # Trim to most recent N events
+        if event_limit > 0 and len(events_raw) > event_limit:
+            events_raw = events_raw[-event_limit:]
 
         # Build response
         narratives = [NarrativeInfo(**narrative_map[nid]) for nid in narrative_ids]

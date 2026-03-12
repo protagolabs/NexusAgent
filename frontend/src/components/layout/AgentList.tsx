@@ -269,11 +269,11 @@ export function AgentList({ collapsed }: AgentListProps) {
       ) : (
         <div className="space-y-1.5">
           {agents.map((agent, index) => (
-            <button
+            <div
               key={agent.agent_id}
               onClick={() => handleSelectAgent(agent.agent_id)}
               className={cn(
-                'w-full text-left p-3 rounded-xl transition-all duration-300',
+                'w-full text-left p-3 rounded-xl transition-all duration-300 cursor-pointer',
                 'hover:bg-[var(--bg-tertiary)] group relative',
                 'animate-slide-up',
                 agentId === agent.agent_id && [
@@ -411,7 +411,7 @@ export function AgentList({ collapsed }: AgentListProps) {
                   )}
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}

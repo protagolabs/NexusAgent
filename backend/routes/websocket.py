@@ -163,11 +163,14 @@ async def websocket_agent_run(websocket: WebSocket):
 
         logger.info("Agent execution completed")
 
-        # Send completion signal
-        await websocket.send_json({
-            "type": "complete",
-            "message": "Agent execution completed successfully",
-        })
+        # Send completion signal (skip if WebSocket already closed)
+        try:
+            await websocket.send_json({
+                "type": "complete",
+                "message": "Agent execution completed successfully",
+            })
+        except RuntimeError:
+            logger.info("Skipped completion signal — WebSocket already closed")
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
