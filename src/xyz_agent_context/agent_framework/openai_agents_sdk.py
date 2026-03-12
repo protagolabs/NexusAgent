@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 
 from xyz_agent_context.settings import settings
-from xyz_agent_context.utils.cost_tracker import record_cost
+from xyz_agent_context.utils.cost_tracker import record_cost, get_cost_context
 
 
 MODEL_NAME = "gpt-5.1-2025-11-13"
@@ -47,8 +47,14 @@ class OpenAIAgentsSDK:
 
         result = await Runner.run(agent, user_input)
 
-        # Extract token usage and record cost
-        if agent_id and db:
+        # Resolve cost context: explicit params > global context
+        _agent_id, _db = agent_id, db
+        if not _agent_id or not _db:
+            ctx = get_cost_context()
+            if ctx:
+                _agent_id, _db = ctx
+
+        if _agent_id and _db:
             try:
                 input_tokens = 0
                 output_tokens = 0
@@ -59,8 +65,8 @@ class OpenAIAgentsSDK:
                         output_tokens += getattr(usage, "output_tokens", 0) or getattr(usage, "completion_tokens", 0) or 0
                 if input_tokens > 0 or output_tokens > 0:
                     await record_cost(
-                        db=db,
-                        agent_id=agent_id,
+                        db=_db,
+                        agent_id=_agent_id,
                         event_id=None,
                         call_type="llm_function",
                         model=MODEL_NAME,

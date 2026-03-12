@@ -219,6 +219,12 @@ class AgentRuntime:
         self._current_agent_id = agent_id
         self._current_user_id = user_id
 
+        # Set global cost tracking context so ALL LLM calls (narrative, job, social
+        # network, module decisions, etc.) automatically record costs without needing
+        # explicit agent_id/db parameters at each call site.
+        from xyz_agent_context.utils.cost_tracker import set_cost_context, clear_cost_context
+        set_cost_context(agent_id, db_client)
+
         # Initialize the three major Services
         self.session_service = SessionService()
         self.event_service = EventService(agent_id)
@@ -534,6 +540,9 @@ class AgentRuntime:
                 narrative_service=self.narrative_service,
                 execute_callback_instance=self._execute_callback_instance
             )
+
+        # Clean up cost tracking context to prevent leakage across tasks
+        clear_cost_context()
 
         # Clean up log handlers
         self._logging_service.cleanup()

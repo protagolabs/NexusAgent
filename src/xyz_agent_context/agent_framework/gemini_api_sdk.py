@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from google import genai
 
 from xyz_agent_context.settings import settings
-from xyz_agent_context.utils.cost_tracker import record_cost
+from xyz_agent_context.utils.cost_tracker import record_cost, get_cost_context
 
 
 class GeminiAPISDK:
@@ -46,6 +46,11 @@ class GeminiAPISDK:
 
     async def _record_usage(self, response, agent_id: Optional[str], db) -> None:
         """Extract usage_metadata from Gemini response and record cost."""
+        # Resolve cost context: explicit params > global context
+        if not agent_id or not db:
+            ctx = get_cost_context()
+            if ctx:
+                agent_id, db = ctx
         if not agent_id or not db:
             return
         try:

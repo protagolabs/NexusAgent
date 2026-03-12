@@ -167,15 +167,25 @@ class EmbeddingClient:
 
     async def _try_record_cost(self, usage) -> None:
         """Record embedding cost if tracking context is available."""
-        if not self._cost_agent_id or not self._cost_db or not usage:
+        if not usage:
+            return
+        # Resolve cost context: instance vars > global ContextVar
+        agent_id = self._cost_agent_id
+        db = self._cost_db
+        if not agent_id or not db:
+            from xyz_agent_context.utils.cost_tracker import get_cost_context
+            ctx = get_cost_context()
+            if ctx:
+                agent_id, db = ctx
+        if not agent_id or not db:
             return
         try:
             from xyz_agent_context.utils.cost_tracker import record_cost
             input_tokens = getattr(usage, "total_tokens", 0) or getattr(usage, "prompt_tokens", 0) or 0
             if input_tokens > 0:
                 await record_cost(
-                    db=self._cost_db,
-                    agent_id=self._cost_agent_id,
+                    db=db,
+                    agent_id=agent_id,
                     event_id=None,
                     call_type="embedding",
                     model=self.model,

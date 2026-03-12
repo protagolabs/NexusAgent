@@ -11,13 +11,16 @@ Provides centralized cost tracking for all LLM API calls:
 - OpenAI Embedding
 
 Architecture:
-    Pure functions + async recorder. Not a Module — this is infrastructure.
-    Price table is hardcoded but centralized for easy future migration to settings.
+    Pure functions + async recorder + global cost context.
+    AgentRuntime sets the cost context once at the start of run(),
+    and all subsequent LLM calls automatically record costs without
+    needing explicit agent_id/db parameters.
 """
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from contextvars import ContextVar
+from typing import Dict, Optional, Tuple
 
 from loguru import logger
 
@@ -38,6 +41,36 @@ MODEL_PRICING: Dict[str, Dict[str, float]] = {
     "text-embedding-3-small": {"input": 0.02, "output": 0.0},
     "text-embedding-3-large": {"input": 0.13, "output": 0.0},
 }
+
+
+# =============================================================================
+# Global Cost Context (asyncio-safe via contextvars)
+# =============================================================================
+# Stores (agent_id, db_client) so LLM calls don't need explicit parameters.
+# Set by AgentRuntime.run() at the start, cleared in finally block.
+
+_cost_context: ContextVar[Optional[Tuple[str, object]]] = ContextVar(
+    "_cost_context", default=None
+)
+
+
+def set_cost_context(agent_id: str, db) -> None:
+    """
+    Set global cost tracking context for the current async task.
+    Called once by AgentRuntime.run() — all subsequent LLM calls
+    in this task automatically use this context.
+    """
+    _cost_context.set((agent_id, db))
+
+
+def clear_cost_context() -> None:
+    """Clear the cost tracking context (called in AgentRuntime.run() finally block)."""
+    _cost_context.set(None)
+
+
+def get_cost_context() -> Optional[Tuple[str, object]]:
+    """Get the current cost context (agent_id, db), or None if not set."""
+    return _cost_context.get()
 
 
 def calculate_cost(
