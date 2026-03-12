@@ -51,6 +51,7 @@ class ClaudeAgentSDK:
         messages: list[dict[str, Any]],
         mcp_server_urls: dict[str, str],  # Corrected type annotation: should be a dict, not a list
         streaming: bool = True,  # Whether to use streaming output
+        extra_env: dict[str, str] | None = None,  # Additional env vars (e.g., skill-configured API keys)
         **kwargs: Any,
         ) -> AsyncGenerator[dict[str, Any], None]:
 
@@ -130,6 +131,10 @@ class ClaudeAgentSDK:
         no_proxy_hosts = "localhost,127.0.0.1"
         cli_env["NO_PROXY"] = no_proxy_hosts
         cli_env["no_proxy"] = no_proxy_hosts
+
+        # Inject skill-configured env vars (e.g., TAVILY_API_KEY, GOG_ACCOUNT)
+        if extra_env:
+            cli_env.update(extra_env)
 
         options = ClaudeAgentOptions(
             system_prompt=system_prompt,

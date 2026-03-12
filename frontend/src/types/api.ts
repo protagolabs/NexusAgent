@@ -257,6 +257,7 @@ export interface AgentInfo {
   description?: string;
   status?: string;
   created_at?: string;
+  bootstrap_active?: boolean;
 }
 
 export interface CreateAgentResponse {

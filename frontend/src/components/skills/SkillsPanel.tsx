@@ -28,6 +28,8 @@ import {
   BookOpen,
   ChevronDown,
   ChevronRight,
+  KeyRound,
+  CircleAlert,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@/components/ui';
 import { useConfigStore } from '@/stores';
@@ -44,6 +46,7 @@ function SkillCard({
   onToggle,
   onRemove,
   onStudy,
+  onConfigure,
   isToggling,
   isRemoving,
   isStudying,
@@ -52,6 +55,7 @@ function SkillCard({
   onToggle: (skill: SkillInfo) => void;
   onRemove: (skill: SkillInfo) => void;
   onStudy: (skill: SkillInfo) => void;
+  onConfigure: (skill: SkillInfo) => void;
   isToggling: boolean;
   isRemoving: boolean;
   isStudying: boolean;
@@ -98,6 +102,19 @@ function SkillCard({
             <span className="text-[10px] font-mono text-[var(--text-tertiary)]">
               v{skill.version}
             </span>
+          )}
+
+          {/* Env config warning */}
+          {skill.requires_env && skill.requires_env.length > 0 && skill.env_configured === false && (
+            <div
+              className="flex items-center gap-2 mt-2 px-2 py-1.5 rounded-lg bg-[var(--color-warning)]/5 border border-[var(--color-warning)]/10 cursor-pointer hover:bg-[var(--color-warning)]/10 transition-colors"
+              onClick={() => onConfigure(skill)}
+            >
+              <CircleAlert className="w-3 h-3 text-[var(--color-warning)]" />
+              <span className="text-xs text-[var(--color-warning)]">
+                Needs config: {skill.requires_env.join(', ')}
+              </span>
+            </div>
           )}
 
           {/* Study status display */}
@@ -156,6 +173,25 @@ function SkillCard({
               )}
               {skill.study_status === 'completed' ? 'Re-study' : 'Study'}
             </Button>
+
+            {/* Configure button - shown when skill has env requirements */}
+            {skill.requires_env && skill.requires_env.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onConfigure(skill)}
+                disabled={skill.disabled}
+                className={cn(
+                  'text-xs',
+                  skill.env_configured === false
+                    ? 'text-[var(--color-warning)] hover:bg-[var(--color-warning)]/10'
+                    : 'text-[var(--accent-secondary)] hover:bg-[var(--accent-secondary)]/10'
+                )}
+              >
+                <KeyRound className="w-3 h-3 mr-1.5" />
+                {skill.env_configured === false ? 'Configure' : 'Env'}
+              </Button>
+            )}
 
             <Button
               variant="ghost"
@@ -396,6 +432,155 @@ function InstallDialog({
   );
 }
 
+// Environment configuration dialog
+function EnvConfigDialog({
+  skill,
+  agentId,
+  userId,
+  onClose,
+  onSaved,
+}: {
+  skill: SkillInfo;
+  agentId: string;
+  userId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [envValues, setEnvValues] = useState<Record<string, string>>({});
+  const [envStatus, setEnvStatus] = useState<Record<string, boolean>>({});
+  const [requiresEnv, setRequiresEnv] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await api.getSkillEnvConfig(skill.name, agentId, userId);
+        setRequiresEnv(res.requires_env);
+        setEnvStatus(res.env_configured);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load config');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConfig();
+  }, [skill.name, agentId, userId]);
+
+  const handleSave = async () => {
+    // Only send non-empty values
+    const toSave: Record<string, string> = {};
+    for (const [key, value] of Object.entries(envValues)) {
+      if (value.trim()) {
+        toSave[key] = value.trim();
+      }
+    }
+    if (Object.keys(toSave).length === 0) {
+      onClose();
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await api.setSkillEnvConfig(skill.name, agentId, userId, toSave);
+      if (res.success) {
+        onSaved();
+        onClose();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
+      <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
+            <KeyRound className="w-5 h-5" />
+            Configure: {skill.name}
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+          >
+            <X className="w-4 h-4 text-[var(--text-tertiary)]" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-[var(--accent-primary)]" />
+          </div>
+        ) : requiresEnv.length === 0 ? (
+          <p className="text-sm text-[var(--text-tertiary)] py-4">
+            No environment variables required for this skill.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-[var(--text-tertiary)]">
+              Enter the required environment variables. Leave blank to keep existing value.
+            </p>
+            {requiresEnv.map((varName) => (
+              <div key={varName}>
+                <label className="flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)] mb-1.5">
+                  {envStatus[varName] ? (
+                    <CheckCircle className="w-3.5 h-3.5 text-[var(--color-success)]" />
+                  ) : (
+                    <CircleAlert className="w-3.5 h-3.5 text-[var(--color-warning)]" />
+                  )}
+                  {varName}
+                </label>
+                <input
+                  type="password"
+                  value={envValues[varName] || ''}
+                  onChange={(e) =>
+                    setEnvValues((prev) => ({ ...prev, [varName]: e.target.value }))
+                  }
+                  placeholder={envStatus[varName] ? '••••••• (configured)' : 'Enter value...'}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-sunken)] border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors font-mono"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center gap-2 px-3 py-2 mt-3 rounded-lg bg-[var(--color-error)]/10 border border-[var(--color-error)]/20">
+            <AlertCircle className="w-4 h-4 text-[var(--color-error)]" />
+            <span className="text-xs text-[var(--color-error)]">{error}</span>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-4 mt-4 border-t border-[var(--border-subtle)]">
+          <Button variant="ghost" onClick={onClose} disabled={saving} className="flex-1">
+            Cancel
+          </Button>
+          <Button
+            variant="default"
+            onClick={handleSave}
+            disabled={saving || requiresEnv.length === 0}
+            className="flex-1"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save'
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SkillsPanel() {
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -405,6 +590,7 @@ export function SkillsPanel() {
   const [togglingSkill, setTogglingSkill] = useState<string | null>(null);
   const [removingSkill, setRemovingSkill] = useState<string | null>(null);
   const [studyingSkill, setStudyingSkill] = useState<string | null>(null);
+  const [configuringSkill, setConfiguringSkill] = useState<SkillInfo | null>(null);
   const [showDisabled, setShowDisabled] = useState(false);
 
   // Interval ref for polling study status
@@ -680,6 +866,7 @@ export function SkillsPanel() {
                 onToggle={handleToggle}
                 onRemove={handleRemove}
                 onStudy={handleStudy}
+                onConfigure={setConfiguringSkill}
                 isToggling={togglingSkill === skill.name}
                 isRemoving={removingSkill === skill.name}
                 isStudying={studyingSkill === skill.name}
@@ -696,6 +883,17 @@ export function SkillsPanel() {
         onInstall={handleInstall}
         isInstalling={isInstalling}
       />
+
+      {/* Env config dialog */}
+      {configuringSkill && agentId && userId && (
+        <EnvConfigDialog
+          skill={configuringSkill}
+          agentId={agentId}
+          userId={userId}
+          onClose={() => setConfiguringSkill(null)}
+          onSaved={loadSkills}
+        />
+      )}
     </Card>
   );
 }
