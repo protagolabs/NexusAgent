@@ -38,6 +38,7 @@ import type {
   SkillListResponse,
   SkillOperationResponse,
   SkillStudyResponse,
+  SkillEnvConfigResponse,
 } from '@/types';
 
 // Auth types
@@ -556,6 +557,41 @@ class ApiClient {
     });
     return this.request<SkillStudyResponse>(
       `/api/skills/${encodeURIComponent(skillName)}/study?${params}`
+    );
+  }
+
+  // Skill Env Config API
+  async getSkillEnvConfig(
+    skillName: string,
+    agentId: string,
+    userId: string
+  ): Promise<SkillEnvConfigResponse> {
+    const params = new URLSearchParams({
+      agent_id: agentId,
+      user_id: userId,
+    });
+    return this.request<SkillEnvConfigResponse>(
+      `/api/skills/${encodeURIComponent(skillName)}/env?${params}`
+    );
+  }
+
+  async setSkillEnvConfig(
+    skillName: string,
+    agentId: string,
+    userId: string,
+    envConfig: Record<string, string>
+  ): Promise<SkillEnvConfigResponse> {
+    const params = new URLSearchParams({
+      agent_id: agentId,
+      user_id: userId,
+    });
+    return this.request<SkillEnvConfigResponse>(
+      `/api/skills/${encodeURIComponent(skillName)}/env?${params}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ env_config: envConfig }),
+      }
     );
   }
 }
