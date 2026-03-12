@@ -23,8 +23,13 @@ import {
   ensureDockerDaemon,
   isEverMemOSAvailable,
   startEverMemOS,
+  getDockerConfigOverride,
 } from './docker-manager'
 import { getExecEnv, execInProject, execWithPrivileges, spawnWithOutput, isPortReachable, delay } from './exec-utils'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+
+const execFileAsync = promisify(execFile)
 import type { ProcessManager } from './process-manager'
 import type { LaunchStep, LaunchStepId } from '../shared/setup-types'
 
