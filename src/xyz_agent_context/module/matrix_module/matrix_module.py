@@ -34,6 +34,31 @@ from ._matrix_credential_manager import MatrixCredentialManager
 from .matrix_client import NexusMatrixClient
 
 
+def _extract_matrix_id(contact_info: dict) -> str:
+    """
+    Extract matrix user ID from contact_info.
+
+    Supports both canonical and legacy formats:
+    - {"channels": {"matrix": {"id": "@xxx:localhost"}}}        (canonical)
+    - {"channels": {"matrix": {"user_id": "@xxx:localhost"}}}   (legacy)
+    - {"matrix": "@xxx:localhost"}                               (legacy)
+    """
+    if not contact_info:
+        return ""
+    channels = contact_info.get("channels", {})
+    if isinstance(channels, dict):
+        matrix_ch = channels.get("matrix", {})
+        if isinstance(matrix_ch, dict):
+            return matrix_ch.get("id", "") or matrix_ch.get("user_id", "")
+        elif isinstance(matrix_ch, str):
+            return matrix_ch
+    # Legacy: top-level "matrix" key
+    matrix_val = contact_info.get("matrix", "")
+    if isinstance(matrix_val, str) and matrix_val:
+        return matrix_val
+    return ""
+
+
 # Default NexusMatrix server URL (local deployment)
 DEFAULT_SERVER_URL = "http://localhost:8953"
 
@@ -131,7 +156,8 @@ class MatrixModule(XYZBaseModule):
         tools_section = """Available tools (prefix: matrix_*):
 - `matrix_register`: Register (or re-register) on NexusMatrix Server
 - `matrix_send_message`: Send a message to a room
-- `matrix_create_room`: Create a new room and invite someone
+- `matrix_create_room`: Create a new DM or group room and invite users
+- `matrix_invite_to_room`: Invite a user to an existing room
 - `matrix_join_room`: Join a room you've been invited to
 - `matrix_list_rooms`: List your joined rooms
 - `matrix_get_room_members`: Get members of a room
@@ -155,10 +181,46 @@ You are NOT yet registered on NexusMatrix Server. You need to call `matrix_regis
 
         instructions = f"""
 ## Matrix Communication
-You have a Matrix account: `{matrix_id}`
 
-You can communicate with other Agents or users via Matrix protocol.
+Matrix is your **inter-agent messaging channel**. Use it to collaborate with other Agents, exchange information, coordinate tasks, or reach out to contacts you cannot talk to directly.
+
+Your Matrix account: `{matrix_id}`
+
+### When to Use Matrix
+- You need to **contact another Agent** (ask a question, share information, coordinate work)
+- Your owner asks you to **send a message** to someone
+- You want to **proactively reach out** based on your current task (e.g., gather intel, request help)
+- Use `matrix_search_agents` to discover agents you haven't talked to yet
+
 {tools_section}
+
+### DM (1-on-1) Workflow
+1. Call `matrix_create_room(agent_id, invite_user_ids="@target:server", is_group=False)`
+2. The room is created and the target receives an invite
+3. Use `matrix_send_message` with the returned `room_id` to send messages
+- Sibling agents (same owner) **auto-accept** invites instantly
+- External agents accept at their own pace — your call returns immediately, do NOT wait
+
+### Group Chat Workflow
+1. Call `matrix_create_room(agent_id, invite_user_ids="@a:server,@b:server", name="Topic Name", is_group=True)`
+2. All listed users receive invites; sibling agents auto-accept, others accept asynchronously
+3. Use `matrix_send_message` with the returned `room_id` to send messages
+4. To add more members later: `matrix_invite_to_room(agent_id, room_id, invite_user_id="@new:server")`
+- Always provide a meaningful room `name` — e.g., "Project Alpha Coordination" or "Weekly Sync"
+
+### Message Source Recognition
+Every incoming message carries a **channel tag** (e.g., `[Matrix · AgentName · @id:server · !room:server]`).
+- When you see `[Matrix · ...]` at the beginning of user input, it means this message came from Matrix, NOT from your owner
+- Treat Matrix messages as **peer-to-peer Agent communication** — the sender is another Agent or external user
+- When you see `[Direct · ...]` or no channel tag, the message is from your owner via the main chat interface
+
+### Reply Discipline
+When responding to Matrix messages:
+- **Stop replying** when the conversation reaches a natural end (e.g., "好的", "谢谢", "got it", acknowledgments)
+- **Do NOT ping-pong**: if you've answered the question and the other party only acknowledges, do not reply again
+- **Do NOT repeat** what you already said with minor variations just to fill space
+- **Silence is acceptable**: not every message needs a response. Only reply when you have substantive content
+- In group rooms, only respond when the message is relevant to you or explicitly mentions you
 """
 
         if rooms:
@@ -174,22 +236,40 @@ You can communicate with other Agents or users via Matrix protocol.
                     room_line += f"  [Members: {', '.join(member_names)}]"
                 instructions += room_line + "\n"
 
-        # Agent directory — all registered agents with their identities
-        agent_dir = matrix_info.get("agent_directory", {})
-        if agent_dir:
-            instructions += "\n### Agent Directory\n"
-            for mid, info in list(agent_dir.items())[:15]:
-                aid = info.get("agent_id", "")
-                aname = info.get("agent_name", "Unknown")
-                instructions += f"- **{aname}** — agent_id: `{aid}`, matrix_id: `{mid}`\n"
+        # Known agents: social network first, then sibling cards (deduplicated)
+        known_agents = ctx_data.extra_data.get("known_agent_entities", [])
+        seen_agent_names: set[str] = set()
+
+        if known_agents:
+            instructions += "\n### Known Agents (from Social Network)\n"
+            for a in known_agents[:50]:
+                name = a.get("entity_name", "Unknown")
+                seen_agent_names.add(name.lower())
+                desc = a.get("entity_description", "")
+                tags = a.get("tags", [])
+                matrix_id = _extract_matrix_id(a.get("contact_info", {}))
+                line = f"- **{name}**"
+                if matrix_id:
+                    line += f" (`{matrix_id}`)"
+                if desc:
+                    line += f" — {desc[:80]}"
+                if tags:
+                    line += f"  [{', '.join(tags[:5])}]"
+                instructions += line + "\n"
 
         if siblings:
-            instructions += "\n### Known Sibling Agents\n"
-            for s in siblings[:5]:  # Cap at 5 siblings
-                name = s.get("name", "Unknown")
-                mid = s.get("matrix", {}).get("user_id", "N/A")
-                role = s.get("role", "")
-                instructions += f"- **{name}** (`{mid}`) — {role}\n"
+            # Filter out siblings already covered by social network
+            unseen = [
+                s for s in siblings
+                if s.get("name", "").lower() not in seen_agent_names
+            ]
+            if unseen:
+                instructions += "\n### Sibling Agents (same owner)\n"
+                for s in unseen[:50]:
+                    name = s.get("name", "Unknown")
+                    mid = s.get("matrix", {}).get("user_id", "N/A")
+                    role = s.get("role", "")
+                    instructions += f"- **{name}** (`{mid}`) — {role}\n"
 
         return instructions
 
@@ -274,6 +354,8 @@ You can communicate with other Agents or users via Matrix protocol.
             from xyz_agent_context.utils import get_db_client
             from ._matrix_credential_manager import ensure_agent_registered
 
+            is_group = kwargs.get("is_group", False)
+
             db = await get_db_client()
             cred = await ensure_agent_registered(db, agent_id)
             if not cred:
@@ -286,7 +368,7 @@ You can communicate with other Agents or users via Matrix protocol.
                     result = await client.create_room(
                         api_key=cred.api_key,
                         invite_user_ids=[target_id],
-                        is_direct=True,
+                        is_direct=(not is_group),
                     )
                     if not result:
                         return {"success": False, "error": "Failed to create room"}

@@ -97,18 +97,29 @@ def register_matrix_mcp_tools(mcp: Any) -> None:
     @mcp.tool()
     async def matrix_create_room(
         agent_id: str,
-        invite_user_id: str,
+        invite_user_ids: str = "",
         name: str = "",
+        is_group: bool = False,
     ) -> dict:
         """
-        Create a new Matrix room and optionally invite a user.
+        Create a new Matrix room and invite one or more users.
 
-        Use this to start a new conversation with another agent.
+        **DM (1-on-1)**: Set is_group=False (default). Pass a single Matrix user ID.
+        **Group chat**: Set is_group=True. Pass multiple comma-separated Matrix user IDs.
+
+        Invited agents will auto-accept the invite — you do NOT need to wait for them.
+        External agents may accept later at their own pace; this call returns immediately.
+
+        IMPORTANT: Always provide a meaningful room name! Good examples:
+        - DM: "Alice, Bob" or "Sales Data Discussion"
+        - Group: "Project X Coordination" or "Weekly Sync Team"
 
         Args:
             agent_id: Your agent ID
-            invite_user_id: Matrix user ID to invite (e.g. "@other:matrix.example.com")
-            name: Optional room name
+            invite_user_ids: Comma-separated Matrix user IDs to invite
+                             (e.g. "@alice:server" or "@alice:server,@bob:server")
+            name: Room name — describe the purpose or list participant names
+            is_group: True for group chat, False for direct message (default)
 
         Returns:
             Result dict with room_id on success
@@ -117,17 +128,56 @@ def register_matrix_mcp_tools(mcp: Any) -> None:
         if not client:
             return {"success": False, "error": "Matrix credentials not found"}
 
+        # Parse comma-separated user IDs
+        parsed_ids = [uid.strip() for uid in invite_user_ids.split(",") if uid.strip()]
+
         result = await client.create_room(
             api_key=cred.api_key,
             name=name,
-            invite_user_ids=[invite_user_id] if invite_user_id else None,
-            is_direct=True,
+            invite_user_ids=parsed_ids or None,
+            is_direct=(not is_group and len(parsed_ids) <= 1),
         )
         await client.close()
 
         if result:
             return {"success": True, "data": result}
         return {"success": False, "error": "Failed to create room"}
+
+    @mcp.tool()
+    async def matrix_invite_to_room(
+        agent_id: str,
+        room_id: str,
+        invite_user_id: str,
+    ) -> dict:
+        """
+        Invite a user to an existing Matrix room.
+
+        Use this to add more participants to an ongoing conversation or group chat.
+        Sibling agents will auto-accept; other agents accept at their own pace.
+        This call returns immediately — it does NOT block waiting for acceptance.
+
+        Args:
+            agent_id: Your agent ID
+            room_id: Room ID to invite into
+            invite_user_id: Matrix user ID to invite (e.g. "@other:matrix.example.com")
+
+        Returns:
+            Result dict indicating success or failure
+        """
+        client, cred = await _get_client_and_cred(agent_id)
+        if not client:
+            return {"success": False, "error": "Matrix credentials not found"}
+
+        ok = await client.invite_to_room(
+            api_key=cred.api_key,
+            room_id=room_id,
+            user_id=invite_user_id,
+        )
+        await client.close()
+
+        if ok:
+            return {"success": True, "message": f"Invitation sent to {invite_user_id}"}
+        return {"success": False, "error": f"Failed to invite {invite_user_id}"}
 
     @mcp.tool()
     async def matrix_join_room(

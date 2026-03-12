@@ -367,14 +367,17 @@ class NexusMatrixClient:
             )
             resp.raise_for_status()
             data = resp.json()
-            if data.get("success"):
-                result = data.get("data")
-                # API returns list directly, not {"rooms": [...]}
-                if isinstance(result, list):
-                    return result
-                if isinstance(result, dict):
-                    return result.get("rooms", [])
-                return []
+            # Server may return a raw list or a wrapped {"success": true, "data": [...]}
+            if isinstance(data, list):
+                return data
+            if isinstance(data, dict):
+                if data.get("success"):
+                    result = data.get("data")
+                    if isinstance(result, list):
+                        return result
+                    if isinstance(result, dict):
+                        return result.get("rooms", [])
+                    return []
             return None
         except Exception as e:
             logger.error(f"List rooms failed: {e}")
