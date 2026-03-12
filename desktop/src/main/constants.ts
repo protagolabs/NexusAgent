@@ -123,6 +123,8 @@ export interface ServiceDef {
   order: number
   /** Optional service: silently skip when cwd doesn't exist (non-blocking) */
   optional?: boolean
+  /** Git repository URL: auto-clone when cwd doesn't exist */
+  gitRepo?: string
 }
 
 /** All backend service definitions */
@@ -175,7 +177,8 @@ export const SERVICES: ServiceDef[] = [
     cwd: 'related_project/NetMind-AI-RS-NexusMatrix',
     port: PORTS.NEXUS_MATRIX,
     healthUrl: 'http://localhost:8953/health',
-    order: 5
+    order: 5,
+    gitRepo: 'git@github.com:protagolabs/NetMind-AI-RS-NexusMatrix.git'
   },
   {
     id: 'matrix-trigger',

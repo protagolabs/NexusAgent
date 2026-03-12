@@ -136,7 +136,12 @@ async def websocket_agent_run(websocket: WebSocket):
                         message_dict = message
                     else:
                         message_dict = {"type": "unknown", "data": str(message)}
-                    await websocket.send_json(message_dict)
+                    try:
+                        await websocket.send_json(message_dict)
+                    except RuntimeError:
+                        # WebSocket already closed (client disconnected mid-stream)
+                        logger.info("WebSocket closed during streaming, stopping send loop")
+                        break
                     # Verbose logging: show type + content preview for monitoring
                     msg_type = message_dict.get('type', '?')
                     if msg_type == 'agent_response':
