@@ -10,6 +10,7 @@ import { join } from 'path'
 import { existsSync } from 'fs'
 import { EventEmitter } from 'events'
 import {
+  PROJECT_ROOT,
   FRONTEND_DIR,
   EVERMEMOS_DIR,
   EVERMEMOS_GIT_URL
