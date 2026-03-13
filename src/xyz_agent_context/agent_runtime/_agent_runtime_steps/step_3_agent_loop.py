@@ -95,6 +95,7 @@ async def step_3_agent_loop(
         query_embedding=ctx.query_embedding,
         created_job_ids=ctx.created_job_ids,  # Jobs created this round, for context passing
         evermemos_memories=ctx.evermemos_memories,  # Phase 2: Pass EverMemOS cache
+        trigger_extra_data=ctx.trigger_extra_data,  # Trigger 层附加数据（channel_tag 等）
     )
     substeps.append(
         f"[3.2] ✓ Context build complete: {len(context.messages)} messages, "
@@ -212,6 +213,10 @@ async def step_3_agent_loop(
         final_output=state.final_output,
         execution_steps=state.get_all_steps_as_list(),
         response_count=state.response_count,
+        input_tokens=state.input_tokens,
+        output_tokens=state.output_tokens,
+        model=state.model,
+        total_cost_usd=state.total_cost_usd,
         agent_loop_response=agent_loop_response,
         ctx_data=context.ctx_data,
     )

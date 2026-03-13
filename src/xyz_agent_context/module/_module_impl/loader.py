@@ -52,13 +52,14 @@ class ModuleLoader:
 
     # Default static module list
     DEFAULT_MODULE_LIST = [
-        "MemoryModule",  
+        "MemoryModule",
         "AwarenessModule",
         "ChatModule",
         "BasicInfoModule",
         "SocialNetworkModule",
         "JobModule",
         "GeminiRAGModule",
+        "MatrixModule",
     ]
 
     # Always-loaded modules (no Instance record needed, loaded directly)
@@ -324,7 +325,7 @@ class ModuleLoader:
         try:
             changes_explanation_dict = json.loads(decision_output.changes_explanation)
         except json.JSONDecodeError:
-            logger.warning(f"Unable to parse changes_explanation JSON, using empty dict")
+            logger.warning("Unable to parse changes_explanation JSON, using empty dict")
             changes_explanation_dict = {}
 
         logger.success(
@@ -364,6 +365,9 @@ class ModuleLoader:
             return []
 
         try:
+            # Ensure agent-level instances exist (auto-creates missing ones like MatrixModule)
+            await self.instance_factory.ensure_agent_instances_exist(self.agent_id)
+
             # Attempt to load from database
             db_instances = await self.instance_factory.load_instances_for_narrative(
                 agent_id=self.agent_id,
@@ -656,7 +660,7 @@ class ModuleLoader:
                 temp_instance = ModuleInstance(
                     instance_id=instance_id,
                     module_class=module_name,
-                    description=f"Always-loaded module (no database record)",
+                    description="Always-loaded module (no database record)",
                     status=InstanceStatus.ACTIVE,
                     agent_id=self.agent_id,
                     dependencies=[],

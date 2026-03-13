@@ -131,6 +131,10 @@ class ClaudeAgentSDK:
         cli_env["NO_PROXY"] = no_proxy_hosts
         cli_env["no_proxy"] = no_proxy_hosts
 
+        # 清除 CLAUDECODE 环境变量，避免嵌套会话检测导致子进程拒绝启动。
+        # 当后端从 Claude Code 终端内启动时，子进程会继承此变量。
+        cli_env["CLAUDECODE"] = ""
+
         options = ClaudeAgentOptions(
             system_prompt=system_prompt,
             cwd=self.working_path,
@@ -189,13 +193,13 @@ class ClaudeAgentSDK:
                     "  3. API 认证失败或额度耗尽"
                 )
                 if cli_stderr_lines:
-                    logger.error(f"[ClaudeAgentSDK] CLI stderr 输出:\n" + "\n".join(cli_stderr_lines))
+                    logger.error("[ClaudeAgentSDK] CLI stderr 输出:\n" + "\n".join(cli_stderr_lines))
         except GeneratorExit:
             logger.warning(f"Agent loop generator was closed early (client disconnected). Messages received: {message_count}")
         except Exception as e:
             logger.error(f"Error in agent_loop: {e}")
             if cli_stderr_lines:
-                logger.error(f"[ClaudeAgentSDK] CLI stderr 输出:\n" + "\n".join(cli_stderr_lines))
+                logger.error("[ClaudeAgentSDK] CLI stderr 输出:\n" + "\n".join(cli_stderr_lines))
             raise
         finally:
             if client is not None:
