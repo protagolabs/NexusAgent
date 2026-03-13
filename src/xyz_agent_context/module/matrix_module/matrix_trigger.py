@@ -208,10 +208,27 @@ class MatrixTrigger:
         """
         Check if this agent is mentioned in the message via m.mentions.
 
-        Uses the structured m.mentions field from the Matrix event content:
-        - m.mentions.room == True → @everyone, all agents triggered
-        - m.mentions.user_ids contains agent's matrix_user_id → that agent triggered
-        - No m.mentions at all → not mentioned (skip in group chats)
+        Matrix mention format (MSC3952 / Matrix v1.7+):
+        The sending client must include an "m.mentions" key in the event content:
+
+            {
+                "msgtype": "m.text",
+                "body": "@alice Hello!",
+                "formatted_body": "<a href='https://matrix.to/#/@alice:server'>@alice</a> Hello!",
+                "format": "org.matrix.custom.html",
+                "m.mentions": {
+                    "user_ids": ["@alice:server"]       # mention specific users
+                }
+            }
+
+        To mention everyone in a room (@room):
+
+            "m.mentions": { "room": true }
+
+        Detection rules:
+        - m.mentions.room == true          → @everyone, all agents triggered
+        - m.mentions.user_ids contains id  → that specific agent triggered
+        - No m.mentions at all             → not mentioned (skip in group chats)
 
         Args:
             msg: Message event dict (must contain "content" with full event content)
