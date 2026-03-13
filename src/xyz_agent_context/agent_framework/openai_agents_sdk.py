@@ -12,6 +12,7 @@ from loguru import logger
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 
+from loguru import logger
 from xyz_agent_context.settings import settings
 from xyz_agent_context.utils.cost_tracker import record_cost, get_cost_context
 
@@ -31,16 +32,19 @@ class OpenAIAgentsSDK:
         instructions: str,
         user_input: str,
         output_type: BaseModel = None,
+        model: str = None,
         agent_id: Optional[str] = None,
         db=None,
     ) -> str:
+
+        model_name = model or MODEL_NAME
 
         agent = Agent(
             name="ChatGPT",
             instructions=instructions,
             output_type=output_type,
             model=OpenAIChatCompletionsModel(
-                model=MODEL_NAME,
+                model=model_name,
                 openai_client=AsyncOpenAI(api_key=settings.openai_api_key),
             ),
         )
@@ -69,7 +73,7 @@ class OpenAIAgentsSDK:
                         agent_id=_agent_id,
                         event_id=None,
                         call_type="llm_function",
-                        model=MODEL_NAME,
+                        model=model_name,
                         input_tokens=input_tokens,
                         output_tokens=output_tokens,
                     )

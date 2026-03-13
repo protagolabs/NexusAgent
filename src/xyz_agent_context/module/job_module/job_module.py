@@ -176,34 +176,27 @@ PENDING --after creation--> ACTIVE --after execution--+--> COMPLETED (success)
 
 ---
 
-### 🚫 CRITICAL: Job Creation Rules
+### Job Creation Rules
 
-**1. Jobs I Just Created This Turn**
-If there are jobs marked as "Jobs I Just Created" above:
-- I already created these jobs based on the user's current request
-- I MUST INFORM the user: "I have created a task for you: [task name], it will..."
-- DO NOT call job_create again - I already created them!
-- Explain what the job will do and when it will execute
+**1. Existing Jobs**
+If there are jobs listed above:
+- Reference them when relevant to the user's query
+- DO NOT create duplicate jobs that match existing ones
 
-**2. Previously Existing Jobs**
-If there are jobs marked as "Previously Existing" above:
-- These existed before this conversation turn
-- Reference them when relevant to user's query
-- DO NOT create duplicate jobs
+**2. When to Create Jobs**
+Use `job_create` when the user requests a task that requires delayed, scheduled, or continuous execution:
+- "Remind me to drink water every day at 8 AM" → recurring job
+- "Keep following up with customer Xiaoming until they show purchase intent" → ongoing job
+- "Research competitors and send me a report tomorrow" → one_off job
+- Multi-step workflows → create jobs with `depends_on_job_ids` for chaining
 
-**3. When I MAY Call job_create (RARE CASES ONLY)**
-Only use job_create when ALL conditions are met:
-- User explicitly requests a NEW scheduled/recurring task
-- No matching job exists in any of the lists above
-- The task requires delayed/periodic execution (not immediate)
+Before creating, check existing jobs to avoid duplicates.
 
-Examples:
-- OK: "Remind me to drink water every day at 8 AM" (recurring, not existing)
-- OK: "Keep following up with customer Xiaoming until they show purchase intent" (ongoing)
-- ❌ User's request matches any job above → Already exists!
-- ❌ Multi-step async workflow → I already created job chains for this
+**3. When NOT to Create Jobs**
+- Immediate questions or conversations (just respond directly)
+- Tasks that can be completed right now in this conversation
 
-**4. If You Must Create a Job**
+**4. How to Create a Job**
 Required fields:
 - `title`: Task title
 - `description`: Task description
@@ -234,7 +227,7 @@ Optional context parameters:
 
 ### Job Capabilities
 - **Retrieve**: job_retrieval_semantic, job_retrieval_by_id, job_retrieval_by_keywords
-- **Create**: job_create (use sparingly, see rules above)
+- **Create**: job_create (check for duplicates before creating)
 - **Modify**: job_update, job_pause, job_cancel
 
 ---
@@ -332,27 +325,37 @@ Example: A sales follow-up task's end_condition is "customer shows purchase inte
         Collect Job information associated with the current Narrative, populate ctx_data.jobs_information
 
         Query strategy: prefer narrative_id, fallback to instance_ids
-        Display strategy: distinguish between "created this turn" and "previously existing"
+        Filtering: only show jobs relevant to the current user (by related_entity_id or user_id)
         """
-        # Collect all Jobs (deduplicated by job_id)
-        jobs_map = await self._collect_jobs(ctx_data.narrative_id)
+        # Get current user ID for filtering
+        current_user_id = ctx_data.user_id if ctx_data else None
 
-        # Get Job IDs created this turn
-        created_this_turn = set(ctx_data.extra_data.get("created_job_ids_this_turn", []))
+        # Collect all Jobs (deduplicated by job_id), filtered by current user
+        jobs_map = await self._collect_jobs(ctx_data.narrative_id, current_user_id=current_user_id)
 
-        # Classify and format
-        newly_created = [j for j in jobs_map.values() if j.job_id in created_this_turn]
-        existing = [j for j in jobs_map.values() if j.job_id not in created_this_turn]
+        # With skip_module_decision_llm, there are no "created this turn" jobs from the LLM.
+        # Jobs created by Claude Code via job_create MCP tool during execution won't appear here
+        # since hook_data_gathering runs before the agent loop.
+        existing = list(jobs_map.values())
 
-        ctx_data.jobs_information = await self._format_jobs_information(newly_created, existing)
+        ctx_data.jobs_information = await self._format_jobs_information([], existing)
 
         if jobs_map:
-            logger.info(f"JobModule: created this turn {len(newly_created)}, previously existing {len(existing)}")
+            logger.info(f"JobModule: {len(existing)} active jobs for user {current_user_id}")
 
         return ctx_data
 
-    async def _collect_jobs(self, narrative_id: Optional[str]) -> Dict[str, JobModel]:
-        """Collect Jobs: prefer via narrative_id, fallback via instance_ids"""
+    async def _collect_jobs(self, narrative_id: Optional[str], current_user_id: Optional[str] = None) -> Dict[str, JobModel]:
+        """
+        Collect Jobs: prefer via narrative_id, fallback via instance_ids.
+
+        When current_user_id is provided, filters to only include jobs where:
+        - related_entity_id matches current user (job targets this user), OR
+        - user_id matches current user (user created this job), OR
+        - related_entity_id is not set (job has no specific target)
+
+        This replaces the module decision LLM's job-filtering-by-user function.
+        """
         jobs_map: Dict[str, JobModel] = {}
 
         # Strategy 1: Query via narrative_id
@@ -373,6 +376,21 @@ Example: A sales follow-up task's end_condition is "customer shows purchase inte
             except Exception:
                 pass
 
+        # Filter by current user if provided
+        if current_user_id and jobs_map:
+            filtered = {}
+            for job_id, job in jobs_map.items():
+                job_related = getattr(job, 'related_entity_id', None)
+                job_creator = getattr(job, 'user_id', None)
+                # Include if: targets current user, created by current user, or has no specific target
+                if (job_related == current_user_id or
+                        job_creator == current_user_id or
+                        not job_related):
+                    filtered[job_id] = job
+                else:
+                    logger.debug(f"JobModule: filtered out job {job_id} (related={job_related}, creator={job_creator}, current={current_user_id})")
+            jobs_map = filtered
+
         return jobs_map
 
     async def _format_jobs_information(
@@ -388,9 +406,7 @@ Example: A sales follow-up task's end_condition is "customer shows purchase inte
 
         if newly_created:
             rows = [await self._format_job_row(j) for j in newly_created]
-            sections.append(f"""### ✅ Jobs I Just Created ({len(newly_created)})
-
-**I already created these jobs. Inform the user and DO NOT call job_create again.**
+            sections.append(f"""### New Jobs ({len(newly_created)})
 
 | Title | ID | Status | Trigger |
 |-------|-----|--------|---------|
@@ -398,7 +414,7 @@ Example: A sales follow-up task's end_condition is "customer shows purchase inte
 
         if existing:
             rows = [await self._format_job_row(j) for j in existing]
-            sections.append(f"""### 📋 Existing Jobs ({len(existing)})
+            sections.append(f"""### Active Jobs ({len(existing)})
 
 | Title | ID | Status | Trigger |
 |-------|-----|--------|---------|

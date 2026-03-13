@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from loguru import logger
 
 from xyz_agent_context.agent_framework.openai_agents_sdk import OpenAIAgentsSDK
+from ..config import config
 from .prompts import (
     NARRATIVE_SINGLE_MATCH_INSTRUCTIONS,
     NARRATIVE_UNIFIED_MATCH_WITH_PARTICIPANT_INSTRUCTIONS,
@@ -87,6 +88,7 @@ async def llm_confirm(query: str, candidates: List[dict]) -> dict:
             instructions=instructions,
             user_input=user_input,
             output_type=NarrativeMatchOutput,
+            model=config.NARRATIVE_JUDGE_LLM_MODEL,
         )
         output: NarrativeMatchOutput = result.final_output
 
@@ -179,6 +181,7 @@ async def llm_judge_unified(
             instructions=instructions,
             user_input=user_input,
             output_type=UnifiedMatchOutput,
+            model=config.NARRATIVE_JUDGE_LLM_MODEL,
         )
         output: UnifiedMatchOutput = result.final_output
 
