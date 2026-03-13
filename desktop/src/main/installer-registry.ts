@@ -531,13 +531,18 @@ async function installDockerLinux(onOutput: (line: string) => void): Promise<voi
 function createEverMemosCloneInstaller(): Installer {
   return {
     id: 'evermemos-clone',
-    label: 'Clone EverMemOS',
+    label: 'Clone / Update EverMemOS',
     blocking: false,
     async check() {
-      return everMemOSEnv.isCloned()
+      // Always run install() to pull latest — never skip
+      return false
     },
     async install(onOutput) {
       if (everMemOSEnv.isCloned()) {
+        onOutput('Updating EverMemOS...')
+        await spawnWithOutput('git', ['pull', '--ff-only'], {
+          cwd: EVERMEMOS_DIR, timeout: 120000, onOutput
+        })
         everMemOSEnv.flushPendingEnv()
         return
       }
@@ -557,13 +562,14 @@ function createEverMemosDepsInstaller(): Installer {
     dependsOn: ['uv', 'evermemos-clone'],
     blocking: false,
     async check() {
-      return existsSync(join(EVERMEMOS_DIR, '.venv'))
+      // Always run uv sync to pick up dependency changes
+      return false
     },
     async install(onOutput) {
       if (!existsSync(EVERMEMOS_DIR)) {
         throw new Error('EverMemOS directory not found, skipping')
       }
-      onOutput('Installing EverMemOS Python dependencies...')
+      onOutput('Syncing EverMemOS Python dependencies...')
       await spawnWithOutput('uv', ['sync'], {
         cwd: EVERMEMOS_DIR, timeout: 600000, onOutput
       })
@@ -574,12 +580,20 @@ function createEverMemosDepsInstaller(): Installer {
 function createNexusMatrixCloneInstaller(): Installer {
   return {
     id: 'nexus-matrix-clone',
-    label: 'Clone NexusMatrix',
+    label: 'Clone / Update NexusMatrix',
     blocking: false,
     async check() {
-      return existsSync(NEXUS_MATRIX_DIR)
+      // Always run install() to pull latest — never skip
+      return false
     },
     async install(onOutput) {
+      if (existsSync(NEXUS_MATRIX_DIR)) {
+        onOutput('Updating NexusMatrix...')
+        await spawnWithOutput('git', ['pull', '--ff-only'], {
+          cwd: NEXUS_MATRIX_DIR, timeout: 120000, onOutput
+        })
+        return
+      }
       onOutput('Cloning NexusMatrix repository...')
       const parentDir = join(NEXUS_MATRIX_DIR, '..')
       const { mkdirSync } = require('fs')
@@ -599,13 +613,14 @@ function createNexusMatrixDepsInstaller(): Installer {
     dependsOn: ['uv', 'nexus-matrix-clone'],
     blocking: false,
     async check() {
-      return existsSync(join(NEXUS_MATRIX_DIR, '.venv'))
+      // Always run uv sync to pick up dependency changes
+      return false
     },
     async install(onOutput) {
       if (!existsSync(NEXUS_MATRIX_DIR)) {
         throw new Error('NexusMatrix directory not found, skipping')
       }
-      onOutput('Installing NexusMatrix Python dependencies...')
+      onOutput('Syncing NexusMatrix Python dependencies...')
       await spawnWithOutput('uv', ['sync'], {
         cwd: NEXUS_MATRIX_DIR, timeout: 600000, onOutput
       })
