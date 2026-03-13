@@ -393,7 +393,9 @@ class MatrixTrigger:
                             room_meta = await self._get_room_meta(
                                 client, cred.api_key, room_id
                             )
-                            is_dm = room_meta["member_count"] <= 2
+                            # member_count == 0 means unknown (cache miss) — treat as group
+                            mc = room_meta["member_count"]
+                            is_dm = mc > 0 and mc <= 2
                             is_creator = (
                                 room_meta["creator"] is not None
                                 and room_meta["creator"] == cred.matrix_user_id
