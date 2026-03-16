@@ -65,8 +65,8 @@
 ### 安装与启动
 
 ```bash
-git clone https://github.com/NetMindAI-Open/NexusAgent.git
-cd NexusAgent
+git clone https://github.com/NetMindAI-Open/NarraNexus.git
+cd NarraNexus
 bash run.sh
 ```
 
@@ -172,6 +172,30 @@ RERANK_BASE_URL=https://api.deepinfra.com/v1/inference
 5. **刷新 Jobs 面板** → 点击 🔄 查看已创建的任务列表
 6. **持续交互** → Agent 执行任务后，刷新各面板查看社交网络更新、Narrative 积累等
 
+## 数据目录 (`~/.narranexus/`)
+
+NarraNexus 在用户目录下的 `~/.narranexus/` 存储运行时日志。该目录在首次运行时自动创建，不包含任何用户数据或密钥，仅存放服务日志。
+
+```
+~/.narranexus/
+└── logs/
+    ├── agents/              # Agent 执行日志（每次运行一个文件）
+    │   ├── agent_<id>_<timestamp>.log.zip
+    │   └── ...
+    ├── job_trigger/         # 任务调度器日志（每日轮转）
+    │   └── job_trigger_YYYYMMDD.log
+    ├── matrix_trigger/      # Matrix 通信触发器日志
+    │   └── matrix_trigger_YYYYMMDD.log
+    ├── mcp/                 # MCP 服务器日志
+    │   └── mcp_YYYYMMDD.log
+    └── module_poller/       # Module Poller 日志
+        └── module_poller_YYYYMMDD.log
+```
+
+- **日志轮转**：每天午夜轮转，旧日志压缩为 `.zip` 并保留 7 天
+- **可安全删除**：整个 `~/.narranexus/` 目录可以随时删除，下次运行时会自动重建
+- **桌面版**：使用相同的 `~/.narranexus/` 路径（macOS 下为 `~/.narranexus/`，不在 `~/Library/Application Support/` 内）
+
 ## 文档
 
 | 文档 | 说明 |
@@ -183,11 +207,11 @@ RERANK_BASE_URL=https://api.deepinfra.com/v1/inference
 
 ## Star History
 
-<a href="https://star-history.com/#NetMindAI-Open/NexusAgent&Date">
+<a href="https://star-history.com/#NetMindAI-Open/NarraNexus&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NexusAgent&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NexusAgent&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=NetMindAI-Open/NexusAgent&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NarraNexus&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NarraNexus&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=NetMindAI-Open/NarraNexus&type=Date" />
  </picture>
 </a>
 
@@ -206,7 +230,7 @@ NarraNexus 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-A
   title        = {NarraNexus: A Framework for Building Nexuses of Agents},
   author       = {NetMind.AI},
   year         = {2026},
-  url          = {https://github.com/NetMindAI-Open/NexusAgent},
+  url          = {https://github.com/NetMindAI-Open/NarraNexus},
   license      = {CC-BY-NC-4.0}
 }
 ```

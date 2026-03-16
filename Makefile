@@ -1,5 +1,5 @@
 # =============================================================================
-# NexusAgent — Developer Command Surface
+# NarraNexus — Developer Command Surface
 # =============================================================================
 # Usage: make <target>
 #
@@ -17,7 +17,7 @@
 # Default target
 help:
 	@echo ""
-	@echo "  NexusAgent Developer Commands"
+	@echo "  NarraNexus Developer Commands"
 	@echo "  ─────────────────────────────"
 	@echo ""
 	@echo "  Lint & Type Check:"

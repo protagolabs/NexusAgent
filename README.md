@@ -65,8 +65,8 @@ An agent in isolation is a tool. An agent with persistent memory, social identit
 ### Install & Run
 
 ```bash
-git clone https://github.com/NetMindAI-Open/NexusAgent.git
-cd NexusAgent
+git clone https://github.com/NetMindAI-Open/NarraNexus.git
+cd NarraNexus
 bash run.sh
 ```
 
@@ -172,6 +172,30 @@ The right panel has multiple tabs showing agent state:
 5. **Refresh Jobs tab** → Click 🔄 to see created jobs
 6. **Ongoing interaction** → After agent executes tasks, refresh panels to see social network updates, narrative accumulation, etc.
 
+## Data Directory (`~/.narranexus/`)
+
+NarraNexus stores runtime logs in a user-level directory at `~/.narranexus/`. This directory is created automatically on first run and does not contain any user data or secrets -- only service logs.
+
+```
+~/.narranexus/
+└── logs/
+    ├── agents/              # Per-agent execution logs (one file per run)
+    │   ├── agent_<id>_<timestamp>.log.zip
+    │   └── ...
+    ├── job_trigger/         # Job scheduler logs (daily rotation)
+    │   └── job_trigger_YYYYMMDD.log
+    ├── matrix_trigger/      # Matrix communication trigger logs
+    │   └── matrix_trigger_YYYYMMDD.log
+    ├── mcp/                 # MCP server logs
+    │   └── mcp_YYYYMMDD.log
+    └── module_poller/       # Module poller logs
+        └── module_poller_YYYYMMDD.log
+```
+
+- **Rotation**: logs rotate daily at midnight; old logs are compressed (`.zip`) and retained for 7 days
+- **Safe to delete**: the entire `~/.narranexus/` directory can be safely removed at any time -- it will be recreated on next run
+- **Desktop app**: uses the same `~/.narranexus/` path (on macOS: `~/.narranexus/`, not inside `~/Library/Application Support/`)
+
 ## Documentation
 
 | Document | Description |
@@ -183,11 +207,11 @@ The right panel has multiple tabs showing agent state:
 
 ## Star History
 
-<a href="https://star-history.com/#NetMindAI-Open/NexusAgent&Date">
+<a href="https://star-history.com/#NetMindAI-Open/NarraNexus&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NexusAgent&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NexusAgent&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=NetMindAI-Open/NexusAgent&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NarraNexus&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NarraNexus&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=NetMindAI-Open/NarraNexus&type=Date" />
  </picture>
 </a>
 
@@ -206,7 +230,7 @@ If you find NarraNexus useful, please cite it as:
   title        = {NarraNexus: A Framework for Building Nexuses of Agents},
   author       = {NetMind.AI},
   year         = {2026},
-  url          = {https://github.com/NetMindAI-Open/NexusAgent},
+  url          = {https://github.com/NetMindAI-Open/NarraNexus},
   license      = {CC-BY-NC-4.0}
 }
 ```

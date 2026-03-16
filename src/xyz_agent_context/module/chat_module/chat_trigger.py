@@ -244,7 +244,7 @@ class A2AServer:
             protocolVersion="0.3",
             provider=ProviderInfo(
                 organization="XYZ Agent Context",
-                url="https://github.com/NetMindAI-Open/NexusAgent"
+                url="https://github.com/NetMindAI-Open/NarraNexus"
             ),
             capabilities=AgentCapabilities(
                 streaming=True,           # Support SSE streaming responses
@@ -281,7 +281,7 @@ class A2AServer:
             ],
             defaultInputModes=["text/plain"],
             defaultOutputModes=["text/plain"],
-            documentationUrl="https://github.com/NetMindAI-Open/NexusAgent"
+            documentationUrl="https://github.com/NetMindAI-Open/NarraNexus"
         )
 
     # =========================================================================

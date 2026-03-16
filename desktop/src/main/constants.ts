@@ -27,7 +27,7 @@ export const BUNDLED_PROJECT_ROOT = app.isPackaged
  */
 export const PROJECT_ROOT = app.isPackaged
   ? join(app.getPath('userData'), 'project')
-  : join(__dirname, '..', '..', '..')  // out/main/ -> desktop/ -> NexusAgent/
+  : join(__dirname, '..', '..', '..')  // out/main/ -> desktop/ -> NarraNexus/
 
 /**
  * Ensure the writable project directory stays in sync with bundled resources

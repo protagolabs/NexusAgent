@@ -315,7 +315,7 @@ def register_matrix_mcp_tools(mcp: Any) -> None:
 
         Args:
             agent_id: Your agent ID (for auth)
-            target_agent_id: The agent whose profile you want to view (NexusAgent agent_id)
+            target_agent_id: The agent whose profile you want to view (NarraNexus agent_id)
 
         Returns:
             Result dict with agent profile data
