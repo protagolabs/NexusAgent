@@ -13,6 +13,7 @@ import type {
   AgentTextDelta,
   AgentThinking,
   AgentToolCall,
+  ErrorMessage,
 } from '@/types';
 import { generateId } from '@/lib/utils';
 
@@ -25,6 +26,7 @@ interface ChatState {
   currentSteps: Step[];
   currentThinking: string;
   currentToolCalls: AgentToolCall[];
+  currentErrors: string[];  // Runtime errors (rate limit, API errors, etc.)
   totalSteps: number;  // Total pipeline steps
 
   // History
@@ -53,17 +55,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
   currentSteps: [],
   currentThinking: '',
   currentToolCalls: [],
+  currentErrors: [],
   totalSteps: TOTAL_PIPELINE_STEPS,
   history: [],
   isStreaming: false,
   currentAssistantMessage: '',
 
   // Computed: get user-visible response content
-  // Only the content from send_message_to_user_directly tool call is visible to the user
+  // Only the content from send_message_to_user_directly tool call is visible to the user.
+  // When the agent calls it multiple times (e.g., "give me a moment" then final answer),
+  // we show the LAST call which contains the final/conclusive response.
   // Note: Claude Agent SDK tool name format is mcp__chat_module__send_message_to_user_directly
   getUserVisibleResponse: () => {
     const state = get();
-    const makeResponseCall = state.currentToolCalls.find(
+    const makeResponseCall = state.currentToolCalls.findLast(
       (tool) => tool.tool_name.endsWith('send_message_to_user_directly')
     );
     if (makeResponseCall && makeResponseCall.tool_input?.content) {
@@ -95,6 +100,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       currentSteps: [],
       currentThinking: '',
       currentToolCalls: [],
+      currentErrors: [],
     });
   },
 
@@ -106,29 +112,43 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return;
     }
 
-    // Core logic: extract user-visible response content from send_message_to_user_directly tool call
-    // All LLM output from the agent is internal thinking; only send_message_to_user_directly content is shown to the user
+    // Core logic: extract user-visible response content from send_message_to_user_directly tool call.
+    // Use findLast() to get the FINAL response — when the agent sends multiple messages
+    // (e.g., "give me a moment" then the actual answer), the last one is the conclusive response.
     // Note: Claude Agent SDK tool name format is mcp__chat_module__send_message_to_user_directly
-    const makeResponseCall = state.currentToolCalls.find(
+    const makeResponseCall = state.currentToolCalls.findLast(
       (tool) => tool.tool_name.endsWith('send_message_to_user_directly')
     );
 
     // Determine content to display to the user
     let displayContent: string;
+    let isError = false;
     if (makeResponseCall && makeResponseCall.tool_input?.content) {
       // send_message_to_user_directly was called, extract the content parameter
       displayContent = makeResponseCall.tool_input.content as string;
+    } else if (state.currentErrors.length > 0) {
+      // Runtime errors occurred (rate limit, API errors, etc.) — show them to the user
+      displayContent = state.currentErrors.join('\n\n');
+      isError = true;
     } else {
       // send_message_to_user_directly was not called, show default message
       displayContent = '(Agent decided no response needed)';
     }
 
     const userMessage = state.messages.find((m) => m.role === 'user');
+    // Attach non-fatal warnings (e.g., module decision LLM failed but fallback used)
+    // These are shown even when the agent responded successfully.
+    const warnings = !isError && state.currentErrors.length > 0
+      ? [...state.currentErrors]
+      : undefined;
+
     const assistantMessage: ChatMessage = {
       id: generateId(),
       role: 'assistant',
       content: displayContent,
       timestamp: Date.now(),
+      isError,
+      warnings,
       // Save LLM raw output as thinking (internal reasoning process)
       thinking: state.currentThinking || state.currentAssistantMessage || undefined,
       toolCalls: state.currentToolCalls.length > 0 ? [...state.currentToolCalls] : undefined,
@@ -244,8 +264,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       case 'error': {
-        // Handle error - could show in UI
-        console.error('Runtime error:', message);
+        const errorMsg = message as ErrorMessage;
+        const errorText = errorMsg.error_message || 'Unknown error occurred';
+        console.error('Runtime error:', errorText);
+        set((state) => ({
+          currentErrors: [...state.currentErrors, errorText],
+        }));
         break;
       }
 
@@ -283,6 +307,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       currentSteps: [],
       currentThinking: '',
       currentToolCalls: [],
+      currentErrors: [],
       currentAssistantMessage: '',
       isStreaming: false,
     });
@@ -295,6 +320,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       currentSteps: [],
       currentThinking: '',
       currentToolCalls: [],
+      currentErrors: [],
       history: [],
       currentAssistantMessage: '',
       isStreaming: false,

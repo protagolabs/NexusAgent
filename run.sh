@@ -600,6 +600,22 @@ verify_services_health() {
         all_healthy=false
     fi
 
+    # Synapse (Matrix homeserver) connectivity
+    if is_port_up 8008; then
+        if http_health_check "http://localhost:8008/health" 5; then
+            echo -e "    ${GREEN}●${RESET}  Synapse                ${GREEN}Healthy${RESET}  (HTTP OK on :8008/health)"
+        else
+            echo -e "    ${YELLOW}●${RESET}  Synapse                ${YELLOW}Port open but not healthy${RESET}"
+            warnings="${warnings}\n    - Synapse: Port 8008 is open but health check failed."
+            all_healthy=false
+        fi
+    else
+        echo -e "    ${RED}○${RESET}  Synapse                ${RED}Not running${RESET}  (port 8008)"
+        warnings="${warnings}\n    - Synapse is not running. Matrix/NexusMatrix features will be unavailable."
+        warnings="${warnings}\n      Run: docker compose up -d synapse"
+        all_healthy=false
+    fi
+
     # Docker container health (check for unhealthy containers)
     if command -v docker &>/dev/null && $DOCKER_CMD info &>/dev/null 2>&1; then
         local unhealthy_containers
@@ -659,9 +675,32 @@ sed_inplace() {
 }
 
 # ============================================================================
-# Start MySQL Docker container and wait until ready
+# Ensure Synapse config exists (copy template on first run)
 # ============================================================================
-start_mysql_docker() {
+ensure_synapse_config() {
+    local template_dir="${PROJECT_ROOT}/deploy/synapse"
+    local data_dir="${template_dir}/data"
+
+    if [ -f "${data_dir}/homeserver.yaml" ]; then
+        return 0
+    fi
+
+    info "Synapse config not found, copying templates (first run)..."
+    mkdir -p "${data_dir}"
+    if [ -f "${template_dir}/homeserver.yaml" ]; then
+        cp "${template_dir}/homeserver.yaml" "${data_dir}/homeserver.yaml"
+        cp "${template_dir}/localhost.log.config" "${data_dir}/localhost.log.config" 2>/dev/null || true
+        success "Synapse config templates copied to ${data_dir}"
+    else
+        warn "Synapse template not found at ${template_dir}/homeserver.yaml"
+        return 1
+    fi
+}
+
+# ============================================================================
+# Start Docker containers (MySQL + Synapse) and wait until ready
+# ============================================================================
+start_docker_services() {
     detect_compose_cmd
     if [ -z "${COMPOSE_CMD:-}" ]; then
         fail "Docker Compose is not available"
@@ -669,8 +708,37 @@ start_mysql_docker() {
     fi
 
     cd "$PROJECT_ROOT"
-    info "Starting MySQL Docker container..."
-    $COMPOSE_CMD up -d mysql 2>&1 | grep -v "is obsolete" || true
+
+    # Skip compose if both MySQL and Synapse are already reachable
+    if is_port_up 3306 && is_port_up 8008; then
+        success "MySQL (3306) and Synapse (8008) are already reachable, skipping compose"
+        return 0
+    fi
+
+    # Ensure Synapse config exists before starting containers
+    ensure_synapse_config
+
+    info "Starting Docker containers (MySQL + Synapse)..."
+    # Containers may have been created by a previous compose project (e.g. directory was renamed).
+    # Current compose won't recognize them and throws "name already in use" Conflict.
+    # Fix: detect existing containers via docker ps -a, start them directly,
+    #       only compose-create truly missing ones.
+    local existing_containers
+    existing_containers=$($DOCKER_CMD ps -a --format '{{.Names}}' 2>/dev/null)
+    local services_to_create=()
+    if echo "$existing_containers" | grep -q '^xyz-mysql$'; then
+        $DOCKER_CMD start xyz-mysql 2>/dev/null || true
+    else
+        services_to_create+=("mysql")
+    fi
+    if echo "$existing_containers" | grep -q '^nexus-synapse$'; then
+        $DOCKER_CMD start nexus-synapse 2>/dev/null || true
+    else
+        services_to_create+=("synapse")
+    fi
+    if [ ${#services_to_create[@]} -gt 0 ]; then
+        $COMPOSE_CMD up -d "${services_to_create[@]}" 2>&1 | grep -v "is obsolete\|already exists" || true
+    fi
 
     # Wait for MySQL to be ready
     local elapsed=0
@@ -687,31 +755,93 @@ start_mysql_docker() {
         elapsed=$((elapsed + 2))
     done
     echo -e " ${GREEN}Ready${RESET}"
-    success "MySQL Docker is ready (127.0.0.1:3306)"
+    success "MySQL is ready (127.0.0.1:3306)"
+
+    # Wait for Synapse to be ready (non-fatal)
+    elapsed=0
+    max_wait=90
+    printf "    Waiting for Synapse "
+    while ! curl -sf --max-time 2 http://localhost:8008/health &>/dev/null; do
+        if [ $elapsed -ge $max_wait ]; then
+            echo -e " ${YELLOW}Timeout${RESET}"
+            warn "Synapse startup timed out (${max_wait}s). Matrix features will be unavailable."
+            warn "Check Docker logs: $DOCKER_CMD logs nexus-synapse"
+            return 0  # Non-fatal: MySQL is up, app is usable
+        fi
+        printf "."
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+    echo -e " ${GREEN}Ready${RESET}"
+    success "Synapse is ready (127.0.0.1:8008)"
+
+    # Create Synapse admin user if NexusMatrix scripts are available
+    local create_admin="${NEXUSMATRIX_DIR}/scripts/create_admin.py"
+    if [ -f "$create_admin" ] && command -v uv &>/dev/null; then
+        info "Creating Synapse admin user..."
+        cd "${NEXUSMATRIX_DIR}"
+        uv run python "$create_admin" \
+            --homeserver "http://localhost:8008" \
+            --shared-secret '9_HimzS2a&CBS^DPyP&mLBT2Nry-e-tR=39.w&jkwf9IGkOCGH' \
+            --username nexus_admin \
+            --password nexus_admin_password \
+            --admin \
+            --display-name NexusAdmin 2>/dev/null \
+            && success "Synapse admin user ready" \
+            || info "Admin user may already exist (OK)"
+        cd "$PROJECT_ROOT"
+    fi
 }
 
 # ============================================================================
-# Ensure MySQL is available (detect port conflicts + interactive handling)
+# Ensure Docker services (MySQL + Synapse) are available
 #
-# Returns: 0=MySQL ready  1=user skipped or failed
+# Returns: 0=services ready  1=user skipped or failed
 # ============================================================================
-ensure_mysql() {
+ensure_docker_services() {
     detect_compose_cmd
     if [ -z "${COMPOSE_CMD:-}" ] || ! command -v docker &>/dev/null; then
-        warn "Docker is not available, skipping MySQL Docker startup"
-        info "Please ensure you have a MySQL service running"
+        warn "Docker is not available, skipping Docker service startup"
+        info "Please ensure you have MySQL and Synapse running"
         return 1
     fi
 
     # Port not occupied → normal startup
     if ! is_port_up 3306; then
-        start_mysql_docker
+        start_docker_services
         return $?
     fi
 
     # Port occupied → check if it's our own container
     if $DOCKER_CMD ps --format '{{.Names}}' 2>/dev/null | grep -q '^xyz-mysql$'; then
         success "xyz-mysql is already running (port 3306)"
+        # MySQL is ours, but also ensure Synapse is up
+        if ! $DOCKER_CMD ps --format '{{.Names}}' 2>/dev/null | grep -q '^nexus-synapse$'; then
+            info "Starting Synapse container..."
+            ensure_synapse_config
+            if $DOCKER_CMD ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^nexus-synapse$'; then
+                $DOCKER_CMD start nexus-synapse 2>/dev/null || true
+            else
+                $COMPOSE_CMD up -d synapse 2>&1 | grep -v "is obsolete\|already exists" || true
+            fi
+            # Wait for Synapse (non-fatal)
+            local elapsed=0
+            printf "    Waiting for Synapse "
+            while ! curl -sf --max-time 2 http://localhost:8008/health &>/dev/null; do
+                if [ $elapsed -ge 90 ]; then
+                    echo -e " ${YELLOW}Timeout${RESET}"
+                    warn "Synapse startup timed out. Matrix features will be unavailable."
+                    return 0
+                fi
+                printf "."
+                sleep 2
+                elapsed=$((elapsed + 2))
+            done
+            echo -e " ${GREEN}Ready${RESET}"
+            success "Synapse is ready (127.0.0.1:8008)"
+        else
+            success "nexus-synapse is already running (port 8008)"
+        fi
         return 0
     fi
 
@@ -768,7 +898,7 @@ ensure_mysql() {
                 fail "Port 3306 is still occupied. Please check manually."
                 return 1
             fi
-            start_mysql_docker
+            start_docker_services
             return $?
             ;;
         2)
@@ -777,7 +907,7 @@ ensure_mysql() {
             return 0
             ;;
         3|*)
-            info "Skipping MySQL startup. Please handle it manually later."
+            info "Skipping Docker service startup. Please handle it manually later."
             return 1
             ;;
     esac
@@ -1208,10 +1338,10 @@ do_install() {
         fail "uv is not available, cannot set up NexusMatrix"
     fi
 
-    # --- Step 10: MySQL Docker ---
+    # --- Step 10: Docker services (MySQL + Synapse) ---
     current=$((current + 1))
-    step "${current}/${total_steps}" "Starting MySQL database (Docker)"
-    ensure_mysql
+    step "${current}/${total_steps}" "Starting Docker services (MySQL + Synapse)"
+    ensure_docker_services
 
     # --- Step 11: .env configuration ---
     current=$((current + 1))
@@ -1334,6 +1464,9 @@ ADMIN_SECRET_KEY="${val_admin_key}"
 EOF
 
     success ".env generated: ${env_file}"
+    echo ""
+    info "Note: Claude Code (if installed) uses its own global API key config."
+    info "If you use Claude Code, run 'claude config' to set its API key separately."
 }
 
 # ============================================================================
@@ -1390,6 +1523,9 @@ EOF
             sed_inplace "s|^NETMIND_API_KEY=.*|NETMIND_API_KEY=\"${val_netmind}\"|" "$env_file"
         fi
         success "API keys updated"
+        echo ""
+        info "Note: Claude Code (if installed) uses its own global API key config."
+        info "If you use Claude Code, run 'claude config' to set its API key separately."
     else
         info "Skipping API key config. You can edit the .env file later."
     fi
@@ -1698,10 +1834,10 @@ do_run() {
         local docker_health=$?
         if [ $docker_health -eq 2 ]; then
             warn "Docker has critical issues. Docker-dependent services will not start."
-            warn "You can continue, but MySQL and EverMemOS will be unavailable."
+            warn "You can continue, but MySQL, Synapse, and EverMemOS will be unavailable."
         fi
     else
-        warn "Docker is not installed. MySQL and EverMemOS infrastructure will be unavailable."
+        warn "Docker is not installed. MySQL, Synapse, and EverMemOS infrastructure will be unavailable."
     fi
 
     if [ "$has_error" = true ]; then
@@ -1807,64 +1943,41 @@ do_run() {
         success "No port conflicts detected (8000, 5173, 7801, 8953)"
     fi
 
-    # --- Step 0.5: MySQL Docker ---
+    # --- Step 0.5: Docker services (MySQL + Synapse) ---
     detect_compose_cmd
     if [ -n "${COMPOSE_CMD:-}" ] && command -v docker &>/dev/null; then
-        step "0.5" "Starting MySQL database (Docker)"
-        ensure_mysql
+        step "0.5" "Starting Docker services (MySQL + Synapse)"
+        ensure_docker_services
 
-        # Create database tables (if they don't exist)
+        # Create database tables (if they don't exist), retry up to 5 times
         step "0.6" "Initializing database tables"
         if command -v uv &>/dev/null && [ -f "${PROJECT_ROOT}/.env" ]; then
             cd "$PROJECT_ROOT"
-            uv run python src/xyz_agent_context/utils/database_table_management/create_all_tables.py 2>&1 | tail -5
-            success "Database tables initialized"
-
-            # Check for schema changes (new version may have added/removed columns)
-            step "0.7" "Checking for database schema updates"
-            local schema_diff
-            schema_diff=$(cd "$PROJECT_ROOT" && uv run python src/xyz_agent_context/utils/database_table_management/sync_all_tables.py --check 2>/dev/null)
-            if [ $? -eq 0 ]; then
-                warn "Database schema changes detected after update:"
-                echo ""
-                echo "$schema_diff" | grep -E "^\s+([\+\-]|[a-z_]+:)" | while IFS= read -r line; do
-                    echo -e "      ${line}"
-                done
-                echo ""
-                echo -e "    ${BOLD}${WHITE}Apply schema changes?${RESET}"
-                echo -e "    ${DIM}Your data will be preserved. Only table structure (columns) will be updated.${RESET}"
-                echo ""
-                echo -e "    ${G1}[1]${RESET}  ${BOLD}Yes, apply changes${RESET}  ${DIM}(Recommended)${RESET}"
-                echo -e "    ${G3}[2]${RESET}  ${BOLD}Preview changes first (dry-run)${RESET}"
-                echo -e "    ${YELLOW}[3]${RESET}  ${BOLD}Skip for now${RESET}"
-                echo ""
-                read -rp "    > " schema_choice
-                echo ""
-                case "$schema_choice" in
-                    1)
-                        info "Applying schema changes..."
-                        cd "$PROJECT_ROOT"
-                        echo "yes" | uv run python src/xyz_agent_context/utils/database_table_management/sync_all_tables.py 2>&1 | tail -20
-                        success "Database schema updated"
-                        ;;
-                    2)
-                        cd "$PROJECT_ROOT"
-                        uv run python src/xyz_agent_context/utils/database_table_management/sync_all_tables.py --dry-run 2>&1 | tail -40
-                        echo ""
-                        read -rp "    Apply these changes? [y/N] " apply_confirm
-                        if [[ "$apply_confirm" == "y" || "$apply_confirm" == "Y" ]]; then
-                            echo "yes" | uv run python src/xyz_agent_context/utils/database_table_management/sync_all_tables.py 2>&1 | tail -20
-                            success "Database schema updated"
-                        else
-                            warn "Schema changes skipped. Services may encounter errors."
-                        fi
-                        ;;
-                    *)
-                        warn "Schema changes skipped. Services may encounter errors if columns are missing."
-                        ;;
-                esac
+            local table_created=false
+            for attempt in 1 2 3 4 5; do
+                if uv run python src/xyz_agent_context/utils/database_table_management/create_all_tables.py 2>&1 | tail -5; then
+                    table_created=true
+                    break
+                fi
+                if [ $attempt -lt 5 ]; then
+                    warn "Table creation failed (attempt ${attempt}/5), retrying in 5s..."
+                    sleep 5
+                fi
+            done
+            if [ "$table_created" = true ]; then
+                success "Database tables initialized"
             else
-                success "Database schema is up-to-date"
+                fail "Table creation failed after 5 attempts. Check database connection."
+            fi
+
+            # Auto-apply safe schema changes (ENUM expansion, VARCHAR growth, new columns)
+            # Dangerous changes (type narrowing, column removal) are skipped silently.
+            step "0.7" "Syncing database schema (auto-safe)"
+            cd "$PROJECT_ROOT"
+            if uv run python -m xyz_agent_context.utils.database_table_management.sync_all_tables --auto-safe 2>&1 | tail -20; then
+                success "Database schema synced"
+            else
+                warn "Schema sync encountered errors (non-fatal). Check logs for details."
             fi
         else
             warn "Skipping database table initialization (uv or .env not available)"
@@ -1986,36 +2099,44 @@ do_run() {
     tmux new-session -d -s "$TMUX_SESSION" -n control -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":control "bash start/control.sh" C-m
     info "Control Panel     → tmux window 0 [control]     Press q to exit"
+    sleep 0.5
 
     # Window 1: Frontend
     tmux new-window -t "$TMUX_SESSION" -n frontend -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":frontend "bash start/frontend.sh" C-m
     info "Frontend          → tmux window 1 [frontend]    Port 5173"
+    sleep 0.5
 
     # Window 2: FastAPI
     tmux new-window -t "$TMUX_SESSION" -n backend -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":backend "bash start/backend.sh" C-m
     info "FastAPI Backend   → tmux window 2 [backend]     Port 8000"
+    sleep 0.5
 
     # Window 3: JobTrigger
     tmux new-window -t "$TMUX_SESSION" -n job-trigger -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":job-trigger "bash start/job-trigger.sh" C-m
     info "Job Trigger       → tmux window 3 [job-trigger]"
+    sleep 0.5
 
     # Window 4: ModulePoller
     tmux new-window -t "$TMUX_SESSION" -n poller -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":poller "bash start/poller.sh" C-m
     info "Module Poller     → tmux window 4 [poller]"
+    sleep 0.5
 
     # Window 5: MCP
     tmux new-window -t "$TMUX_SESSION" -n mcp -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":mcp "bash start/mcp.sh" C-m
     info "MCP Server        → tmux window 5 [mcp]         Ports 7801-7805"
 
+    sleep 0.5
+
     # Window 6: NexusMatrix Server
     tmux new-window -t "$TMUX_SESSION" -n nexus-matrix -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":nexus-matrix "bash start/nexus-matrix.sh" C-m
     info "NexusMatrix       → tmux window 6 [nexus-matrix] Port 8953"
+    sleep 0.5
 
     # Window 7: MatrixTrigger (Matrix message polling)
     tmux new-window -t "$TMUX_SESSION" -n matrix-trigger -c "$PROJECT_ROOT"
@@ -2355,8 +2476,13 @@ do_stop() {
         "matrix_trigger"             # MatrixTrigger (message polling)
     )
     for pat in "${stop_patterns[@]}"; do
+        pkill -f "$pat" 2>/dev/null
+    done
+    # Wait for graceful shutdown, then SIGKILL any survivors
+    sleep 2
+    for pat in "${stop_patterns[@]}"; do
         if pgrep -f "$pat" &>/dev/null; then
-            pkill -f "$pat" 2>/dev/null
+            pkill -9 -f "$pat" 2>/dev/null
         fi
     done
     success "Application processes stopped"
@@ -2374,11 +2500,11 @@ do_stop() {
     step "3" "Stopping Docker containers"
     detect_compose_cmd
     if [ -n "${COMPOSE_CMD:-}" ]; then
-        # Stop project MySQL
+        # Stop project Docker services (MySQL + Synapse)
         if [ -f "${PROJECT_ROOT}/docker-compose.yaml" ]; then
             cd "${PROJECT_ROOT}"
             $COMPOSE_CMD down 2>/dev/null
-            success "MySQL Docker stopped"
+            success "Docker services stopped (MySQL + Synapse)"
         fi
         # Stop EverMemOS infrastructure
         if [ -d "${EVERMEMOS_DIR}" ]; then

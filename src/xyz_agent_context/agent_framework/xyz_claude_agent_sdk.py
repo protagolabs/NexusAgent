@@ -145,6 +145,7 @@ class ClaudeAgentSDK:
             cwd=self.working_path,
             mcp_servers=claude_agent_mcp_dict,
             permission_mode="bypassPermissions",
+            max_turns=100,  # Safety limit to prevent infinite agent loops
             max_buffer_size=50 * 1024 * 1024,  # 50MB buffer size for large MCP responses (PDF parsing etc.)
             include_partial_messages=True,  # Enable token-level streaming via StreamEvent
             stderr=_on_cli_stderr,  # 捕获 CLI 错误输出

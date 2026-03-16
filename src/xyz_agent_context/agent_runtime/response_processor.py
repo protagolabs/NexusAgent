@@ -23,6 +23,7 @@ from xyz_agent_context.schema import (
     AgentTextDelta,
     AgentThinking,
     AgentToolCall,
+    ErrorMessage,
 )
 from .execution_state import ExecutionState
 from ._agent_runtime_steps.step_display import (
@@ -38,6 +39,7 @@ class ResponseType(str, Enum):
     TOOL_OUTPUT = "tool_output"
     THINKING = "thinking"
     DONE = "done"
+    ERROR = "error"
     OTHER = "other"
 
 
@@ -52,7 +54,7 @@ class ProcessedResponse:
         state_update: State update function name and arguments (for updating ExecutionState)
     """
     type: ResponseType
-    message: Union[AgentTextDelta, AgentThinking, AgentToolCall, ProgressMessage, dict, None]
+    message: Union[AgentTextDelta, AgentThinking, AgentToolCall, ProgressMessage, ErrorMessage, dict, None]
     state_update: Optional[dict] = None  # {"method": "append_text", "args": {"text": "..."}}
 
 
@@ -164,6 +166,20 @@ class ResponseProcessor:
                 type=ResponseType.TEXT_DELTA,
                 message=AgentTextDelta(delta=delta),
                 state_update={"method": "append_text", "args": {"text": delta}}
+            )
+
+        if data_type == "response.error":
+            # API error (rate limit, auth failure, quota exhaustion, etc.)
+            error_message = data.get("error_message", "Unknown API error")
+            error_type = data.get("error_type", "api_error")
+            logger.error(f"  ❌ API error ({error_type}): {error_message}")
+            return ProcessedResponse(
+                type=ResponseType.ERROR,
+                message=ErrorMessage(
+                    error_message=error_message,
+                    error_type=error_type,
+                ),
+                state_update={"method": "increment_response", "args": {}}
             )
 
         if data_type == "response.done":

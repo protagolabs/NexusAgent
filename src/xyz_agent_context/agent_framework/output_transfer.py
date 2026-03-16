@@ -151,14 +151,28 @@ def _convert_assistant_to_stream_events(message: Any) -> List[Dict[str, Any]]:
     出现多次。去重逻辑在 xyz_claude_agent_sdk.py 的 agent_loop 中处理。
     """
 
-    # 检查 AssistantMessage.error 字段（认证失败、额度不足、限流等）
+    # Check AssistantMessage.error field (auth failure, quota exhaustion, rate limit, etc.)
+    # SDK defines: "authentication_failed" | "billing_error" | "rate_limit" |
+    #              "invalid_request" | "server_error" | "unknown"
     if hasattr(message, 'error') and message.error is not None:
-        error_text = f"[Claude API Error: {message.error}]"
+        error_type = str(message.error)  # Already a standardized literal from SDK
+
+        # Human-readable messages for each error type
+        error_messages = {
+            "rate_limit": "Claude API rate limit reached. Please wait a moment and try again.",
+            "authentication_failed": "Claude API authentication failed. Please check your API key.",
+            "billing_error": "Claude API billing error. Please check your account credits.",
+            "invalid_request": "Claude API received an invalid request.",
+            "server_error": "Claude API server error. Please try again later.",
+        }
+        error_message = error_messages.get(error_type, f"Claude API error: {error_type}")
+
         return [{
             "type": "raw_response_event",
             "data": {
-                "type": "response.text.delta",
-                "delta": error_text
+                "type": "response.error",
+                "error_message": error_message,
+                "error_type": error_type,
             }
         }]
 

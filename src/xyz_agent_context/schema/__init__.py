@@ -48,6 +48,7 @@ from .runtime_message import (
     AgentTextDelta,
     AgentThinking,
     AgentToolCall,
+    ErrorMessage,
 )
 
 # ===== Job Schema =====

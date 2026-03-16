@@ -144,7 +144,7 @@ do_stop_all() {
     echo -e "  ${YELLOW}Stopping all services...${RESET}"
     echo ""
 
-    # Stop application processes (kill process trees, not just parents)
+    # Stop application processes: SIGTERM first, then SIGKILL for survivors
     local patterns=(
         "uvicorn.*backend.main"      # FastAPI backend (port 8000)
         "uvicorn.*1995"              # EverMemOS Web
@@ -158,8 +158,14 @@ do_stop_all() {
         "matrix_trigger"             # MatrixTrigger (message polling)
     )
     for pat in "${patterns[@]}"; do
+        pkill -f "$pat" 2>/dev/null
+    done
+
+    # Wait briefly for graceful shutdown, then SIGKILL any survivors
+    sleep 2
+    for pat in "${patterns[@]}"; do
         if pgrep -f "$pat" &>/dev/null; then
-            pkill -f "$pat" 2>/dev/null
+            pkill -9 -f "$pat" 2>/dev/null
         fi
     done
     echo -e "  ${GREEN}✓${RESET} Application processes stopped"
@@ -189,6 +195,9 @@ do_stop_all() {
     # Close tmux session
     tmux kill-session -t "$TMUX_SESSION" 2>/dev/null
 }
+
+# If tmux is killed directly (not via 'q'), SIGHUP is sent — run cleanup
+trap 'do_stop_all; exit 0' SIGHUP SIGTERM SIGINT
 
 # === Initial startup: wait for services to be ready ===
 # control.sh starts as the first window; other services are still initializing.

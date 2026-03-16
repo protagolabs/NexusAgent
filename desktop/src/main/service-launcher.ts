@@ -373,13 +373,14 @@ export class ServiceLauncher extends EventEmitter {
         return { success: false, error: 'Table creation failed' }
       }
 
-      // Sync table schema (non-blocking)
-      console.log('[launcher] Step 4: Syncing table schema...')
+      // Auto-apply safe schema changes (ENUM expansion, VARCHAR growth, new columns)
+      // Dangerous changes are skipped silently — no user prompts needed.
+      console.log('[launcher] Step 4: Syncing table schema (auto-safe)...')
       updateStep('init-tables', { status: 'running', message: 'Syncing table schema...' })
       try {
         const syncScript = join(TABLE_MGMT_DIR, 'sync_all_tables.py')
-        await execInProject('uv', ['run', 'python', syncScript], { timeout: 60000 })
-        console.log('[launcher] Step 4: sync_all_tables succeeded')
+        await execInProject('uv', ['run', 'python', syncScript, '--auto-safe'], { timeout: 60000 })
+        console.log('[launcher] Step 4: sync_all_tables --auto-safe succeeded')
       } catch (syncErr) {
         console.log(`[launcher] Step 4: sync_all_tables failed (non-blocking): ${syncErr}`)
       }

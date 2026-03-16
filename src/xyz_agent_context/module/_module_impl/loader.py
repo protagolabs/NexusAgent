@@ -25,6 +25,7 @@ from xyz_agent_context.schema.instance_schema import ModuleInstanceRecord
 from .instance_decision import (
     llm_decide_instances,
     dict_to_module_instance,
+    _get_default_decision,
 )
 from .instance_factory import InstanceFactory
 
@@ -272,17 +273,23 @@ class ModuleLoader:
                     )
 
         # ===== Call LLM for Instance decision (only decide task modules) =====
-        decision_output = await llm_decide_instances(
-            user_input=input_content,
-            agent_id=self.agent_id,
-            current_instances=task_instances,  # Only pass task modules
-            narrative_summary=narrative_summary,
-            markdown_history=markdown_history,
-            awareness=awareness,
-            capability_modules=capability_info,  # Inform LLM of loaded capabilities
-            current_user_id=self.user_id,  # Inform LLM of current user
-            job_info_map=job_info_map  # Inform LLM of each Job's target user
-        )
+        llm_error: str | None = None
+        try:
+            decision_output = await llm_decide_instances(
+                user_input=input_content,
+                agent_id=self.agent_id,
+                current_instances=task_instances,  # Only pass task modules
+                narrative_summary=narrative_summary,
+                markdown_history=markdown_history,
+                awareness=awareness,
+                capability_modules=capability_info,  # Inform LLM of loaded capabilities
+                current_user_id=self.user_id,  # Inform LLM of current user
+                job_info_map=job_info_map  # Inform LLM of each Job's target user
+            )
+        except Exception as e:
+            llm_error = f"Module decision LLM failed ({type(e).__name__}): {e}"
+            logger.warning(f"ModuleLoader: {llm_error}, using fallback")
+            decision_output = _get_default_decision(task_instances)
 
         # ===== Use InstanceSyncService to handle task_key conversion (only process task modules) =====
         processed_task_instances, key_to_id = await self.instance_sync_service.process_instance_decision(
@@ -347,6 +354,7 @@ class ModuleLoader:
             execution_type=execution_type,
             direct_trigger=decision_output.direct_trigger,
             relationship_graph=decision_output.relationship_graph,
+            llm_error=llm_error,
             # Complex Job support
             key_to_id=key_to_id,
             raw_instances=processed_task_instances

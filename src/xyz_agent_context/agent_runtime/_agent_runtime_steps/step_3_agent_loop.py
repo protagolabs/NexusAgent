@@ -19,6 +19,7 @@ from xyz_agent_context.schema import (
     ProgressMessage,
     ProgressStatus,
     PathExecutionResult,
+    ErrorMessage,
 )
 from xyz_agent_context.context_runtime import ContextRuntime
 from xyz_agent_context.agent_framework import ClaudeAgentSDK
@@ -156,17 +157,28 @@ async def step_3_agent_loop(
     if context.ctx_data and context.ctx_data.extra_data:
         skill_env_vars = context.ctx_data.extra_data.get("skill_env_vars", {})
 
-    async for response in ClaudeAgentSDK(working_path=agent_working_path).agent_loop(
-        messages=messages,
-        mcp_server_urls=ctx.mcp_urls,
-        extra_env=skill_env_vars or None,
-    ):
-        # Use ResponseProcessor to process responses
-        result = response_processor.process(response, state)
-        state = response_processor.apply_state_update(state, result)
-        if result.message is not None:
-            agent_loop_response.append(result.message)
-            yield result.message
+    try:
+        async for response in ClaudeAgentSDK(working_path=agent_working_path).agent_loop(
+            messages=messages,
+            mcp_server_urls=ctx.mcp_urls,
+            extra_env=skill_env_vars or None,
+        ):
+            # Use ResponseProcessor to process responses
+            result = response_processor.process(response, state)
+            state = response_processor.apply_state_update(state, result)
+            if result.message is not None:
+                agent_loop_response.append(result.message)
+                yield result.message
+    except Exception as e:
+        # Yield error to frontend so the user sees what went wrong
+        # (instead of a cryptic "Agent decided no response needed")
+        error_str = str(e)
+        error_type = type(e).__name__
+        logger.error(f"  ❌ Agent loop error ({error_type}): {error_str}")
+        yield ErrorMessage(
+            error_message=f"Agent execution error: {error_str}",
+            error_type=error_type,
+        )
 
     # After Agent Loop completes, record final output
     state = state.finalize()
