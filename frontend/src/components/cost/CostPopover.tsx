@@ -4,17 +4,19 @@
  * @date: 2026-03-12
  * @description: Token usage popover - shows LLM API token consumption summary
  *
- * Displays a small activity button in the header.
- * Click to open a popover with total tokens, per-model breakdown, and daily trend.
+ * Supports two views: current agent and all agents combined.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Activity, RefreshCw } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui';
 import { usePreloadStore, useConfigStore } from '@/stores';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { CostSummary } from '@/types/api';
+
+type CostView = 'agent' | 'all';
 
 /** Format token count (e.g. 12345 -> "12.3k") */
 function formatTokens(n: number): string {
@@ -92,21 +94,53 @@ function SummaryContent({ summary }: { summary: CostSummary }) {
 }
 
 export function CostPopover() {
+  const [view, setView] = useState<CostView>('agent');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [allSummary, setAllSummary] = useState<CostSummary | null>(null);
+  const [allLoading, setAllLoading] = useState(false);
+
   const { agentId } = useConfigStore();
   const { costSummary, costLoading, refreshCost } = usePreloadStore();
+
+  const activeSummary = view === 'agent' ? costSummary : allSummary;
+  const activeLoading = view === 'agent' ? costLoading : allLoading;
+
+  const loadAllAgents = useCallback(async () => {
+    setAllLoading(true);
+    try {
+      const res = await api.getCosts('_all');
+      if (res.success && res.summary) {
+        setAllSummary(res.summary);
+      }
+    } catch {
+      // Silently ignore
+    } finally {
+      setAllLoading(false);
+    }
+  }, []);
+
+  // Load "all agents" data on first switch
+  useEffect(() => {
+    if (view === 'all' && !allSummary && !allLoading) {
+      loadAllAgents();
+    }
+  }, [view, allSummary, allLoading, loadAllAgents]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refreshCost(agentId);
+      if (view === 'agent') {
+        await refreshCost(agentId);
+      } else {
+        await loadAllAgents();
+      }
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const totalTokens = costSummary
-    ? costSummary.total_input_tokens + costSummary.total_output_tokens
+  const totalTokens = activeSummary
+    ? activeSummary.total_input_tokens + activeSummary.total_output_tokens
     : 0;
 
   return (
@@ -126,27 +160,53 @@ export function CostPopover() {
         sideOffset={8}
         className="w-[260px] p-3 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-xl shadow-lg"
       >
-        {/* Header */}
+        {/* Header with view toggle */}
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-[var(--text-secondary)]">
-            Token Usage (7d)
-          </span>
+          <div className="flex items-center gap-1 p-0.5 bg-[var(--bg-tertiary)] rounded-md">
+            <button
+              onClick={() => setView('agent')}
+              className={cn(
+                'px-2 py-0.5 rounded text-[10px] font-medium transition-all',
+                view === 'agent'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              )}
+            >
+              Agent
+            </button>
+            <button
+              onClick={() => setView('all')}
+              className={cn(
+                'px-2 py-0.5 rounded text-[10px] font-medium transition-all',
+                view === 'all'
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              )}
+            >
+              All
+            </button>
+          </div>
           <Button
             variant="ghost"
             size="icon"
             className="h-6 w-6"
             onClick={handleRefresh}
-            disabled={isRefreshing || costLoading}
+            disabled={isRefreshing || activeLoading}
           >
-            <RefreshCw className={cn('w-3 h-3', (isRefreshing || costLoading) && 'animate-spin')} />
+            <RefreshCw className={cn('w-3 h-3', (isRefreshing || activeLoading) && 'animate-spin')} />
           </Button>
         </div>
 
+        {/* Subtitle */}
+        <div className="text-[10px] text-[var(--text-tertiary)] mb-2">
+          {view === 'agent' ? 'Current agent · 7 days' : 'All agents · 7 days'}
+        </div>
+
         {/* Content */}
-        {costLoading && !costSummary ? (
+        {activeLoading && !activeSummary ? (
           <div className="py-4 text-center text-xs text-[var(--text-tertiary)]">Loading...</div>
-        ) : costSummary ? (
-          <SummaryContent summary={costSummary} />
+        ) : activeSummary ? (
+          <SummaryContent summary={activeSummary} />
         ) : (
           <div className="py-4 text-center text-xs text-[var(--text-tertiary)]">
             No usage data yet

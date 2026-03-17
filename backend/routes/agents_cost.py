@@ -41,17 +41,30 @@ async def get_agent_costs(
         db = await get_db_client()
 
         # Fetch records within the time window
-        rows = await db.execute(
-            """
-            SELECT id, agent_id, event_id, call_type, model,
-                   input_tokens, output_tokens, total_cost_usd, created_at
-            FROM cost_records
-            WHERE agent_id = %s
-              AND created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
-            ORDER BY created_at DESC
-            """,
-            (agent_id, days),
-        )
+        # Special agent_id "_all" returns all agents' records
+        if agent_id == "_all":
+            rows = await db.execute(
+                """
+                SELECT id, agent_id, event_id, call_type, model,
+                       input_tokens, output_tokens, total_cost_usd, created_at
+                FROM cost_records
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                ORDER BY created_at DESC
+                """,
+                (days,),
+            )
+        else:
+            rows = await db.execute(
+                """
+                SELECT id, agent_id, event_id, call_type, model,
+                       input_tokens, output_tokens, total_cost_usd, created_at
+                FROM cost_records
+                WHERE agent_id = %s
+                  AND created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                ORDER BY created_at DESC
+                """,
+                (agent_id, days),
+            )
 
         if not rows:
             return CostResponse(
