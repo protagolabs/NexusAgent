@@ -364,7 +364,8 @@ async def clear_conversation_history(
 async def get_simple_chat_history(
     agent_id: str,
     user_id: str = Query(..., description="User ID"),
-    limit: int = Query(default=20, description="Maximum number of messages to return (recent N rounds)")
+    limit: int = Query(default=20, description="Maximum number of messages to return"),
+    offset: int = Query(default=0, description="Number of recent messages to skip (for pagination from newest)")
 ):
     """
     Get simplified chat history between user and Agent
@@ -416,11 +417,13 @@ async def get_simple_chat_history(
                         working_source = meta_data.get("working_source", "chat")
                         role = msg.get("role", "unknown")
 
-                        # Frontend chat history filter: only show chat-type messages
-                        if working_source != "chat":
+                        # For non-chat sources (job/matrix), only show assistant messages
+                        # (the "user" side is the trigger prompt, not a real user message)
+                        if working_source != "chat" and role != "assistant":
                             continue
 
                         timestamp = meta_data.get("timestamp") or msg.get("created_at")
+                        message_type = meta_data.get("message_type", "chat")
 
                         all_messages.append({
                             "role": role,
@@ -428,6 +431,8 @@ async def get_simple_chat_history(
                             "timestamp": timestamp,
                             "narrative_id": narrative_id,
                             "instance_id": instance.instance_id,
+                            "working_source": working_source,
+                            "message_type": message_type,
                             "_sort_key": timestamp or ""
                         })
 
@@ -444,9 +449,15 @@ async def get_simple_chat_history(
             logger.debug(f"First message timestamp: {all_messages[0].get('_sort_key', 'N/A')}")
             logger.debug(f"Last message timestamp: {all_messages[-1].get('_sort_key', 'N/A')}")
 
-        # Limit return count
+        # Paginate: messages are sorted oldest→newest; slice from the end
+        # offset=0, limit=20 → last 20 messages (most recent)
+        # offset=20, limit=20 → messages 20-40 from the end (older page)
         total_count = len(all_messages)
-        if limit > 0 and total_count > limit:
+        if offset > 0:
+            end_idx = max(0, total_count - offset)
+            start_idx = max(0, end_idx - limit)
+            all_messages = all_messages[start_idx:end_idx]
+        elif limit > 0 and total_count > limit:
             all_messages = all_messages[-limit:]
 
         response_messages = [
@@ -454,7 +465,9 @@ async def get_simple_chat_history(
                 role=msg["role"],
                 content=msg["content"],
                 timestamp=msg.get("timestamp"),
-                narrative_id=msg.get("narrative_id")
+                narrative_id=msg.get("narrative_id"),
+                working_source=msg.get("working_source"),
+                message_type=msg.get("message_type"),
             )
             for msg in all_messages
         ]
