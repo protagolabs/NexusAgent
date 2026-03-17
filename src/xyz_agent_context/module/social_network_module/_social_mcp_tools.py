@@ -660,9 +660,15 @@ def create_social_network_mcp_server(port: int, get_db_client_fn, module_class) 
         This action is irreversible. The entity and all its associated data
         (tags, contact info, interaction history) will be permanently deleted.
 
+        **NOTE**: If the user refers to an entity by name (not ID), use
+        `search_social_network` first to find the matching entity_id.
+        Multiple entities may share the same name — confirm with the user
+        if there are ambiguous matches before deleting.
+
         Args:
             agent_id: The ID of the agent who owns this social network.
-            entity_id: The entity ID to delete (e.g., "user_alice_123").
+            entity_id: The unique entity ID to delete (e.g., "user_alice_123").
+                       Use search_social_network to find the ID if you only have a name.
 
         Returns:
             Operation result with success status.
