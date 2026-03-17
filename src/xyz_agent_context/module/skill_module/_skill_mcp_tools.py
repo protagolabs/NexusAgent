@@ -48,10 +48,15 @@ def create_skill_mcp_server(port: int) -> FastMCP:
         """
         Save an environment variable for a skill.
 
-        Use this tool after obtaining credentials (API keys, tokens, etc.) during
-        skill study or registration. The value will be stored securely and injected
-        into the agent's environment at runtime. It will also appear as "configured"
-        in the frontend Skills panel.
+        **WHEN TO CALL**: Every time you obtain a credential — API key, token, secret,
+        account ID — you MUST call this tool. Even if you also saved it to a local file
+        as the SKILL.md instructed. Without this call, the credential will NOT appear
+        in the frontend config panel and will NOT be auto-injected at runtime.
+
+        Common triggers:
+        - You just registered on a platform and received an API key
+        - A user gave you a key/token in conversation and asked you to configure it
+        - You generated or rotated a credential during skill setup
 
         Args:
             agent_id: Your agent ID.
@@ -83,7 +88,9 @@ def create_skill_mcp_server(port: int) -> FastMCP:
         """
         List the required environment variables for a skill and their configuration status.
 
-        Use this tool to check what credentials a skill needs and which are already configured.
+        **WHEN TO CALL**: After completing registration or setup for a skill, call this
+        to verify all required credentials are configured. Also useful when a user asks
+        "what does this skill need?" or when diagnosing why a skill isn't working.
 
         Args:
             agent_id: Your agent ID.
@@ -91,7 +98,7 @@ def create_skill_mcp_server(port: int) -> FastMCP:
             skill_name: Name of the skill.
 
         Returns:
-            A summary of required env vars and their status.
+            A summary of required env vars with ✓/✗ status for each.
         """
         try:
             sm = _get_skill_module(agent_id, user_id)
@@ -124,15 +131,19 @@ def create_skill_mcp_server(port: int) -> FastMCP:
         """
         Save a structured study summary for a skill.
 
-        Call this tool at the END of your skill study to record what you learned.
+        **WHEN TO CALL**: You MUST call this at the END of every skill study — it is
+        the final required step. If you don't call this, the study will be marked as
+        incomplete and the user will see a generic fallback message instead of your summary.
+
         The summary should be well-formatted Markdown covering:
         - What this skill does (core capabilities)
         - Any accounts/registrations you completed
+        - Any credentials you saved (key names only, not values)
         - Any scheduled jobs you created (with their schedules and purposes)
-        - Any pending actions that require human intervention
-        - Key commands or APIs you discovered
+        - Any pending actions that require human intervention (e.g., Twitter verification)
 
-        This summary is displayed to the user in the Skills panel.
+        This summary is displayed directly to the user in the Skills panel.
+        Make it clear, useful, and well-structured.
 
         Args:
             agent_id: Your agent ID.
