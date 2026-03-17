@@ -7,9 +7,8 @@ import type {
   JobListResponse,
   JobDetailResponse,
   CancelJobResponse,
-  InboxListResponse,
-  MarkReadResponse,
   AgentInboxListResponse,
+  MarkReadResponse,
   AwarenessResponse,
   ClearHistoryResponse,
   SocialNetworkResponse,
@@ -103,27 +102,6 @@ class ApiClient {
     });
   }
 
-  // Inbox API
-  async getInbox(userId: string, isRead?: boolean, limit: number = 50, offset: number = 0): Promise<InboxListResponse> {
-    let url = `/api/inbox?user_id=${encodeURIComponent(userId)}&limit=${limit}&offset=${offset}`;
-    if (isRead !== undefined) url += `&is_read=${isRead}`;
-    return this.request<InboxListResponse>(url);
-  }
-
-  async markMessageRead(messageId: string): Promise<MarkReadResponse> {
-    return this.request<MarkReadResponse>(
-      `/api/inbox/${encodeURIComponent(messageId)}/read`,
-      { method: 'PUT' }
-    );
-  }
-
-  async markAllRead(userId: string): Promise<MarkReadResponse> {
-    return this.request<MarkReadResponse>(
-      `/api/inbox/read-all?user_id=${encodeURIComponent(userId)}`,
-      { method: 'PUT' }
-    );
-  }
-
   // Agent Inbox API (Matrix channel messages)
   async getAgentInbox(agentId: string, isRead?: boolean): Promise<AgentInboxListResponse> {
     let url = `/api/agent-inbox?agent_id=${encodeURIComponent(agentId)}`;
@@ -188,10 +166,11 @@ class ApiClient {
     return this.request<ChatHistoryResponse>(url);
   }
 
-  async getSimpleChatHistory(agentId: string, userId: string, limit: number = 20): Promise<SimpleChatHistoryResponse> {
+  async getSimpleChatHistory(agentId: string, userId: string, limit: number = 20, offset: number = 0): Promise<SimpleChatHistoryResponse> {
     const params = new URLSearchParams({
       user_id: userId,
       limit: limit.toString(),
+      offset: offset.toString(),
     });
     return this.request<SimpleChatHistoryResponse>(
       `/api/agents/${encodeURIComponent(agentId)}/simple-chat-history?${params}`
@@ -212,12 +191,11 @@ class ApiClient {
     });
   }
 
-  async createUser(userId: string, adminSecretKey: string, displayName?: string): Promise<CreateUserResponse> {
+  async createUser(userId: string, displayName?: string): Promise<CreateUserResponse> {
     return this.request<CreateUserResponse>('/api/auth/create-user', {
       method: 'POST',
       body: JSON.stringify({
         user_id: userId,
-        admin_secret_key: adminSecretKey,
         display_name: displayName,
       }),
     });

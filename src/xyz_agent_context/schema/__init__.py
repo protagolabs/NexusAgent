@@ -152,11 +152,6 @@ from .api_schema import (
     JobResponse,
     JobListResponse,
     JobDetailResponse,
-    # Inbox
-    MessageSourceResponse,
-    InboxMessageResponse,
-    InboxListResponse,
-    MarkReadResponse,
     # RAG Files
     RAGFileInfo,
     RAGFileListResponse,
@@ -352,11 +347,6 @@ __all__ = [
     "JobResponse",
     "JobListResponse",
     "JobDetailResponse",
-    # Inbox (API)
-    "MessageSourceResponse",
-    "InboxMessageResponse",
-    "InboxListResponse",
-    "MarkReadResponse",
     # RAG Files
     "RAGFileInfo",
     "RAGFileListResponse",
