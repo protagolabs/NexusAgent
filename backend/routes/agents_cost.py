@@ -66,7 +66,7 @@ async def get_agent_costs(
         total_input = 0
         total_output = 0
         by_model: dict[str, dict] = {}
-        daily_map: dict[str, float] = {}
+        daily_map: dict[str, dict] = {}
 
         for row in rows:
             cost = float(row["total_cost_usd"])
@@ -88,7 +88,10 @@ async def get_agent_costs(
 
             # Daily aggregation
             day_str = row["created_at"].strftime("%Y-%m-%d") if row["created_at"] else "unknown"
-            daily_map[day_str] = daily_map.get(day_str, 0.0) + cost
+            if day_str not in daily_map:
+                daily_map[day_str] = {"input_tokens": 0, "output_tokens": 0}
+            daily_map[day_str]["input_tokens"] += inp
+            daily_map[day_str]["output_tokens"] += out
 
         summary = CostSummary(
             total_cost_usd=round(total_cost, 6),
@@ -104,7 +107,7 @@ async def get_agent_costs(
                 for k, v in by_model.items()
             },
             daily=sorted(
-                [CostDailyEntry(date=d, cost=round(c, 6)) for d, c in daily_map.items()],
+                [CostDailyEntry(date=d, input_tokens=v["input_tokens"], output_tokens=v["output_tokens"]) for d, v in daily_map.items()],
                 key=lambda x: x.date,
             ),
         )

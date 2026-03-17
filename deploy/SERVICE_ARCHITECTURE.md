@@ -20,7 +20,7 @@ This document describes the responsibilities and interactions of each backend se
 | AwarenessModule | 7801 | awareness_get, awareness_update |
 | SocialNetworkModule | 7802 | extract_entity, recall_entity, search_social_network |
 | JobModule | 7803 | job_create, job_retrieval_* |
-| ChatModule | 7804 | send_message_to_user_directly, get_inbox_status, agent_send_* |
+| ChatModule | 7804 | send_message_to_user_directly, get_chat_history |
 | GeminiRAGModule | 7805 | rag_query, rag_upload_file, rag_upload_text |
 
 ### 2. xyz-agent-api (FastAPI Backend)

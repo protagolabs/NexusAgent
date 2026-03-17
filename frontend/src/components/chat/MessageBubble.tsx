@@ -3,8 +3,8 @@
  * Distinctive message bubbles with dramatic visual effects
  */
 
-import { User, Bot, ChevronDown, ChevronRight, Wrench, Sparkles, AlertTriangle } from 'lucide-react';
-import { useState } from 'react';
+import { User, Bot, ChevronDown, ChevronRight, Wrench, Sparkles, AlertTriangle, Copy, Download, Check } from 'lucide-react';
+import { useState, useCallback } from 'react';
 import type { ChatMessage } from '@/types';
 import { cn, formatTime } from '@/lib/utils';
 import { Markdown } from '@/components/ui';
@@ -17,7 +17,38 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
   const [showThinking, setShowThinking] = useState(false);
   const [showTools, setShowTools] = useState(false);
+  const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const ta = document.createElement('textarea');
+      ta.value = message.content;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [message.content]);
+
+  const handleDownload = useCallback(() => {
+    const blob = new Blob([message.content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `message-${new Date(message.timestamp).toISOString().slice(0, 16).replace(/[:.]/g, '-')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [message.content, message.timestamp]);
 
   return (
     <div
@@ -175,7 +206,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
             )}
           </div>
 
-          {/* Non-fatal warnings (e.g., module decision LLM failed but fallback used) */}
+          {/* Non-fatal warnings */}
           {message.warnings && message.warnings.length > 0 && (
             <div className="mt-2 pt-2 border-t border-amber-500/20">
               {message.warnings.map((warning, i) => (
@@ -188,14 +219,42 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
           )}
         </div>
 
-        {/* Timestamp */}
+        {/* Footer: timestamp + action buttons */}
         <div
           className={cn(
-            'mt-1.5 text-[10px] text-[var(--text-tertiary)] font-mono tracking-wide',
-            isUser ? 'text-right pr-1' : 'text-left pl-1'
+            'mt-1.5 flex items-center gap-2 text-[10px] text-[var(--text-tertiary)] font-mono tracking-wide',
+            isUser ? 'justify-end pr-1' : 'justify-start pl-1'
           )}
         >
-          {formatTime(message.timestamp)}
+          <span>{formatTime(message.timestamp)}</span>
+
+          {/* Copy & Download (assistant messages only, not during streaming) */}
+          {!isUser && !isStreaming && message.content && (
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity"
+              style={{ opacity: undefined }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = ''; }}
+            >
+              <button
+                onClick={handleCopy}
+                className="p-0.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors"
+                title="Copy Markdown"
+              >
+                {copied ? (
+                  <Check className="w-3 h-3 text-[var(--color-success)]" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+              </button>
+              <button
+                onClick={handleDownload}
+                className="p-0.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors"
+                title="Download as .md"
+              >
+                <Download className="w-3 h-3" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
