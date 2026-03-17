@@ -93,7 +93,7 @@ export function useAutoRefresh({ agentId, userId }: UseAutoRefreshOptions) {
       refreshAgentInbox(aid, true);
     };
 
-    // Mid-freq tick: jobs + ragFiles + awareness (silent)
+    // Mid-freq tick: jobs + ragFiles + awareness + agent list (silent)
     const tickMid = () => {
       if (document.hidden) return;
       const aid = agentIdRef.current;
@@ -103,6 +103,8 @@ export function useAutoRefresh({ agentId, userId }: UseAutoRefreshOptions) {
       refreshRAGFiles(aid, uid, true);
       refreshAwareness(aid, true);
       refreshSocialNetwork(aid, true);
+      // Refresh agent list so newly created agents appear
+      useConfigStore.getState().refreshAgents();
     };
 
     // Background message detection: check all agents for new chat messages

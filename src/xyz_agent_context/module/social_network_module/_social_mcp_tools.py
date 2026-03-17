@@ -700,4 +700,123 @@ def create_social_network_mcp_server(port: int, get_db_client_fn, module_class) 
             logger.error(f"Error deleting entity: {e}")
             return {"success": False, "message": f"Error: {str(e)}"}
 
+    @mcp.tool()
+    async def create_agent(
+        agent_id: str,
+        agent_name: str,
+        awareness: str,
+        agent_description: str = "",
+    ) -> dict:
+        """
+        Create a new agent with a name and awareness (self-identity).
+
+        **WHEN TO CALL**: When the user asks you to create a new agent — e.g.,
+        "create an agent called Scout", "set up a new agent for research".
+
+        This tool creates the agent, its workspace, and sets its initial awareness.
+        The new agent will appear in the user's agent list in the frontend.
+
+        **IMPORTANT**: This only creates the agent with a name and awareness.
+        If the user needs further configuration (skills, jobs, MCP tools, etc.),
+        tell them to switch to the new agent and interact with it directly.
+
+        Args:
+            agent_id: YOUR agent ID (the creator). The new agent's owner will be
+                      the same user who owns you.
+            agent_name: Display name for the new agent (e.g., "Scout").
+            awareness: The new agent's self-awareness / identity description.
+                       This defines who the agent is, what it does, and how it behaves.
+            agent_description: Optional short description of the agent's purpose.
+
+        Returns:
+            Operation result with the new agent's ID.
+        """
+        try:
+            from uuid import uuid4
+            import os
+
+            db = await get_db_client_fn()
+
+            # Resolve the creator's user_id (the owner of the calling agent)
+            from xyz_agent_context.repository import AgentRepository
+            agent_repo = AgentRepository(db)
+            caller = await agent_repo.get_agent(agent_id)
+            if not caller or not caller.created_by:
+                return {"success": False, "message": "Cannot determine your owner (created_by). Aborting."}
+
+            owner_user_id = caller.created_by
+            new_agent_id = f"agent_{uuid4().hex[:12]}"
+
+            # 1. Create agent record in DB
+            await agent_repo.add_agent(
+                agent_id=new_agent_id,
+                agent_name=agent_name,
+                created_by=owner_user_id,
+                agent_description=agent_description or f"Agent created by {caller.agent_name or agent_id}",
+                agent_type="chat",
+            )
+            logger.info(f"Created agent {new_agent_id} ('{agent_name}') for owner {owner_user_id}")
+
+            # 2. Create workspace directory + Bootstrap.md
+            from xyz_agent_context.settings import settings
+            workspace_path = os.path.join(
+                settings.base_working_path,
+                f"{new_agent_id}_{owner_user_id}"
+            )
+            os.makedirs(workspace_path, exist_ok=True)
+
+            try:
+                from xyz_agent_context.bootstrap.template import BOOTSTRAP_MD_TEMPLATE
+                bootstrap_file = os.path.join(workspace_path, "Bootstrap.md")
+                with open(bootstrap_file, "w", encoding="utf-8") as f:
+                    f.write(BOOTSTRAP_MD_TEMPLATE)
+            except Exception as e:
+                logger.warning(f"Failed to write Bootstrap.md for {new_agent_id}: {e}")
+
+            # 3. Create awareness instance and set awareness text
+            instance_repo = InstanceRepository(db)
+            from xyz_agent_context.schema.instance_schema import ModuleInstanceRecord, InstanceStatus
+            awareness_instance_id = f"aware_{uuid4().hex[:8]}"
+            new_instance = ModuleInstanceRecord(
+                instance_id=awareness_instance_id,
+                module_class="AwarenessModule",
+                agent_id=new_agent_id,
+                is_public=True,
+                status=InstanceStatus.ACTIVE,
+                description="Agent self-awareness module instance",
+            )
+            await instance_repo.create_instance(new_instance)
+
+            from xyz_agent_context.repository import InstanceAwarenessRepository
+            awareness_repo = InstanceAwarenessRepository(db)
+            await awareness_repo.upsert(awareness_instance_id, awareness)
+            logger.info(f"Set awareness for {new_agent_id}: {len(awareness)} chars")
+
+            # 4. Register on NexusMatrix (non-fatal)
+            try:
+                from xyz_agent_context.module.matrix_module._matrix_credential_manager import (
+                    ensure_agent_registered,
+                )
+                cred = await ensure_agent_registered(db=db, agent_id=new_agent_id)
+                if cred:
+                    logger.info(f"Agent {new_agent_id} registered on NexusMatrix: {cred.matrix_user_id}")
+            except Exception as e:
+                logger.warning(f"Matrix registration for {new_agent_id} failed (non-fatal): {e}")
+
+            return {
+                "success": True,
+                "message": (
+                    f"Agent '{agent_name}' created successfully (ID: {new_agent_id}). "
+                    f"The user can now switch to this agent in the frontend. "
+                    f"If further configuration is needed (skills, jobs, etc.), "
+                    f"tell the user to interact with the new agent directly."
+                ),
+                "new_agent_id": new_agent_id,
+                "agent_name": agent_name,
+            }
+
+        except Exception as e:
+            logger.error(f"Error creating agent: {e}")
+            return {"success": False, "message": f"Error: {str(e)}"}
+
     return mcp
