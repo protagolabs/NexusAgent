@@ -82,6 +82,7 @@ function KPICard({
 
 export function AgentInboxPanel() {
   const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null);
+  const [loadedAll, setLoadedAll] = useState(false);
 
   const { agentId } = useConfigStore();
   const {
@@ -92,7 +93,14 @@ export function AgentInboxPanel() {
   } = usePreloadStore();
 
   const handleRefresh = () => {
-    refreshAgentInbox(agentId);
+    setLoadedAll(false);
+    // Pass limit=0 to reset stored _inboxLimit back to default (50)
+    refreshAgentInbox(agentId, false, 0);
+  };
+
+  const handleLoadAll = () => {
+    setLoadedAll(true);
+    refreshAgentInbox(agentId, false, -1);
   };
 
   const toggleRoom = (roomId: string) => {
@@ -121,6 +129,18 @@ export function AgentInboxPanel() {
             <Badge variant="accent" pulse glow className="font-mono">
               {unreadCount}
             </Badge>
+          )}
+          {!loadedAll && rooms.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLoadAll}
+              disabled={loading}
+              title="Load all messages"
+              className="hover:bg-[var(--accent-glow)] text-[10px] px-2"
+            >
+              Load all
+            </Button>
           )}
           <Button
             variant="ghost"

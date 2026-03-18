@@ -104,9 +104,10 @@ class ApiClient {
   }
 
   // Agent Inbox API (Matrix channel messages)
-  async getAgentInbox(agentId: string, isRead?: boolean): Promise<AgentInboxListResponse> {
+  async getAgentInbox(agentId: string, isRead?: boolean, limit?: number): Promise<AgentInboxListResponse> {
     let url = `/api/agent-inbox?agent_id=${encodeURIComponent(agentId)}`;
     if (isRead !== undefined) url += `&is_read=${isRead}`;
+    if (limit !== undefined) url += `&limit=${limit}`;
     return this.request<AgentInboxListResponse>(url);
   }
 
