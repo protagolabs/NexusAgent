@@ -18,10 +18,11 @@ Provides endpoints for:
 """
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from loguru import logger
+import httpx
 
 from xyz_agent_context.utils.db_factory import get_db_client
 
@@ -105,6 +106,69 @@ async def _build_agent_name_map(db_client) -> dict:
     return name_map
 
 
+async def _fetch_all_messages(
+    client: Any,
+    api_key: str,
+    room_id: str,
+    page_size: int = 500,
+) -> List[Dict[str, Any]]:
+    """
+    Fetch all messages for a room using pagination.
+
+    NexusMatrix API limits to 500 messages per request.
+    This helper pages through the full history using the `end` token
+    returned in each MessageHistory response.
+
+    Args:
+        client: NexusMatrixClient instance
+        api_key: Agent's API key
+        room_id: Room ID
+        page_size: Messages per page (max 500 per NexusMatrix API)
+
+    Returns:
+        All messages for the room (newest first)
+    """
+    all_msgs: List[Dict[str, Any]] = []
+    http_client = await client._get_client()
+    headers = client._headers(api_key)
+    page_token = ""
+
+    while True:
+        params: Dict[str, Any] = {"limit": page_size}
+        if page_token:
+            params["start"] = page_token
+
+        try:
+            resp = await http_client.get(
+                f"/api/v1/messages/{room_id}/history",
+                headers=headers,
+                params=params,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.error(f"_fetch_all_messages page failed: {e}")
+            break
+
+        if not data.get("success"):
+            break
+
+        page_data = data.get("data", {})
+        messages = page_data.get("messages", [])
+        all_msgs.extend(messages)
+
+        # Check if there are more pages
+        has_more = page_data.get("has_more", False)
+        next_token = page_data.get("end", "")
+
+        if not has_more or not next_token or next_token == page_token:
+            break
+        page_token = next_token
+
+    logger.info(f"_fetch_all_messages: room={room_id}, total={len(all_msgs)} messages")
+    return all_msgs
+
+
 # =============================================================================
 # API Endpoints
 # =============================================================================
@@ -112,7 +176,7 @@ async def _build_agent_name_map(db_client) -> dict:
 @router.get("", response_model=AgentInboxListResponse)
 async def list_agent_inbox_rooms(
     agent_id: str = Query(..., description="Agent ID"),
-    limit: int = Query(50, description="Max messages per room"),
+    limit: int = Query(50, description="Max messages per room (-1 for all)"),
 ):
     """
     List Matrix channel messages grouped by room.
@@ -164,9 +228,13 @@ async def list_agent_inbox_rooms(
 
             # Fetch message history
             try:
-                raw_msgs = await client.get_messages(
-                    api_key=api_key, room_id=room_id, limit=limit,
-                ) or []
+                # limit=-1 means fetch all messages via pagination
+                if limit == -1:
+                    raw_msgs = await _fetch_all_messages(client, api_key, room_id)
+                else:
+                    raw_msgs = await client.get_messages(
+                        api_key=api_key, room_id=room_id, limit=limit,
+                    ) or []
             except Exception:
                 raw_msgs = []
 
