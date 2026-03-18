@@ -175,13 +175,11 @@ export const useChatStore = create<ChatState>((_set, get) => {
     getUserVisibleResponse: () => {
       const state = get();
       const session = getSession(state.agentSessions, state.activeAgentId);
-      const makeResponseCall = session.currentToolCalls.findLast(
-        (tool) => tool.tool_name.endsWith('send_message_to_user_directly')
-      );
-      if (makeResponseCall && makeResponseCall.tool_input?.content) {
-        return makeResponseCall.tool_input.content as string;
-      }
-      return null;
+      const parts = session.currentToolCalls
+        .filter((tool) => tool.tool_name.endsWith('send_message_to_user_directly'))
+        .map((tool) => tool.tool_input?.content as string)
+        .filter(Boolean);
+      return parts.length > 0 ? parts.join('\n\n') : null;
     },
 
     // Switch active agent (also clears its completion notification)
@@ -231,15 +229,16 @@ export const useChatStore = create<ChatState>((_set, get) => {
         // Prevent duplicate calls
         if (!session.isStreaming) return {};
 
-        // Extract user-visible response
-        const makeResponseCall = session.currentToolCalls.findLast(
-          (tool) => tool.tool_name.endsWith('send_message_to_user_directly')
-        );
+        // Extract user-visible response (concatenate ALL send_message_to_user_directly calls)
+        const responseParts = session.currentToolCalls
+          .filter((tool) => tool.tool_name.endsWith('send_message_to_user_directly'))
+          .map((tool) => tool.tool_input?.content as string)
+          .filter(Boolean);
 
         let displayContent: string;
         let isError = false;
-        if (makeResponseCall && makeResponseCall.tool_input?.content) {
-          displayContent = makeResponseCall.tool_input.content as string;
+        if (responseParts.length > 0) {
+          displayContent = responseParts.join('\n\n');
         } else if (session.currentErrors.length > 0) {
           displayContent = session.currentErrors.join('\n\n');
           isError = true;

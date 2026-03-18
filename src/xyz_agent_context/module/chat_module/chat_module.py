@@ -152,21 +152,19 @@ class ChatModule(XYZBaseModule):
         """
         Extract user-visible response content from agent_loop_response
 
-        Iterates through agent_loop_response, looking for send_message_to_user_directly tool calls,
-        and extracts the content parameter as the actual content displayed to the user.
-
-        Logic is consistent with getUserVisibleResponse in the frontend chatStore.ts:
-        - Tool name ends with 'send_message_to_user_directly' (Claude SDK format: mcp__chat_module__send_message_to_user_directly)
-        - Extracts content field from tool_input/arguments
+        Iterates through agent_loop_response, looking for ALL send_message_to_user_directly
+        tool calls, and concatenates their content. Agent may call this tool multiple times
+        in a single turn (e.g. sending a greeting then a detailed answer).
 
         Args:
             agent_loop_response: Raw response list from Agent Loop, containing ProgressMessage etc.
 
         Returns:
-            str: User-visible response content; returns default message if send_message_to_user_directly was not called
+            str: Concatenated user-visible response content; returns default message if not called
         """
         from xyz_agent_context.schema import ProgressMessage
 
+        parts = []
         for response in agent_loop_response:
             # Check if it's a ProgressMessage (tool calls are wrapped as ProgressMessage)
             if isinstance(response, ProgressMessage) and response.details:
@@ -176,11 +174,15 @@ class ChatModule(XYZBaseModule):
                     arguments = response.details.get("arguments", {})
                     content = arguments.get("content", "")
                     if content:
-                        logger.debug(
-                            f"ChatModule._extract_user_visible_response: "
-                            f"Extracted reply content from {tool_name}, length {len(content)}"
-                        )
-                        return content
+                        parts.append(content)
+
+        if parts:
+            combined = "\n\n".join(parts)
+            logger.debug(
+                f"ChatModule._extract_user_visible_response: "
+                f"Extracted {len(parts)} reply(s), total length {len(combined)}"
+            )
+            return combined
 
         # send_message_to_user_directly call not found
         logger.debug(
