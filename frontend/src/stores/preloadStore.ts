@@ -68,7 +68,7 @@ interface PreloadState {
 
   // Actions (silent=true skips loading state toggle & deduplicates unchanged data)
   preloadAll: (agentId: string, userId: string) => Promise<void>;
-  refreshAgentInbox: (agentId: string, silent?: boolean) => Promise<void>;
+  refreshAgentInbox: (agentId: string, silent?: boolean, limit?: number) => Promise<void>;
   refreshJobs: (agentId: string, userId?: string, status?: string, silent?: boolean) => Promise<void>;
   refreshAwareness: (agentId: string, silent?: boolean) => Promise<void>;
   refreshSocialNetwork: (agentId: string, silent?: boolean) => Promise<void>;
@@ -227,9 +227,9 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
 
   // ── Individual refresh methods ────────────────────
 
-  refreshAgentInbox: (agentId, silent?) => loadDomain(set, get,
+  refreshAgentInbox: (agentId, silent?, limit?) => loadDomain(set, get,
     'agentInboxLoading', 'agentInboxError',
-    () => api.getAgentInbox(agentId),
+    () => api.getAgentInbox(agentId, undefined, limit),
     (r) => ({ agentInboxRooms: r.rooms, agentInboxUnreadCount: r.total_unread }),
     'Failed to load agent inbox', silent),
 
