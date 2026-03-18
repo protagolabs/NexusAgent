@@ -519,16 +519,28 @@ async def get_event_log_detail(agent_id: str, event_id: str):
 
         event_log = _parse_json_field(event_row.get("event_log"), [])
 
-        # Extract thinking: concatenate all thinking entries
-        thinking_parts = []
+        # Extract thinking: concatenate streaming deltas into coherent blocks.
+        # Each thinking_delta is stored as a separate step in event_log.
+        # Consecutive thinking entries are part of the same block (concatenate directly).
+        # When interrupted by other step types (tool_call, etc.), start a new block with \n\n.
+        thinking_blocks: List[str] = []
+        current_block: List[str] = []
         for entry in event_log:
             content = entry.get("content", {})
             if isinstance(content, dict) and content.get("type") == "thinking":
                 thinking_text = content.get("content", "")
                 if thinking_text:
-                    thinking_parts.append(thinking_text)
+                    current_block.append(thinking_text)
+            else:
+                # Non-thinking entry: flush current block if any
+                if current_block:
+                    thinking_blocks.append("".join(current_block))
+                    current_block = []
+        # Flush remaining block
+        if current_block:
+            thinking_blocks.append("".join(current_block))
 
-        thinking = "\n\n".join(thinking_parts) if thinking_parts else None
+        thinking = "\n\n".join(thinking_blocks) if thinking_blocks else None
 
         # Extract tool calls: pair each tool_call with the next tool_output
         tool_calls: List[EventLogToolCall] = []

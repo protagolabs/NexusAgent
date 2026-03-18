@@ -94,7 +94,8 @@ export function AgentInboxPanel() {
 
   const handleRefresh = () => {
     setLoadedAll(false);
-    refreshAgentInbox(agentId);
+    // Pass limit=0 to reset stored _inboxLimit back to default (50)
+    refreshAgentInbox(agentId, false, 0);
   };
 
   const handleLoadAll = () => {

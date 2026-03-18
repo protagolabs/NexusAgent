@@ -32,6 +32,7 @@ interface PreloadState {
   // Data
   agentInboxRooms: MatrixRoom[];
   agentInboxUnreadCount: number;
+  _inboxLimit?: number;  // Remembered limit for auto-refresh (preserves "load all" choice)
   jobs: Job[];
   awareness: string | null;
   awarenessCreateTime: string | null;
@@ -141,6 +142,7 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
   // Initial data
   agentInboxRooms: [],
   agentInboxUnreadCount: 0,
+  _inboxLimit: undefined as number | undefined,
   jobs: [],
   awareness: null,
   awarenessCreateTime: null,
@@ -227,11 +229,22 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
 
   // ── Individual refresh methods ────────────────────
 
-  refreshAgentInbox: (agentId, silent?, limit?) => loadDomain(set, get,
-    'agentInboxLoading', 'agentInboxError',
-    () => api.getAgentInbox(agentId, undefined, limit),
-    (r) => ({ agentInboxRooms: r.rooms, agentInboxUnreadCount: r.total_unread }),
-    'Failed to load agent inbox', silent),
+  refreshAgentInbox: (agentId, silent?, limit?) => {
+    // Remember explicit limit so auto-refresh preserves user's "load all" choice.
+    // limit=-1 means "load all", limit=0 means "reset to default", undefined means "use stored".
+    if (limit === 0) {
+      set({ _inboxLimit: undefined });
+    } else if (limit !== undefined) {
+      set({ _inboxLimit: limit });
+    }
+    const storedLimit = get()._inboxLimit;
+    const effectiveLimit = limit === 0 ? undefined : (limit ?? storedLimit);
+    return loadDomain(set, get,
+      'agentInboxLoading', 'agentInboxError',
+      () => api.getAgentInbox(agentId, undefined, effectiveLimit),
+      (r) => ({ agentInboxRooms: r.rooms, agentInboxUnreadCount: r.total_unread }),
+      'Failed to load agent inbox', silent);
+  },
 
   refreshJobs: (agentId, _userId?, status?, silent?) => loadDomain(set, get,
     'jobsLoading', 'jobsError',
@@ -298,7 +311,7 @@ export const usePreloadStore = create<PreloadState>()((set, get) => ({
 
   clearAll: () => {
     set({
-      agentInboxRooms: [], agentInboxUnreadCount: 0,
+      agentInboxRooms: [], agentInboxUnreadCount: 0, _inboxLimit: undefined,
       jobs: [],
       awareness: null, awarenessCreateTime: null, awarenessUpdateTime: null,
       socialNetworkList: [],
