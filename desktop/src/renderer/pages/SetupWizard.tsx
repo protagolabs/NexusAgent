@@ -168,6 +168,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     const installerIds: string[] = []
     if (ids.includes('docker')) installerIds.push('docker')
     if (ids.includes('uv')) installerIds.push('uv')
+    if (ids.includes('node')) installerIds.push('node')
     if (ids.includes('claude')) installerIds.push('claude')
     if (ids.includes('uv') || ids.includes('python')) installerIds.push('python-deps')
     installerIds.push('python-deps', 'frontend-build')

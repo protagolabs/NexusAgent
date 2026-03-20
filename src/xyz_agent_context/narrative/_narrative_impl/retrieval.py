@@ -707,11 +707,24 @@ class NarrativeRetrieval:
                         "topic_hint": narrative.topic_hint or "Unknown topic"
                     }
 
+                # Use narrative_info (LLM-generated) for richer candidate info.
+                # Falls back to topic_hint only when narrative_info is empty.
+                candidate_name = (
+                    narrative.narrative_info.name
+                    if narrative.narrative_info and narrative.narrative_info.name
+                    else (narrative.topic_hint[:50] if narrative.topic_hint else "Untitled")
+                )
+                candidate_desc = (
+                    narrative.narrative_info.current_summary[:300]
+                    if narrative.narrative_info and narrative.narrative_info.current_summary
+                    else (narrative.topic_hint[:100] if narrative.topic_hint else "")
+                )
+
                 search_candidates.append({
                     "id": narrative.id,
                     "type": "search",
-                    "name": narrative.topic_hint[:50] if narrative.topic_hint else "Untitled",
-                    "description": narrative.topic_hint[:100] if narrative.topic_hint else "",
+                    "name": candidate_name,
+                    "description": candidate_desc,
                     "score": result.similarity_score,
                     "matched_content": matched_content  # Phase 1: New field
                 })
