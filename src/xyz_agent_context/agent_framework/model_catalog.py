@@ -119,6 +119,7 @@ OPENAI_MODELS: list[ModelInfo] = [
         model_id="gpt-5.1-2025-11-13",
         display_name="GPT-5.1",
         slot_types=["helper_llm"],
+        max_output_tokens=115200,  # 128000 * 0.9
         is_default=True,
     ),
     # Embedding models
@@ -143,12 +144,14 @@ ANTHROPIC_MODELS: list[ModelInfo] = [
         model_id="claude-opus-4-6",
         display_name="Claude Opus 4.6",
         slot_types=["agent"],
+        max_output_tokens=115200,  # 128000 * 0.9 (not used by Claude Agent SDK, recorded for reference)
         is_default=True,
     ),
     ModelInfo(
         model_id="claude-sonnet-4-6",
         display_name="Claude Sonnet 4.6",
         slot_types=["agent"],
+        max_output_tokens=115200,  # 128000 * 0.9 (not used by Claude Agent SDK, recorded for reference)
     ),
 ]
 
