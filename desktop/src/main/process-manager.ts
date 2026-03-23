@@ -234,10 +234,13 @@ export class ProcessManager extends EventEmitter {
     this.emit('status-change', svc.id, 'starting')
 
     try {
-      await execFileAsync('git', ['clone', svc.gitRepo, dirName], {
+      const env = this.getExecEnv()
+      // Resolve git path: execFile doesn't use shell, so we locate git via PATH
+      const gitPath = await this.resolveCommand('git', env)
+      await execFileAsync(gitPath, ['clone', svc.gitRepo, dirName], {
         cwd: parentDir,
         timeout: 120_000,
-        env: this.getExecEnv()
+        env
       })
       this.addLog(svc.id, 'stdout', 'Repository cloned successfully')
       return true
@@ -439,5 +442,29 @@ export class ProcessManager extends EventEmitter {
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  /**
+   * Resolve a command name to its full path via the given PATH env.
+   * execFile doesn't spawn a shell, so it needs the absolute path on macOS
+   * when launched from Finder/Dock (minimal launchd PATH).
+   */
+  private async resolveCommand(cmd: string, env: Record<string, string>): Promise<string> {
+    const pathDirs = (env.PATH || '').split(':')
+    for (const dir of pathDirs) {
+      const fullPath = join(dir, cmd)
+      if (existsSync(fullPath)) return fullPath
+    }
+    // Fallback: try common known locations
+    const fallbacks = [
+      `/usr/bin/${cmd}`,
+      `/usr/local/bin/${cmd}`,
+      `/opt/homebrew/bin/${cmd}`,
+    ]
+    for (const p of fallbacks) {
+      if (existsSync(p)) return p
+    }
+    // Last resort: return the bare command name (will likely fail with ENOENT)
+    return cmd
   }
 }
