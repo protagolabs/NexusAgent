@@ -154,7 +154,7 @@ class OpenAIAgentsSDK:
         resp = await client.chat.completions.create(
             model=model_name,
             messages=messages,
-            max_tokens=2048,
+            # max_tokens not set — use model's maximum by default
         )
 
         raw_content = resp.choices[0].message.content or ""
