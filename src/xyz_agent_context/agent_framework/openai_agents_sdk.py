@@ -111,7 +111,7 @@ class OpenAIAgentsSDK:
         self, client, model_name, instructions, user_input, output_type
     ):
         """Attempt structured output via OpenAI Agents SDK"""
-        from agents import Agent, Runner, OpenAIChatCompletionsModel
+        from agents import Agent, Runner, OpenAIChatCompletionsModel, ModelSettings
 
         agent = Agent(
             name="LLMFunction",
@@ -121,6 +121,7 @@ class OpenAIAgentsSDK:
                 model=model_name,
                 openai_client=client,
             ),
+            model_settings=ModelSettings(max_tokens=16384),
         )
         return await Runner.run(agent, user_input)
 
@@ -154,7 +155,7 @@ class OpenAIAgentsSDK:
         resp = await client.chat.completions.create(
             model=model_name,
             messages=messages,
-            # max_tokens not set — use model's maximum by default
+            max_tokens=16384,  # Explicitly set large value; some providers default to 256
         )
 
         raw_content = resp.choices[0].message.content or ""
