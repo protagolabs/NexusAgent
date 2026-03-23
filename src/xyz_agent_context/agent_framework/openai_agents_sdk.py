@@ -50,6 +50,10 @@ def _extract_json_from_llm_output(text: str) -> Optional[str]:
     return None
 
 
+# Models that have failed structured output — skip Agents SDK for these
+_structured_output_blocklist: set[str] = set()
+
+
 class OpenAIAgentsSDK:
     def __init__(self):
         pass
@@ -71,8 +75,8 @@ class OpenAIAgentsSDK:
 
         When output_type is specified, attempts structured output via
         Agents SDK first. If that fails (e.g., model doesn't support
-        response_format), falls back to direct chat completion with
-        prompt-guided JSON + manual Pydantic parsing.
+        response_format), the model is added to a blocklist and all
+        subsequent calls skip straight to the fallback path.
         """
         model_name = model or openai_config.model
 
@@ -82,8 +86,8 @@ class OpenAIAgentsSDK:
             client_kwargs["base_url"] = openai_config.base_url
         openai_client = AsyncOpenAI(**client_kwargs)
 
-        # Try Agents SDK structured output first
-        if output_type:
+        # Try Agents SDK structured output (skip if model is blocklisted)
+        if output_type and model_name not in _structured_output_blocklist:
             try:
                 result = await self._try_agents_sdk(
                     openai_client, model_name, instructions, user_input, output_type
@@ -91,7 +95,11 @@ class OpenAIAgentsSDK:
                 await self._record_cost(result, model_name, agent_id, db)
                 return result
             except Exception as e:
-                logger.debug(f"Agents SDK structured output failed, falling back to manual parsing: {e}")
+                _structured_output_blocklist.add(model_name)
+                logger.info(
+                    f"Model '{model_name}' does not support structured output, "
+                    f"added to blocklist (will use fallback from now on): {e}"
+                )
 
         # Fallback: direct chat completion + manual JSON parsing
         result = await self._fallback_chat_completion(
