@@ -52,10 +52,15 @@ NETMIND_MODELS: list[ModelInfo] = [
     ),
     # Helper LLM models (OpenAI protocol)
     ModelInfo(
+        model_id="minimax/minimax-m2.5",
+        display_name="MiniMax M2.5",
+        slot_types=["helper_llm"],
+        is_default=True,
+    ),
+    ModelInfo(
         model_id="deepseek-ai/DeepSeek-V3",
         display_name="DeepSeek V3",
         slot_types=["helper_llm"],
-        is_default=True,
     ),
     # Embedding models (OpenAI protocol)
     ModelInfo(
