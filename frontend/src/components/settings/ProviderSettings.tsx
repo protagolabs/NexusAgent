@@ -210,9 +210,24 @@ export function ProviderSettings() {
           </>
         )}
         {preset === 'claude_openai' && (
-          <input type="password" value={openaiKey} onChange={e => setOpenaiKey(e.target.value)}
-            placeholder="OpenAI API Key (sk-...)"
-            className="w-full px-3 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
+          <>
+            <div className="p-2.5 rounded-lg border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/5">
+              <p className="text-[11px] text-[var(--text-secondary)] mb-1.5 font-medium">Claude Code Authentication (Agent Slot)</p>
+              <p className="text-[10px] text-[var(--text-tertiary)] leading-relaxed">
+                Web frontend cannot trigger OAuth login directly.
+                Please login in your terminal first:
+              </p>
+              <code className="block mt-1.5 px-2 py-1 text-[10px] font-mono rounded bg-[var(--bg-tertiary)] text-[var(--accent-primary)] select-all">
+                claude login
+              </code>
+              <p className="text-[9px] text-[var(--text-tertiary)] mt-1.5">
+                After login, click "Apply" below. The agent slot will use your Claude Code OAuth credentials automatically.
+              </p>
+            </div>
+            <input type="password" value={openaiKey} onChange={e => setOpenaiKey(e.target.value)}
+              placeholder="OpenAI API Key for Embedding + Helper LLM (sk-...)"
+              className="w-full px-3 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
+          </>
         )}
         {preset === 'custom' && (
           <>
