@@ -20,6 +20,7 @@ import { useAgentWebSocket } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { MessageBubble } from './MessageBubble';
+import { EmbeddingBanner } from '@/components/ui/EmbeddingBanner';
 import type { SimpleChatMessage } from '@/types';
 
 // Must match BOOTSTRAP_GREETING in src/xyz_agent_context/bootstrap/template.py
@@ -382,6 +383,9 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
           </div>
         )}
       </div>
+
+      {/* Embedding rebuild warning banner */}
+      <EmbeddingBanner />
 
       {/* Messages area — single unified timeline */}
       <div

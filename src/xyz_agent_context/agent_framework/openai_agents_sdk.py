@@ -12,11 +12,8 @@ from loguru import logger
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 
-from xyz_agent_context.settings import settings
+from xyz_agent_context.agent_framework.api_config import openai_config
 from xyz_agent_context.utils.cost_tracker import record_cost, get_cost_context
-
-
-MODEL_NAME = "gpt-5.1-2025-11-13"
 
 
 class OpenAIAgentsSDK:
@@ -36,7 +33,12 @@ class OpenAIAgentsSDK:
         db=None,
     ) -> str:
 
-        model_name = model or MODEL_NAME
+        model_name = model or openai_config.model
+
+        # Build AsyncOpenAI client; only pass base_url when configured
+        client_kwargs: dict = {"api_key": openai_config.api_key}
+        if openai_config.base_url:
+            client_kwargs["base_url"] = openai_config.base_url
 
         agent = Agent(
             name="ChatGPT",
@@ -44,7 +46,7 @@ class OpenAIAgentsSDK:
             output_type=output_type,
             model=OpenAIChatCompletionsModel(
                 model=model_name,
-                openai_client=AsyncOpenAI(api_key=settings.openai_api_key),
+                openai_client=AsyncOpenAI(**client_kwargs),
             ),
         )
 

@@ -17,7 +17,7 @@ from typing import AsyncGenerator, Dict, TYPE_CHECKING
 from loguru import logger
 
 from xyz_agent_context.schema import ProgressMessage, ProgressStatus
-from xyz_agent_context.utils.embedding import cosine_similarity
+from xyz_agent_context.agent_framework.llm_api.embedding import cosine_similarity
 from .step_display import format_narrative_for_display
 
 if TYPE_CHECKING:

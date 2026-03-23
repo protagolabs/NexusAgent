@@ -30,7 +30,7 @@ from .default_narratives import (
 from xyz_agent_context.utils.evermemos import get_evermemos_client
 
 # Use common utilities from utils
-from xyz_agent_context.utils.embedding import (
+from xyz_agent_context.agent_framework.llm_api.embedding import (
     get_embedding,
     cosine_similarity,
     compute_average_embedding,
@@ -985,6 +985,10 @@ class NarrativeRetrieval:
             embedding=query_embedding,
             metadata={"user_id": user_id, "agent_id": agent_id}
         )
+
+        # Dual-write to embeddings_store
+        from xyz_agent_context.agent_framework.llm_api.embedding_store_bridge import store_embedding
+        await store_embedding("narrative", narrative.id, query_embedding, source_text=topic_hint)
 
         logger.info(f"Created new Narrative: {narrative.id}")
         return narrative
