@@ -288,6 +288,56 @@ async def get_catalog():
 
 
 # =============================================================================
+# Claude Code Auth Status
+# =============================================================================
+
+@router.get("/claude-status")
+async def get_claude_status():
+    """
+    Check if Claude Code CLI is logged in by inspecting local credentials.
+
+    Returns login state so the web frontend can show guidance.
+    """
+    import json as _json
+    from pathlib import Path
+
+    claude_dir = Path.home() / ".claude"
+    creds_file = claude_dir / ".credentials.json"
+
+    result = {
+        "cli_installed": False,
+        "logged_in": False,
+        "expires_at": None,
+    }
+
+    # Check CLI installed
+    import shutil
+    if shutil.which("claude"):
+        result["cli_installed"] = True
+
+    # Check credentials file
+    if creds_file.is_file():
+        try:
+            data = _json.loads(creds_file.read_text(encoding="utf-8"))
+            # credentials.json has various formats; look for any OAuth token
+            if isinstance(data, dict):
+                # Check for oauth tokens
+                for key in ("accessToken", "oauthToken", "claudeAiOauth"):
+                    if data.get(key):
+                        result["logged_in"] = True
+                        result["expires_at"] = data.get("expiresAt")
+                        break
+                # Also check nested format
+                if not result["logged_in"] and data.get("oauth"):
+                    result["logged_in"] = True
+                    result["expires_at"] = data["oauth"].get("expiresAt")
+        except Exception:
+            pass
+
+    return {"success": True, "data": result}
+
+
+# =============================================================================
 # Embedding Migration Endpoints
 # =============================================================================
 

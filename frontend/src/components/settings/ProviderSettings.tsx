@@ -70,14 +70,17 @@ export function ProviderSettings() {
   const [applying, setApplying] = useState(false)
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState(true)  // Start collapsed if already configured
+  const [claudeStatus, setClaudeStatus] = useState<{ cli_installed: boolean; logged_in: boolean; expires_at: string | null } | null>(null)
 
   // Load
   const refreshConfig = useCallback(async () => {
     try {
-      const [cfgRes, catRes] = await Promise.all([
+      const [cfgRes, catRes, claudeRes] = await Promise.all([
         fetch(`${API_BASE}/api/providers`).then(r => r.json()),
         fetch(`${API_BASE}/api/providers/catalog`).then(r => r.json()),
+        fetch(`${API_BASE}/api/providers/claude-status`).then(r => r.json()).catch(() => null),
       ])
+      if (claudeRes?.success) setClaudeStatus(claudeRes.data)
       if (cfgRes.success) {
         setProviders(cfgRes.data.providers)
         setSlots(cfgRes.data.slots)
@@ -213,16 +216,39 @@ export function ProviderSettings() {
           <>
             <div className="p-2.5 rounded-lg border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/5">
               <p className="text-[11px] text-[var(--text-secondary)] mb-1.5 font-medium">Claude Code Authentication (Agent Slot)</p>
-              <p className="text-[10px] text-[var(--text-tertiary)] leading-relaxed">
-                Web frontend cannot trigger OAuth login directly.
-                Please login in your terminal first:
-              </p>
-              <code className="block mt-1.5 px-2 py-1 text-[10px] font-mono rounded bg-[var(--bg-tertiary)] text-[var(--accent-primary)] select-all">
-                claude login
-              </code>
-              <p className="text-[9px] text-[var(--text-tertiary)] mt-1.5">
-                After login, click "Apply" below. The agent slot will use your Claude Code OAuth credentials automatically.
-              </p>
+              {/* Live status */}
+              {claudeStatus && (
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={cn(
+                    'inline-block w-1.5 h-1.5 rounded-full',
+                    claudeStatus.logged_in ? 'bg-[var(--color-success)]' :
+                    claudeStatus.cli_installed ? 'bg-[var(--color-warning)]' : 'bg-[var(--text-tertiary)]'
+                  )} />
+                  <span className="text-[10px] text-[var(--text-secondary)]">
+                    {claudeStatus.logged_in
+                      ? `Logged in${claudeStatus.expires_at ? ` (expires: ${new Date(claudeStatus.expires_at).toLocaleDateString()})` : ''}`
+                      : claudeStatus.cli_installed
+                        ? 'CLI installed but not logged in'
+                        : 'CLI not installed'}
+                  </span>
+                </div>
+              )}
+              {/* Guidance */}
+              {(!claudeStatus || !claudeStatus.logged_in) && (
+                <>
+                  <p className="text-[10px] text-[var(--text-tertiary)] leading-relaxed">
+                    {claudeStatus?.cli_installed
+                      ? 'Please login in your terminal:'
+                      : 'Install Claude Code CLI first, then login:'}
+                  </p>
+                  <code className="block mt-1.5 px-2 py-1 text-[10px] font-mono rounded bg-[var(--bg-tertiary)] text-[var(--accent-primary)] select-all">
+                    {claudeStatus?.cli_installed ? 'claude login' : 'npm install -g @anthropic-ai/claude-code && claude login'}
+                  </code>
+                  <p className="text-[9px] text-[var(--text-tertiary)] mt-1.5">
+                    After login, click "Apply" below. The agent slot will use your Claude Code OAuth credentials automatically.
+                  </p>
+                </>
+              )}
             </div>
             <input type="password" value={openaiKey} onChange={e => setOpenaiKey(e.target.value)}
               placeholder="OpenAI API Key for Embedding + Helper LLM (sk-...)"
