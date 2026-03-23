@@ -235,12 +235,22 @@ export class ProcessManager extends EventEmitter {
 
     try {
       const env = this.getExecEnv()
-      // Resolve git path: execFile doesn't use shell, so we locate git via PATH
-      const gitPath = await this.resolveCommand('git', env)
-      await execFileAsync(gitPath, ['clone', svc.gitRepo, dirName], {
-        cwd: parentDir,
-        timeout: 120_000,
-        env
+      // Use shell: true to let the OS resolve git via PATH and handle
+      // macOS Xcode shim (/usr/bin/git) which fails under Hardened Runtime
+      // when called directly via execFile.
+      const shell = process.platform === 'darwin' ? '/bin/zsh' : true
+      await new Promise<void>((resolve, reject) => {
+        const proc = spawn('git', ['clone', svc.gitRepo!, dirName], {
+          cwd: parentDir,
+          env,
+          shell,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          timeout: 120_000,
+        })
+        let stderr = ''
+        proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString() })
+        proc.on('exit', (code) => code === 0 ? resolve() : reject(new Error(stderr.trim() || `exit code ${code}`)))
+        proc.on('error', reject)
       })
       this.addLog(svc.id, 'stdout', 'Repository cloned successfully')
       return true
