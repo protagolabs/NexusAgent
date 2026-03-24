@@ -468,94 +468,99 @@ class ProviderRegistry:
             return False, f"Connection failed: {e}"
 
     async def _test_openai_provider(self, provider: ProviderConfig) -> tuple[bool, str]:
-        """Test an OpenAI-protocol provider with a minimal chat completion request.
+        """Test an OpenAI-protocol provider.
 
-        Uses /chat/completions with an invalid model name. A 200 means full
-        success; a 400/404 (model not found) still proves auth works.
-        Only 401/403 indicate real auth failures.
-        Falls back to /models list if chat endpoint is unavailable.
+        Strategy:
+        - Official OpenAI: GET /v1/models (zero token cost, lists available models)
+        - Non-official (proxy): POST /chat/completions with the provider's first
+          configured model and max_tokens=1 (minimal real request)
         """
         import httpx
+        from xyz_agent_context.agent_framework.model_catalog import is_official_provider
 
         base_url = provider.base_url or "https://api.openai.com/v1"
-        url = f"{base_url}/chat/completions"
+        headers: dict[str, str] = {"Authorization": f"Bearer {provider.api_key}"}
 
-        headers: dict[str, str] = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {provider.api_key}",
-        }
-        payload = {
-            "model": "test-connectivity",
-            "max_tokens": 1,
-            "messages": [{"role": "user", "content": "hi"}],
-        }
-
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
-
-        if resp.status_code == 200:
-            return True, "Connected successfully"
-        elif resp.status_code in (400, 404, 422):
-            # Auth passed but model invalid — auth works
-            return True, "Authentication verified (API reachable)"
-        elif resp.status_code == 401:
-            return False, "Authentication failed (invalid API key)"
-        elif resp.status_code == 403:
-            return False, "Access denied (check API key permissions)"
-        elif resp.status_code in (502, 503):
-            # Upstream error with a test model name — auth likely works,
-            # the proxy just can't route the fake model name
-            return True, "API reachable (upstream returned 502/503 for test model)"
+        if is_official_provider("openai", provider.base_url):
+            # Official: GET /models — no token cost
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(f"{base_url}/models", headers=headers)
+            if resp.status_code == 200:
+                return True, "Connected successfully"
+            elif resp.status_code == 401:
+                return False, "Authentication failed (invalid API key)"
+            elif resp.status_code == 403:
+                return False, "Access denied (check API key permissions)"
+            else:
+                return False, f"HTTP {resp.status_code}: {resp.text[:200]}"
         else:
-            body = resp.text[:200]
-            return False, f"HTTP {resp.status_code}: {body}"
+            # Non-official: minimal chat completion with a real model name
+            test_model = provider.models[0] if provider.models else "test"
+            headers["Content-Type"] = "application/json"
+            payload = {"model": test_model, "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]}
+
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(f"{base_url}/chat/completions", json=payload, headers=headers)
+
+            return self._interpret_test_response(resp)
 
     async def _test_anthropic_provider(self, provider: ProviderConfig) -> tuple[bool, str]:
-        """Test an Anthropic-protocol provider with a minimal request.
+        """Test an Anthropic-protocol provider.
 
-        Sends a tiny messages request. A 200 means full success; a 400
-        (e.g., invalid model) still proves authentication works.
-        Only 401/403 indicate real auth failures.
+        Strategy:
+        - Official Anthropic: GET /v1/models (zero token cost)
+        - Non-official (proxy): POST /v1/messages with the provider's first
+          configured model and max_tokens=1 (minimal real request)
         """
         import httpx
+        from xyz_agent_context.agent_framework.model_catalog import is_official_provider
 
         base_url = provider.base_url or "https://api.anthropic.com"
-        url = f"{base_url}/v1/messages"
-
-        headers: dict[str, str] = {
-            "Content-Type": "application/json",
-            "anthropic-version": "2023-06-01",
-        }
+        headers: dict[str, str] = {"anthropic-version": "2023-06-01"}
         if provider.auth_type == AuthType.BEARER_TOKEN:
             headers["Authorization"] = f"Bearer {provider.api_key}"
         else:
             headers["X-Api-Key"] = provider.api_key
 
-        payload = {
-            "model": "test-connectivity",
-            "max_tokens": 1,
-            "messages": [{"role": "user", "content": "hi"}],
-        }
+        if is_official_provider("anthropic", provider.base_url):
+            # Official: GET /models — no token cost
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(f"{base_url}/v1/models", headers=headers)
+            if resp.status_code == 200:
+                return True, "Connected successfully"
+            elif resp.status_code == 401:
+                return False, "Authentication failed (invalid API key)"
+            elif resp.status_code == 403:
+                return False, "Access denied (check API key permissions)"
+            else:
+                return False, f"HTTP {resp.status_code}: {resp.text[:200]}"
+        else:
+            # Non-official: minimal messages request with a real model name
+            test_model = provider.models[0] if provider.models else "test"
+            headers["Content-Type"] = "application/json"
+            payload = {"model": test_model, "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]}
 
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(f"{base_url}/v1/messages", json=payload, headers=headers)
 
+            return self._interpret_test_response(resp)
+
+    @staticmethod
+    def _interpret_test_response(resp) -> tuple[bool, str]:
+        """Interpret HTTP response from a real model test request."""
         if resp.status_code == 200:
             return True, "Connected successfully"
         elif resp.status_code in (400, 404, 422):
-            # Auth passed but payload invalid (e.g., model not found) — auth works
+            # Auth passed, model/payload issue — auth works
             return True, "Authentication verified (API reachable)"
         elif resp.status_code == 401:
             return False, "Authentication failed (invalid API key)"
         elif resp.status_code == 403:
             return False, "Access denied (check API key permissions)"
-        elif resp.status_code in (502, 503):
-            # Upstream error with a test model name — auth likely works,
-            # the proxy just can't route the fake model name
-            return True, "API reachable (upstream returned 502/503 for test model)"
+        elif resp.status_code in (502, 503, 529):
+            return True, "API reachable (upstream temporarily unavailable)"
         else:
-            body = resp.text[:200]
-            return False, f"HTTP {resp.status_code}: {body}"
+            return False, f"HTTP {resp.status_code}: {resp.text[:200]}"
 
 
 # =============================================================================
