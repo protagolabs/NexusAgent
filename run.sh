@@ -1909,8 +1909,45 @@ do_configure() {
     echo ""
 
     # 2. LLM Providers
-    step "2/2" "LLM Providers (~/.nexusagent/llm_config.json)"
+    step "2/3" "LLM Providers (~/.nexusagent/llm_config.json)"
     configure_llm_providers
+
+    # 3. Google Gemini API Key (optional, for RAG)
+    step "3/3" "Gemini RAG Knowledge Base (optional)"
+    echo ""
+    echo -e "    ${DIM}The RAG module uses Google Gemini File Search to index and retrieve${RESET}"
+    echo -e "    ${DIM}documents. Without this key, RAG is unavailable but everything else works.${RESET}"
+    echo ""
+
+    # Show current value if exists
+    local current_gemini_key=""
+    if [ -f "${PROJECT_ROOT}/.env" ]; then
+        current_gemini_key=$(grep -oP '^GOOGLE_API_KEY="\K[^"]*' "${PROJECT_ROOT}/.env" 2>/dev/null || true)
+    fi
+    if [ -n "$current_gemini_key" ]; then
+        echo -e "    ${GREEN}✓${RESET} Currently set: ***${current_gemini_key: -4}"
+        read -rp "    Update Gemini API Key? [y/N] " update_gemini
+        if [[ "$update_gemini" != "y" && "$update_gemini" != "Y" ]]; then
+            success "Keeping existing Gemini API Key"
+        else
+            read -rp "    New Google Gemini API Key: " new_gemini_key
+            if [ -n "$new_gemini_key" ]; then
+                sed_inplace "s|^GOOGLE_API_KEY=.*|GOOGLE_API_KEY=\"${new_gemini_key}\"|" "${PROJECT_ROOT}/.env"
+                success "Gemini API Key updated"
+            fi
+        fi
+    else
+        echo -e "    ${DIM}Get key at: https://aistudio.google.com/apikey${RESET}"
+        read -rp "    Google Gemini API Key (Enter to skip): " gemini_key
+        if [ -n "$gemini_key" ]; then
+            if [ -f "${PROJECT_ROOT}/.env" ]; then
+                sed_inplace "s|^GOOGLE_API_KEY=.*|GOOGLE_API_KEY=\"${gemini_key}\"|" "${PROJECT_ROOT}/.env"
+            fi
+            success "Gemini API Key saved"
+        else
+            info "Skipped. RAG knowledge base will be unavailable."
+        fi
+    fi
 
     echo ""
     echo -e "  ${BOLD}${GREEN}Configuration complete.${RESET}"

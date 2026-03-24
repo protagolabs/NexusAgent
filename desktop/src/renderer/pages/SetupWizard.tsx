@@ -533,12 +533,32 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
               </>
             )}
 
-            {/* Claude Code notice */}
-            <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
-              <p className="text-xs text-amber-700">
-                <strong>Note:</strong> Claude Code (if installed) uses its own global API key config.
-                Run <code className="px-1 py-0.5 bg-amber-100 rounded text-[11px]">claude config</code> in terminal to set it separately.
+            {/* Google Gemini API Key (for RAG) */}
+            <div className="my-5 border-t border-gray-200" />
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700 mb-1">
+                Gemini RAG Knowledge Base
+              </h2>
+              <p className="text-[11px] text-gray-400 mb-3">
+                Optional. Enables the RAG (Retrieval-Augmented Generation) module powered by
+                Gemini File Search. Without this key, the RAG knowledge base feature is unavailable
+                but all other Agent capabilities work normally.
               </p>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={values['GOOGLE_API_KEY'] || ''}
+                  onChange={(e) => setValues((v) => ({ ...v, GOOGLE_API_KEY: e.target.value }))}
+                  placeholder="Google Gemini API Key"
+                  className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+                <button
+                  onClick={() => window.nexus.openExternal('https://aistudio.google.com/apikey')}
+                  className="titlebar-no-drag px-3 py-1.5 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 whitespace-nowrap border border-blue-200"
+                >
+                  Get Key
+                </button>
+              </div>
             </div>
 
             {/* Finish button */}
