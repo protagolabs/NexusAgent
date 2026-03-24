@@ -41,13 +41,11 @@ class AuthType(str, Enum):
     OAUTH = "oauth"                  # Claude Code CLI managed OAuth (no key needed)
 
 
-class ProviderPreset(str, Enum):
-    """Built-in provider templates for quick setup"""
-    NETMIND = "netmind"
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    CLAUDE_OAUTH = "claude_oauth"
-    CUSTOM = "custom"
+class ProviderSource(str, Enum):
+    """How this provider was created (informational, not logic-driving)"""
+    NETMIND = "netmind"            # Auto-created from NetMind one-key card
+    CLAUDE_OAUTH = "claude_oauth"  # Auto-created from Claude Code Login card
+    USER = "user"                  # User-configured (Anthropic/OpenAI protocol cards)
 
 
 class SlotName(str, Enum):
@@ -71,11 +69,12 @@ class ProviderConfig(BaseModel):
     """
     provider_id: str = Field(..., description="Unique identifier, e.g. 'prov_a1b2c3d4'")
     name: str = Field(..., description="Display name, e.g. 'NetMind (Anthropic)'")
-    preset: ProviderPreset = Field(..., description="Provider template type")
+    source: ProviderSource = Field(..., description="How this provider was created")
     protocol: ProviderProtocol = Field(..., description="API protocol")
     auth_type: AuthType = Field(..., description="Authentication method")
     api_key: str = Field(default="", description="API key or token")
     base_url: str = Field(default="", description="API base URL (empty = provider default)")
+    models: list[str] = Field(default_factory=list, description="Available model IDs on this provider")
     linked_group: str = Field(default="", description="Group ID linking providers from the same key")
     is_active: bool = Field(default=True, description="Whether this provider is enabled")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

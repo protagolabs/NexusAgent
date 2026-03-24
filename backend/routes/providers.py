@@ -5,15 +5,14 @@
 @description: REST API routes for LLM provider and slot configuration
 
 Provides endpoints for:
-- GET    /api/providers           - Get current provider & slot config
-- POST   /api/providers/preset    - Apply a preset (netmind / openai / anthropic / claude_oauth)
-- POST   /api/providers           - Add a custom provider
-- DELETE /api/providers/{id}      - Remove a provider (and its linked group)
-- POST   /api/providers/{id}/test - Test provider connectivity
-- PUT    /api/slots/{slot_name}   - Update slot assignment (provider + model)
-- GET    /api/slots/validate      - Validate all slots are configured
-- GET    /api/providers/models/{provider_id} - Get available models for a provider
-- GET    /api/providers/catalog    - Get full model catalog for all presets
+- GET    /api/providers              - Get current provider & slot config
+- POST   /api/providers              - Add a provider (atomic, 4 card types)
+- DELETE /api/providers/{id}         - Remove a provider (and its linked group)
+- POST   /api/providers/{id}/test    - Test provider connectivity
+- PUT    /api/providers/{id}/models  - Update provider's model list
+- PUT    /api/providers/slots/{slot} - Update slot assignment (provider + model)
+- GET    /api/providers/slots/validate - Validate all slots are configured
+- GET    /api/providers/catalog      - Get known model metadata + suggestions
 """
 
 from __future__ import annotations
@@ -26,12 +25,12 @@ from pydantic import BaseModel
 
 from xyz_agent_context.agent_framework.provider_registry import provider_registry
 from xyz_agent_context.agent_framework.model_catalog import (
-    get_all_presets_summary,
-    get_models_for_slot,
+    get_all_known_models,
+    get_suggested_models,
+    get_model_display_name,
 )
 from xyz_agent_context.schema.provider_schema import (
     LLMConfig,
-    ProviderPreset,
     SlotName,
     SLOT_REQUIRED_PROTOCOLS,
 )
@@ -43,27 +42,23 @@ router = APIRouter()
 # Request/Response Models
 # =============================================================================
 
-class ApplyPresetRequest(BaseModel):
-    preset: str  # "netmind" | "openai" | "anthropic" | "claude_oauth"
-    api_key: str = ""
-
-
-class MergePresetRequest(BaseModel):
-    preset: str
-    api_key: str = ""
-
-
-class AddCustomProviderRequest(BaseModel):
-    name: str
-    protocol: str  # "openai" | "anthropic"
-    auth_type: str  # "api_key" | "bearer_token"
-    api_key: str
-    base_url: str
+class AddProviderRequest(BaseModel):
+    """Unified request for adding a provider (all 4 card types)"""
+    card_type: str          # "netmind" | "claude_oauth" | "anthropic" | "openai"
+    name: str = ""          # Display name (for anthropic/openai cards)
+    api_key: str = ""       # API key (not needed for claude_oauth)
+    base_url: str = ""      # Base URL (defaults to official if empty)
+    auth_type: str = "api_key"  # "api_key" | "bearer_token"
+    models: list[str] = []  # User-specified model IDs
 
 
 class SetSlotRequest(BaseModel):
     provider_id: str
     model: str
+
+
+class UpdateModelsRequest(BaseModel):
+    models: list[str]
 
 
 # =============================================================================
@@ -77,7 +72,7 @@ def _get_or_empty_config() -> LLMConfig:
 
 
 def _config_to_response(config: LLMConfig) -> dict:
-    """Convert LLMConfig to API response dict with slot protocol info."""
+    """Convert LLMConfig to API response dict with masked api_key."""
     # Build providers list with masked api_key
     providers = {}
     for pid, prov in config.providers.items():
@@ -119,61 +114,29 @@ async def get_providers():
     return {"success": True, "data": _config_to_response(config)}
 
 
-@router.post("/preset")
-async def apply_preset(req: ApplyPresetRequest):
-    """
-    Apply a preset configuration (replaces existing config).
-
-    This is the "quick setup" path: user picks a provider type,
-    enters one API key, and the system auto-configures everything.
-    """
-    try:
-        config = provider_registry.apply_preset(req.preset, req.api_key)
-        provider_registry.save(config)
-        errors = provider_registry.validate(config)
-        return {
-            "success": True,
-            "data": _config_to_response(config),
-            "validation_errors": errors,
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post("/merge")
-async def merge_preset(req: MergePresetRequest):
-    """
-    Add a preset's providers to the existing config without replacing it.
-
-    Useful when the user has e.g. Claude OAuth for agent slot but wants
-    to add OpenAI for embedding/helper_llm slots.
-    """
-    try:
-        config = _get_or_empty_config()
-        config = provider_registry.merge_preset(config, req.preset, req.api_key)
-        provider_registry.save(config)
-        return {"success": True, "data": _config_to_response(config)}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @router.post("")
-async def add_custom_provider(req: AddCustomProviderRequest):
-    """Add a user-defined custom provider."""
+async def add_provider(req: AddProviderRequest):
+    """
+    Atomic add of a provider (or two for NetMind).
+
+    Card types:
+    - "netmind": one API key → 2 providers (anthropic + openai). Unique.
+    - "claude_oauth": OAuth login → 1 anthropic provider. Unique.
+    - "anthropic": user-configured anthropic-protocol provider. Can have multiple.
+    - "openai": user-configured openai-protocol provider. Can have multiple.
+    """
     try:
-        config = _get_or_empty_config()
-        config, provider_id = provider_registry.add_custom_provider(
-            config,
+        config, new_ids = provider_registry.add_provider(
+            card_type=req.card_type,
             name=req.name,
-            protocol=req.protocol,
-            auth_type=req.auth_type,
             api_key=req.api_key,
             base_url=req.base_url,
+            auth_type=req.auth_type,
+            models=req.models if req.models else None,
         )
-        provider_registry.save(config)
         return {
             "success": True,
-            "provider_id": provider_id,
+            "provider_ids": new_ids,
             "data": _config_to_response(config),
         }
     except ValueError as e:
@@ -202,6 +165,18 @@ async def test_provider(provider_id: str):
     prov = config.providers[provider_id]
     success, message = await provider_registry.test_provider(prov)
     return {"success": success, "message": message}
+
+
+@router.put("/{provider_id}/models")
+async def update_provider_models(provider_id: str, req: UpdateModelsRequest):
+    """Update the available models list for a provider."""
+    config = _get_or_empty_config()
+    try:
+        config = provider_registry.update_provider_models(config, provider_id, req.models)
+        provider_registry.save(config)
+        return {"success": True, "data": _config_to_response(config)}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.put("/slots/{slot_name}")
@@ -233,53 +208,23 @@ async def validate_slots():
     }
 
 
-@router.get("/models/{provider_id}")
-async def get_provider_models(provider_id: str, slot: Optional[str] = None):
-    """
-    Get available models for a provider.
-
-    For preset providers, returns models from the static catalog.
-    For custom providers, returns an empty list (user specifies manually).
-    Optionally filter by slot type.
-    """
-    config = _get_or_empty_config()
-    if provider_id not in config.providers:
-        raise HTTPException(status_code=404, detail=f"Provider '{provider_id}' not found")
-
-    prov = config.providers[provider_id]
-    preset = prov.preset.value if hasattr(prov.preset, "value") else prov.preset
-
-    if preset == "custom":
-        return {"success": True, "models": []}
-
-    if slot:
-        models = get_models_for_slot(preset, slot)
-    else:
-        # Return all models for this preset
-        from xyz_agent_context.agent_framework.model_catalog import _CATALOG
-        models = _CATALOG.get(preset, [])
-
-    return {
-        "success": True,
-        "models": [
-            {
-                "model_id": m.model_id,
-                "display_name": m.display_name,
-                "slot_types": m.slot_types,
-                "dimensions": m.dimensions,
-                "is_default": m.is_default,
-            }
-            for m in models
-        ],
-    }
-
-
 @router.get("/catalog")
 async def get_catalog():
-    """Get the full model catalog for all presets (for frontend dropdown population)."""
+    """
+    Get known model metadata and suggested models for each protocol.
+
+    Returns:
+    - known_models: metadata dict (dimensions, max_output_tokens) for all known models
+    - suggestions: suggested model lists per protocol (for UI pre-population)
+    - slot_protocols: which protocols each slot requires
+    """
     return {
         "success": True,
-        "catalog": get_all_presets_summary(),
+        "known_models": get_all_known_models(),
+        "suggestions": {
+            "anthropic": get_suggested_models("anthropic"),
+            "openai": get_suggested_models("openai"),
+        },
         "slot_protocols": {
             slot.value: [p.value for p in protos]
             for slot, protos in SLOT_REQUIRED_PROTOCOLS.items()
@@ -310,24 +255,19 @@ async def get_claude_status():
         "expires_at": None,
     }
 
-    # Check CLI installed
     import shutil
     if shutil.which("claude"):
         result["cli_installed"] = True
 
-    # Check credentials file
     if creds_file.is_file():
         try:
             data = _json.loads(creds_file.read_text(encoding="utf-8"))
-            # credentials.json has various formats; look for any OAuth token
             if isinstance(data, dict):
-                # Check for oauth tokens
                 for key in ("accessToken", "oauthToken", "claudeAiOauth"):
                     if data.get(key):
                         result["logged_in"] = True
                         result["expires_at"] = data.get("expiresAt")
                         break
-                # Also check nested format
                 if not result["logged_in"] and data.get("oauth"):
                     result["logged_in"] = True
                     result["expires_at"] = data["oauth"].get("expiresAt")
@@ -343,12 +283,7 @@ async def get_claude_status():
 
 @router.get("/embeddings/status")
 async def get_embedding_status():
-    """
-    Get embedding migration status for the current model.
-
-    Returns per-entity-type counts of total/migrated/missing vectors,
-    plus any in-progress migration progress.
-    """
+    """Get embedding migration status for the current model."""
     from xyz_agent_context.utils.db_factory import get_db_client
     from xyz_agent_context.services.embedding_migration_service import EmbeddingMigrationService
 
@@ -360,12 +295,7 @@ async def get_embedding_status():
 
 @router.post("/embeddings/rebuild")
 async def rebuild_embeddings(background_tasks: BackgroundTasks):
-    """
-    Trigger embedding rebuild for the current model.
-
-    Runs in the background. Poll GET /embeddings/status for progress.
-    Returns immediately with the initial status.
-    """
+    """Trigger embedding rebuild for the current model. Runs in background."""
     from xyz_agent_context.utils.db_factory import get_db_client
     from xyz_agent_context.services.embedding_migration_service import (
         EmbeddingMigrationService,
@@ -382,8 +312,6 @@ async def rebuild_embeddings(background_tasks: BackgroundTasks):
 
     db = await get_db_client()
     service = EmbeddingMigrationService(db)
-
-    # Run in background
     background_tasks.add_task(service.rebuild_all)
 
     return {

@@ -1,8 +1,12 @@
 /**
- * ProviderSettings - LLM Provider configuration for the web frontend
+ * @file ProviderSettings.tsx
+ * @description LLM Provider configuration for the web frontend (settings panel)
  *
- * Allows users to configure providers and slots after initial setup.
- * Uses the bioluminescent terminal design system.
+ * Two-layer architecture (same as desktop ProviderConfigView):
+ *   Layer 1 — Provider Atomic Cards: add/remove providers
+ *   Layer 2 — Slot Model Selection: 3 tabs with green/red indicators
+ *
+ * Uses the bioluminescent terminal design system CSS variables.
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -10,15 +14,18 @@ import { cn } from '@/lib/utils'
 
 const API_BASE = ''  // Relative — Vite proxy handles /api/*
 
-type PresetType = 'netmind' | 'anthropic_openai' | 'claude_openai' | 'custom'
+// =============================================================================
+// Types
+// =============================================================================
 
 interface ProviderSummary {
   provider_id: string
   name: string
-  preset: string
+  source: string
   protocol: string
   auth_type: string
   is_active: boolean
+  models: string[]
   api_key_masked?: string
 }
 
@@ -32,111 +39,201 @@ interface SlotData {
   required_protocols: string[]
 }
 
-interface ModelOption {
+interface KnownModelMeta {
   model_id: string
   display_name: string
-  slot_types: string[]
   dimensions: number | null
-  is_default: boolean
+  max_output_tokens: number | null
 }
 
-const SLOT_META: Record<string, { label: string; desc: string; protocol: string }> = {
-  agent: { label: 'Agent', desc: 'Main dialogue', protocol: 'anthropic' },
-  embedding: { label: 'Embedding', desc: 'Vector search', protocol: 'openai' },
-  helper_llm: { label: 'Helper LLM', desc: 'Auxiliary tasks', protocol: 'openai' },
-}
-
-const PRESETS: { value: PresetType; label: string; desc: string }[] = [
-  { value: 'netmind', label: 'NetMind', desc: 'One key for everything' },
-  { value: 'anthropic_openai', label: 'Anthropic + OpenAI', desc: 'Separate keys' },
-  { value: 'claude_openai', label: 'Claude OAuth + OpenAI', desc: 'OAuth + API key' },
-  { value: 'custom', label: 'Custom', desc: 'Manual configuration' },
+const SLOT_DEFS: { key: string; label: string; desc: string; protocol: string }[] = [
+  { key: 'agent', label: 'Agent', desc: 'Main dialogue', protocol: 'anthropic' },
+  { key: 'embedding', label: 'Embedding', desc: 'Vector search', protocol: 'openai' },
+  { key: 'helper_llm', label: 'Helper LLM', desc: 'Auxiliary tasks', protocol: 'openai' },
 ]
 
-export function ProviderSettings() {
-  const [preset, setPreset] = useState<PresetType>('netmind')
-  const [netmindKey, setNetmindKey] = useState('')
-  const [anthropicKey, setAnthropicKey] = useState('')
-  const [openaiKey, setOpenaiKey] = useState('')
-  const [customName, setCustomName] = useState('')
-  const [customProtocol, setCustomProtocol] = useState<'openai' | 'anthropic'>('openai')
-  const [customAuthType, setCustomAuthType] = useState<'api_key' | 'bearer_token'>('api_key')
-  const [customKey, setCustomKey] = useState('')
-  const [customUrl, setCustomUrl] = useState('')
+// =============================================================================
+// Model Bubble Tag Input
+// =============================================================================
 
+function ModelBubbleInput({
+  models, onChange, placeholder = 'Model name'
+}: {
+  models: string[]; onChange: (m: string[]) => void; placeholder?: string
+}) {
+  const [input, setInput] = useState('')
+  const addModel = () => {
+    const v = input.trim()
+    if (v && !models.includes(v)) onChange([...models, v])
+    setInput('')
+  }
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1 mb-1">
+        {models.map((m) => (
+          <span key={m} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20">
+            {m}
+            <button onClick={() => onChange(models.filter((x) => x !== m))} className="text-[var(--accent-primary)]/50 hover:text-[var(--accent-primary)] ml-0.5">&times;</button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-1">
+        <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addModel() } }}
+          placeholder={placeholder}
+          className="flex-1 px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
+        <button onClick={addModel} disabled={!input.trim()}
+          className="px-1.5 py-1 text-[10px] rounded border border-[var(--accent-primary)]/20 text-[var(--accent-primary)] bg-[var(--accent-primary)]/5 hover:bg-[var(--accent-primary)]/10 disabled:opacity-30">
+          + Add
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// Main Component
+// =============================================================================
+
+export function ProviderSettings() {
   const [providers, setProviders] = useState<Record<string, ProviderSummary>>({})
   const [slots, setSlots] = useState<Record<string, SlotData>>({})
-  const [catalog, setCatalog] = useState<Record<string, ModelOption[]>>({})
-  const [applying, setApplying] = useState(false)
+  const [knownModels, setKnownModels] = useState<Record<string, KnownModelMeta>>({})
   const [error, setError] = useState('')
-  const [collapsed, setCollapsed] = useState(true)  // Start collapsed if already configured
+  const [collapsed, setCollapsed] = useState(true)
   const [claudeStatus, setClaudeStatus] = useState<{ cli_installed: boolean; logged_in: boolean; expires_at: string | null } | null>(null)
 
-  // Load
+  // NetMind card
+  const [netmindKey, setNetmindKey] = useState('')
+  const [netmindAdding, setNetmindAdding] = useState(false)
+
+  // Protocol form
+  const [showForm, setShowForm] = useState<'anthropic' | 'openai' | null>(null)
+  const [formName, setFormName] = useState('')
+  const [formUrl, setFormUrl] = useState('')
+  const [formKey, setFormKey] = useState('')
+  const [formAuth, setFormAuth] = useState<'api_key' | 'bearer_token'>('api_key')
+  const [formModels, setFormModels] = useState<string[]>([])
+  const [formAdding, setFormAdding] = useState(false)
+
+  // Slot tab
+  const [activeTab, setActiveTab] = useState('agent')
+
+  // Testing
+  const [testing, setTesting] = useState<string | null>(null)
+  const [testResults, setTestResults] = useState<Record<string, { ok: boolean; msg: string }>>({})
+
+  // ---- Data loading ----
   const refreshConfig = useCallback(async () => {
     try {
       const [cfgRes, catRes, claudeRes] = await Promise.all([
-        fetch(`${API_BASE}/api/providers`).then(r => r.json()),
-        fetch(`${API_BASE}/api/providers/catalog`).then(r => r.json()),
-        fetch(`${API_BASE}/api/providers/claude-status`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/providers`).then((r) => r.json()),
+        fetch(`${API_BASE}/api/providers/catalog`).then((r) => r.json()),
+        fetch(`${API_BASE}/api/providers/claude-status`).then((r) => r.json()).catch(() => null),
       ])
       if (claudeRes?.success) setClaudeStatus(claudeRes.data)
       if (cfgRes.success) {
         setProviders(cfgRes.data.providers)
         setSlots(cfgRes.data.slots)
-        // Auto-collapse if already configured
-        const allReady = ['agent', 'embedding', 'helper_llm'].every(
-          s => cfgRes.data.slots[s]?.config?.provider_id && cfgRes.data.slots[s]?.config?.model
+        const allReady = SLOT_DEFS.every(
+          (s) => cfgRes.data.slots[s.key]?.config?.provider_id && cfgRes.data.slots[s.key]?.config?.model
         )
         if (allReady) setCollapsed(true)
       }
-      if (catRes.success) setCatalog(catRes.catalog)
+      if (catRes.success) setKnownModels(catRes.known_models)
     } catch {}
   }, [])
 
   useEffect(() => { refreshConfig() }, [refreshConfig])
 
-  const hasProviders = Object.keys(providers).length > 0
-  const allSlotsReady = ['agent', 'embedding', 'helper_llm'].every(
-    s => slots[s]?.config?.provider_id && slots[s]?.config?.model
+  const providerList = Object.values(providers)
+  const hasProviders = providerList.length > 0
+  const hasNetMind = providerList.some((p) => p.source === 'netmind')
+  const hasClaude = providerList.some((p) => p.source === 'claude_oauth')
+  const allSlotsReady = SLOT_DEFS.every(
+    (s) => slots[s.key]?.config?.provider_id && slots[s.key]?.config?.model
   )
 
-  const handleApply = async () => {
-    setApplying(true); setError('')
+  // ---- Provider actions ----
+  const addProvider = async (body: Record<string, unknown>) => {
+    setError('')
     try {
-      if (preset === 'netmind') {
-        if (!netmindKey.trim()) { setError('Enter NetMind API Key'); setApplying(false); return }
-        await fetch(`${API_BASE}/api/providers/preset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: 'netmind', api_key: netmindKey.trim() }) })
-      } else if (preset === 'anthropic_openai') {
-        if (!anthropicKey.trim() || !openaiKey.trim()) { setError('Enter both keys'); setApplying(false); return }
-        await fetch(`${API_BASE}/api/providers/preset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: 'anthropic', api_key: anthropicKey.trim() }) })
-        await fetch(`${API_BASE}/api/providers/merge`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: 'openai', api_key: openaiKey.trim() }) })
-      } else if (preset === 'claude_openai') {
-        if (!openaiKey.trim()) { setError('Enter OpenAI API Key'); setApplying(false); return }
-        await fetch(`${API_BASE}/api/providers/preset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: 'claude_oauth', api_key: '' }) })
-        await fetch(`${API_BASE}/api/providers/merge`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: 'openai', api_key: openaiKey.trim() }) })
-      } else if (preset === 'custom') {
-        if (!customKey.trim() || !customUrl.trim()) { setError('Fill all fields'); setApplying(false); return }
-        await fetch(`${API_BASE}/api/providers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: customName || 'Custom', protocol: customProtocol, auth_type: customAuthType, api_key: customKey.trim(), base_url: customUrl.trim() }) })
-      }
+      const res = await fetch(`${API_BASE}/api/providers`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((r) => r.json())
+      if (!res.success) { setError(res.detail || 'Failed'); return false }
       await refreshConfig()
-      setCollapsed(false)  // Show slots after applying
-    } catch { setError('Network error') }
-    setApplying(false)
+      return true
+    } catch { setError('Network error'); return false }
   }
 
-  const handleSlotChange = async (slotName: string, providerId: string, model: string) => {
-    await fetch(`${API_BASE}/api/providers/slots/${slotName}`, {
+  const handleAddNetMind = async () => {
+    if (!netmindKey.trim()) { setError('Enter NetMind API Key'); return }
+    setNetmindAdding(true)
+    const ok = await addProvider({ card_type: 'netmind', api_key: netmindKey.trim() })
+    if (ok) { setNetmindKey(''); setCollapsed(false) }
+    setNetmindAdding(false)
+  }
+
+  const handleAddClaudeOAuth = async () => {
+    await addProvider({ card_type: 'claude_oauth' })
+    setCollapsed(false)
+  }
+
+  const handleAddProtocol = async () => {
+    if (!showForm || !formKey.trim()) { setError('Enter API key'); return }
+    setFormAdding(true)
+    const ok = await addProvider({
+      card_type: showForm,
+      name: formName.trim() || undefined,
+      api_key: formKey.trim(),
+      base_url: formUrl.trim(),
+      auth_type: formAuth,
+      models: formModels,
+    })
+    if (ok) {
+      setShowForm(null); setFormName(''); setFormUrl(''); setFormKey(''); setFormAuth('api_key'); setFormModels([])
+      setCollapsed(false)
+    }
+    setFormAdding(false)
+  }
+
+  const handleDelete = async (id: string) => {
+    await fetch(`${API_BASE}/api/providers/${id}`, { method: 'DELETE' })
+    await refreshConfig()
+  }
+
+  const handleTest = async (id: string) => {
+    setTesting(id)
+    try {
+      const res = await fetch(`${API_BASE}/api/providers/${id}/test`, { method: 'POST' }).then((r) => r.json())
+      setTestResults((p) => ({ ...p, [id]: { ok: res.success, msg: res.message } }))
+    } catch {
+      setTestResults((p) => ({ ...p, [id]: { ok: false, msg: 'Network error' } }))
+    }
+    setTesting(null)
+  }
+
+  const handleSlotChange = async (slot: string, pid: string, model: string) => {
+    await fetch(`${API_BASE}/api/providers/slots/${slot}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider_id: providerId, model })
+      body: JSON.stringify({ provider_id: pid, model }),
     })
     await refreshConfig()
   }
 
-  const getModels = (provPreset: string, slot: string): ModelOption[] =>
-    (catalog[provPreset] || []).filter(m => m.slot_types.includes(slot))
+  const openForm = (protocol: 'anthropic' | 'openai') => {
+    setShowForm(protocol)
+    setFormName('')
+    setFormUrl(protocol === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1')
+    setFormKey(''); setFormAuth('api_key'); setFormModels([]); setError('')
+  }
 
-  // Collapsed summary view
+  const getProvidersForSlot = (protocol: string) =>
+    providerList.filter((p) => p.protocol === protocol && p.is_active)
+
+  // ---- Collapsed summary ----
   if (collapsed && allSlotsReady) {
     return (
       <div className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
@@ -147,18 +244,15 @@ export function ProviderSettings() {
             </div>
             <span className="text-xs text-[var(--text-secondary)]">LLM Providers configured</span>
           </div>
-          <button onClick={() => setCollapsed(false)}
-            className="text-[10px] text-[var(--accent-primary)] hover:underline">
-            Edit
-          </button>
+          <button onClick={() => setCollapsed(false)} className="text-[10px] text-[var(--accent-primary)] hover:underline">Edit</button>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
-          {['agent', 'embedding', 'helper_llm'].map(s => {
-            const cfg = slots[s]?.config
+          {SLOT_DEFS.map((s) => {
+            const cfg = slots[s.key]?.config
             const prov = cfg?.provider_id ? providers[cfg.provider_id] : null
             return (
-              <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]">
-                {SLOT_META[s].label}: {prov?.name || '?'} / {cfg?.model || '?'}
+              <span key={s.key} className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]">
+                {s.label}: {prov?.name || '?'} / {cfg?.model || '?'}
               </span>
             )
           })}
@@ -167,191 +261,229 @@ export function ProviderSettings() {
     )
   }
 
+  // ---- Full view ----
   return (
     <div className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-[var(--text-primary)]">LLM Providers</span>
         {allSlotsReady && (
-          <button onClick={() => setCollapsed(true)}
-            className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-            Collapse
-          </button>
+          <button onClick={() => setCollapsed(true)} className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">Collapse</button>
         )}
       </div>
 
-      {/* Preset selector */}
-      <div className="grid grid-cols-2 gap-1.5">
-        {PRESETS.map(p => (
-          <button key={p.value} onClick={() => { setPreset(p.value); setError('') }}
-            className={cn(
-              'p-2 rounded-lg border text-left transition-colors',
-              preset === p.value
-                ? 'border-[var(--accent-primary)]/50 bg-[var(--accent-glow)]'
-                : 'border-[var(--border-subtle)] hover:border-[var(--border-default)]'
-            )}>
-            <span className="text-[11px] font-medium text-[var(--text-primary)]">{p.label}</span>
-            <p className="text-[9px] text-[var(--text-tertiary)]">{p.desc}</p>
-          </button>
-        ))}
+      {/* ---- NetMind Card ---- */}
+      <div className="p-2.5 rounded-lg border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[11px] font-medium text-[var(--text-primary)]">NetMind</span>
+          <span className="text-[8px] px-1 py-0.5 rounded-full bg-[var(--accent-secondary)]/20 text-[var(--accent-secondary)]">Recommended</span>
+          {hasNetMind && <span className="text-[var(--color-success)] text-[10px] ml-auto">{'\u2713'}</span>}
+        </div>
+        <p className="text-[9px] text-[var(--text-tertiary)] mb-1.5">One API key covers Anthropic + OpenAI protocol endpoints.</p>
+        {!hasNetMind && (
+          <div className="flex gap-1.5">
+            <input type="password" value={netmindKey} onChange={(e) => setNetmindKey(e.target.value)} placeholder="NetMind API Key"
+              className="flex-1 px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
+            <button onClick={handleAddNetMind} disabled={netmindAdding}
+              className="px-2 py-1 text-[10px] font-medium rounded bg-[var(--accent-secondary)]/20 text-[var(--accent-secondary)] hover:bg-[var(--accent-secondary)]/30 disabled:opacity-40">
+              {netmindAdding ? '...' : 'Add'}
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Key inputs */}
-      <div className="space-y-2">
-        {preset === 'netmind' && (
-          <input type="password" value={netmindKey} onChange={e => setNetmindKey(e.target.value)}
-            placeholder="NetMind API Key"
-            className="w-full px-3 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
-        )}
-        {preset === 'anthropic_openai' && (
-          <>
-            <input type="password" value={anthropicKey} onChange={e => setAnthropicKey(e.target.value)}
-              placeholder="Anthropic API Key (sk-ant-...)"
-              className="w-full px-3 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
-            <input type="password" value={openaiKey} onChange={e => setOpenaiKey(e.target.value)}
-              placeholder="OpenAI API Key (sk-...)"
-              className="w-full px-3 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
-          </>
-        )}
-        {preset === 'claude_openai' && (
-          <>
-            <div className="p-2.5 rounded-lg border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/5">
-              <p className="text-[11px] text-[var(--text-secondary)] mb-1.5 font-medium">Claude Code Authentication (Agent Slot)</p>
-              {/* Live status */}
-              {claudeStatus && (
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={cn(
-                    'inline-block w-1.5 h-1.5 rounded-full',
-                    claudeStatus.logged_in ? 'bg-[var(--color-success)]' :
-                    claudeStatus.cli_installed ? 'bg-[var(--color-warning)]' : 'bg-[var(--text-tertiary)]'
-                  )} />
-                  <span className="text-[10px] text-[var(--text-secondary)]">
-                    {claudeStatus.logged_in
-                      ? `Logged in${claudeStatus.expires_at ? ` (expires: ${new Date(claudeStatus.expires_at).toLocaleDateString()})` : ''}`
-                      : claudeStatus.cli_installed
-                        ? 'CLI installed but not logged in'
-                        : 'CLI not installed'}
-                  </span>
-                </div>
-              )}
-              {/* Guidance */}
-              {(!claudeStatus || !claudeStatus.logged_in) && (
-                <>
-                  <p className="text-[10px] text-[var(--text-tertiary)] leading-relaxed">
-                    {claudeStatus?.cli_installed
-                      ? 'Please login in your terminal:'
-                      : 'Install Claude Code CLI first, then login:'}
-                  </p>
-                  <code className="block mt-1.5 px-2 py-1 text-[10px] font-mono rounded bg-[var(--bg-tertiary)] text-[var(--accent-primary)] select-all">
-                    {claudeStatus?.cli_installed ? 'claude login' : 'npm install -g @anthropic-ai/claude-code && claude login'}
-                  </code>
-                  <p className="text-[9px] text-[var(--text-tertiary)] mt-1.5">
-                    After login, click "Apply" below. The agent slot will use your Claude Code OAuth credentials automatically.
-                  </p>
-                </>
-              )}
+      {/* ---- Claude Code Card ---- */}
+      <div className="p-2.5 rounded-lg border border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[11px] font-medium text-[var(--text-primary)]">Claude Code Login</span>
+          <span className="text-[8px] px-1 py-0.5 rounded-full bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]">Recommended</span>
+          {hasClaude && <span className="text-[var(--color-success)] text-[10px] ml-auto">{'\u2713'}</span>}
+        </div>
+        <p className="text-[9px] text-[var(--text-tertiary)] mb-1.5">OAuth login via Claude Code CLI. No API key needed.</p>
+        {!hasClaude && claudeStatus && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className={cn('inline-block w-1.5 h-1.5 rounded-full',
+                claudeStatus.logged_in ? 'bg-[var(--color-success)]' :
+                claudeStatus.cli_installed ? 'bg-[var(--color-warning)]' : 'bg-[var(--text-tertiary)]'
+              )} />
+              <span className="text-[9px] text-[var(--text-secondary)]">
+                {claudeStatus.logged_in ? 'Logged in' : claudeStatus.cli_installed ? 'Not logged in' : 'CLI not installed'}
+              </span>
             </div>
-            <input type="password" value={openaiKey} onChange={e => setOpenaiKey(e.target.value)}
-              placeholder="OpenAI API Key for Embedding + Helper LLM (sk-...)"
-              className="w-full px-3 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
-          </>
+            {claudeStatus.logged_in && (
+              <button onClick={handleAddClaudeOAuth}
+                className="px-2 py-1 text-[10px] font-medium rounded bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/30">
+                Add as Provider
+              </button>
+            )}
+            {!claudeStatus.logged_in && (
+              <code className="block px-2 py-1 text-[9px] font-mono rounded bg-[var(--bg-tertiary)] text-[var(--accent-primary)] select-all">
+                {claudeStatus.cli_installed ? 'claude login' : 'npm i -g @anthropic-ai/claude-code && claude login'}
+              </code>
+            )}
+          </div>
         )}
-        {preset === 'custom' && (
-          <>
-            <div className="grid grid-cols-2 gap-1.5">
-              <input type="text" value={customName} onChange={e => setCustomName(e.target.value)}
-                placeholder="Provider name"
-                className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
-              <select value={customProtocol} onChange={e => setCustomProtocol(e.target.value as 'openai' | 'anthropic')}
-                className="px-2 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <select value={customAuthType} onChange={e => setCustomAuthType(e.target.value as 'api_key' | 'bearer_token')}
-                className="px-2 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
+      </div>
+
+      {/* ---- Add Protocol Buttons ---- */}
+      <div className="flex gap-1.5">
+        <button onClick={() => openForm('anthropic')}
+          className="flex-1 py-1.5 text-[10px] rounded border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]">
+          + Anthropic Protocol
+        </button>
+        <button onClick={() => openForm('openai')}
+          className="flex-1 py-1.5 text-[10px] rounded border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]">
+          + OpenAI Protocol
+        </button>
+      </div>
+
+      {/* ---- Protocol Form ---- */}
+      {showForm && (
+        <div className="p-2.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-tertiary)] space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-[var(--text-primary)]">
+              {showForm === 'anthropic' ? 'Anthropic' : 'OpenAI'} Protocol
+            </span>
+            <button onClick={() => setShowForm(null)} className="text-[9px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">Cancel</button>
+          </div>
+          <p className="text-[9px] text-[var(--text-tertiary)]">
+            {showForm === 'anthropic' ? 'Anthropic API or compatible endpoint.' : 'OpenAI API or compatible endpoint.'}
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)}
+              placeholder="Provider name"
+              className="px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
+            {showForm === 'anthropic' ? (
+              <select value={formAuth} onChange={(e) => setFormAuth(e.target.value as 'api_key' | 'bearer_token')}
+                className="px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
                 <option value="api_key">API Key</option>
                 <option value="bearer_token">Bearer Token</option>
               </select>
+            ) : (
+              <div /> /* Placeholder for grid alignment */
+            )}
+          </div>
+          <input type="text" value={formUrl} onChange={(e) => setFormUrl(e.target.value)}
+            placeholder="Base URL"
+            className="w-full px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
+          <input type="password" value={formKey} onChange={(e) => setFormKey(e.target.value)}
+            placeholder="API Key"
+            className="w-full px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
+          <div>
+            <label className="block text-[9px] text-[var(--text-tertiary)] mb-0.5">Available Models</label>
+            <ModelBubbleInput models={formModels} onChange={setFormModels} />
+          </div>
+          <button onClick={handleAddProtocol} disabled={formAdding || !formKey.trim()}
+            className="w-full py-1 text-[10px] font-medium rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20 hover:bg-[var(--accent-primary)]/20 disabled:opacity-40">
+            {formAdding ? 'Adding...' : 'Add Provider'}
+          </button>
+        </div>
+      )}
+
+      {error && <p className="text-[9px] text-[var(--color-error)]">{error}</p>}
+
+      {/* ---- Configured Providers ---- */}
+      {hasProviders && (
+        <div className="space-y-1">
+          <span className="text-[9px] text-[var(--text-tertiary)] uppercase tracking-wider">Providers</span>
+          {providerList.map((prov) => (
+            <div key={prov.provider_id} className="flex items-center justify-between p-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)]">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-medium text-[var(--text-primary)] truncate">{prov.name}</span>
+                  <span className="text-[8px] px-1 rounded bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] uppercase">{prov.protocol}</span>
+                </div>
+                <span className="text-[9px] text-[var(--text-tertiary)]">{prov.api_key_masked} · {prov.models.length} model(s)</span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => handleTest(prov.provider_id)} disabled={testing === prov.provider_id}
+                  className="px-1.5 py-0.5 text-[9px] text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/5 rounded disabled:opacity-40">
+                  {testing === prov.provider_id ? '...' : 'Test'}
+                </button>
+                <button onClick={() => handleDelete(prov.provider_id)}
+                  className="px-1.5 py-0.5 text-[9px] text-[var(--color-error)] hover:bg-[var(--color-error)]/5 rounded">Del</button>
+                {testResults[prov.provider_id] && (
+                  <span className={cn('text-[9px]', testResults[prov.provider_id].ok ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]')}>
+                    {testResults[prov.provider_id].msg}
+                  </span>
+                )}
+              </div>
             </div>
-            <input type="text" value={customUrl} onChange={e => setCustomUrl(e.target.value)}
-              placeholder="Base URL (https://...)"
-              className="w-full px-3 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
-            <input type="password" value={customKey} onChange={e => setCustomKey(e.target.value)}
-              placeholder="API Key"
-              className="w-full px-3 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
-          </>
-        )}
+          ))}
+        </div>
+      )}
 
-        <button onClick={handleApply} disabled={applying}
-          className={cn(
-            'w-full py-1.5 text-xs font-medium rounded-lg transition-all',
-            'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]',
-            'hover:bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/20',
-            'disabled:opacity-40'
-          )}>
-          {applying ? 'Applying...' : hasProviders ? 'Re-configure' : 'Apply'}
-        </button>
-        {error && <p className="text-[10px] text-[var(--color-error)]">{error}</p>}
-      </div>
-
-      {/* Slot configuration */}
+      {/* ---- Slot Tabs ---- */}
       {hasProviders && (
         <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
-          <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">Slots</span>
-          {['agent', 'embedding', 'helper_llm'].map(slotName => {
-            const meta = SLOT_META[slotName]
-            const slotData = slots[slotName]
-            const cfg = slotData?.config
-            const isReady = !!(cfg?.provider_id && cfg?.model)
-            const matchingProvs = Object.entries(providers)
-              .filter(([, p]) => p.protocol === meta.protocol && p.is_active)
-            const currentProv = cfg?.provider_id ? providers[cfg.provider_id] : null
-            const models = currentProv ? getModels(currentProv.preset, slotName) : []
+          <span className="text-[9px] text-[var(--text-tertiary)] uppercase tracking-wider">Model Assignment</span>
+
+          {/* Tab row */}
+          <div className="flex rounded-lg border border-[var(--border-subtle)] overflow-hidden">
+            {SLOT_DEFS.map((s) => {
+              const cfg = slots[s.key]?.config
+              const ready = !!(cfg?.provider_id && cfg?.model)
+              return (
+                <button key={s.key} onClick={() => setActiveTab(s.key)}
+                  className={cn('flex-1 py-1.5 text-[10px] font-medium transition-colors',
+                    activeTab === s.key ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]' : 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)]'
+                  )}>
+                  <span className={cn('inline-block w-1.5 h-1.5 rounded-full mr-1', ready ? 'bg-[var(--color-success)]' : 'bg-[var(--color-error)]')} />
+                  {s.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Active tab content */}
+          {SLOT_DEFS.filter((s) => s.key === activeTab).map((slot) => {
+            const cfg = slots[slot.key]?.config
+            const ready = !!(cfg?.provider_id && cfg?.model)
+            const matching = getProvidersForSlot(slot.protocol)
+            const curProv = cfg?.provider_id ? providers[cfg.provider_id] : null
 
             return (
-              <div key={slotName} className={cn(
-                'p-2 rounded-lg border',
-                isReady ? 'border-[var(--color-success)]/20 bg-[var(--color-success)]/5' : 'border-[var(--color-warning)]/20 bg-[var(--color-warning)]/5'
+              <div key={slot.key} className={cn('p-2 rounded-lg border',
+                ready ? 'border-[var(--color-success)]/20 bg-[var(--color-success)]/5' : 'border-[var(--color-error)]/20 bg-[var(--color-error)]/5'
               )}>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[11px] font-medium text-[var(--text-primary)]">
-                    {meta.label} <span className="text-[var(--text-tertiary)] font-normal">({meta.desc})</span>
+                    {slot.label} <span className="text-[var(--text-tertiary)] font-normal">({slot.desc}, {slot.protocol})</span>
                   </span>
-                  {isReady ? <span className="text-[var(--color-success)] text-xs">{'\u2713'}</span> : <span className="text-[10px] text-[var(--color-warning)]">Needed</span>}
+                  {ready ? <span className="text-[var(--color-success)] text-xs">{'\u2713'}</span> : <span className="text-[9px] text-[var(--color-error)]">Needed</span>}
                 </div>
-                {matchingProvs.length > 0 ? (
+                {matching.length > 0 ? (
                   <div className="grid grid-cols-2 gap-1.5">
                     <select value={cfg?.provider_id || ''}
-                      onChange={e => {
+                      onChange={(e) => {
                         const pid = e.target.value
                         const prov = providers[pid]
-                        if (prov) {
-                          const ms = getModels(prov.preset, slotName)
-                          const def = ms.find(m => m.is_default) || ms[0]
-                          if (def) handleSlotChange(slotName, pid, def.model_id)
-                        }
+                        if (prov?.models.length) handleSlotChange(slot.key, pid, prov.models[0])
+                        else if (prov) handleSlotChange(slot.key, pid, '')
                       }}
                       className="px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
                       <option value="">Provider...</option>
-                      {matchingProvs.map(([id, p]) => <option key={id} value={id}>{p.name}</option>)}
+                      {matching.map((p) => <option key={p.provider_id} value={p.provider_id}>{p.name}</option>)}
                     </select>
-                    {currentProv?.preset === 'custom' || currentProv?.preset === 'claude_oauth' ? (
-                      <input type="text" value={cfg?.model || ''}
-                        onChange={e => { if (cfg?.provider_id) handleSlotChange(slotName, cfg.provider_id, e.target.value) }}
-                        placeholder="Model name"
-                        className="px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none" />
-                    ) : (
+                    {curProv && curProv.models.length > 0 ? (
                       <select value={cfg?.model || ''}
-                        onChange={e => { if (cfg?.provider_id) handleSlotChange(slotName, cfg.provider_id, e.target.value) }}
+                        onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
                         className="px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
                         <option value="">Model...</option>
-                        {models.map(m => <option key={m.model_id} value={m.model_id}>{m.display_name}</option>)}
+                        {curProv.models.map((mid) => {
+                          const meta = knownModels[mid]
+                          return <option key={mid} value={mid}>{meta?.display_name || mid}{meta?.dimensions ? ` (${meta.dimensions}d)` : ''}</option>
+                        })}
                       </select>
+                    ) : (
+                      <input type="text" value={cfg?.model || ''}
+                        onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
+                        placeholder="Model name"
+                        className="px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none" />
                     )}
                   </div>
                 ) : (
-                  <p className="text-[10px] text-[var(--color-error)]">No {meta.protocol} provider. Add one above.</p>
+                  <p className="text-[9px] text-[var(--color-error)]">No {slot.protocol} provider. Add one above.</p>
                 )}
               </div>
             )

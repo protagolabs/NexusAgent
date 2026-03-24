@@ -2,173 +2,122 @@
 @file_name: model_catalog.py
 @author: Bin Liang
 @date: 2026-03-23
-@description: Static model catalog for each provider preset
+@description: Static model catalog — default model lists and metadata lookup
 
-Provides available model lists grouped by provider and slot type.
-This is a static preset; models will be updated as providers add new ones.
+Provides:
+- Default model lists for auto-populating providers (NetMind, Claude OAuth, etc.)
+- Metadata lookup for known models (embedding dimensions, max output tokens)
+
+The catalog is NOT indexed by preset/source. Instead:
+- get_default_models(source, protocol) returns default model IDs for pre-population
+- get_embedding_dimensions(model_id) / get_max_output_tokens(model_id) do global lookups
 
 Usage:
     from xyz_agent_context.agent_framework.model_catalog import (
-        get_models_for_slot,
-        get_default_model,
+        get_default_models,
         get_embedding_dimensions,
+        get_max_output_tokens,
     )
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
-
-from xyz_agent_context.schema.provider_schema import ProviderPreset, SlotName
 
 
 # =============================================================================
-# Model Definition
+# Model Metadata
 # =============================================================================
 
 @dataclass(frozen=True)
-class ModelInfo:
-    """Metadata for a single model"""
-    model_id: str                        # e.g. "BAAI/bge-m3"
-    display_name: str                    # e.g. "BGE-M3 (Multilingual)"
-    slot_types: list[str]                # Which slots can use this: ["embedding"], ["agent"], ["helper_llm"]
-    dimensions: Optional[int] = None     # Embedding dimensions (only for embedding models)
-    max_output_tokens: Optional[int] = None  # Max output tokens (90% of model limit)
-    is_default: bool = False             # Whether this is the preset default
+class ModelMeta:
+    """Known metadata for a model (dimensions, output limits, etc.)"""
+    model_id: str
+    display_name: str
+    dimensions: Optional[int] = None          # Embedding dimensions
+    max_output_tokens: Optional[int] = None   # 90% of model limit
 
 
 # =============================================================================
-# Model Catalog
+# Known Model Metadata Registry
 # =============================================================================
 
-# --- NetMind Models ---
-NETMIND_MODELS: list[ModelInfo] = [
-    # Agent models (Anthropic protocol)
-    ModelInfo(
-        model_id="minimax/minimax-m2.5",
-        display_name="MiniMax M2.5",
-        slot_types=["agent"],
-        max_output_tokens=58982,  # 65536 * 0.9
-        is_default=True,
-    ),
-    # Helper LLM models (OpenAI protocol)
-    ModelInfo(
-        model_id="minimax/minimax-m2.5",
-        display_name="MiniMax M2.5",
-        slot_types=["helper_llm"],
-        max_output_tokens=58982,  # 65536 * 0.9
-        is_default=True,
-    ),
-    ModelInfo(
-        model_id="google/gemini-3.1-pro-preview",
-        display_name="Gemini 3.1 Pro",
-        slot_types=["helper_llm"],
-        max_output_tokens=58982,  # 65536 * 0.9
-    ),
-    ModelInfo(
-        model_id="google/gemini-3.1-flash-lite-preview",
-        display_name="Gemini 3.1 Flash Lite",
-        slot_types=["helper_llm"],
-        max_output_tokens=58982,  # 65536 * 0.9
-    ),
-    ModelInfo(
-        model_id="moonshotai/Kimi-K2.5",
-        display_name="Kimi K2.5",
-        slot_types=["helper_llm"],
-        max_output_tokens=58981,  # 65535 * 0.9
-    ),
-    ModelInfo(
-        model_id="zai-org/GLM-5",
-        display_name="GLM-5",
-        slot_types=["helper_llm"],
-        max_output_tokens=117964,  # 131072 * 0.9
-    ),
-    ModelInfo(
-        model_id="deepseek-ai/DeepSeek-V3",
-        display_name="DeepSeek V3",
-        slot_types=["helper_llm"],
-        max_output_tokens=7200,  # 8000 * 0.9
-    ),
-    # Embedding models (OpenAI protocol)
-    ModelInfo(
-        model_id="BAAI/bge-m3",
-        display_name="BGE-M3 (Multilingual)",
-        slot_types=["embedding"],
-        dimensions=1024,
-        is_default=True,
-    ),
-    ModelInfo(
-        model_id="nvidia/NV-Embed-v2",
-        display_name="NV-Embed-v2",
-        slot_types=["embedding"],
-        dimensions=4096,
-    ),
-    ModelInfo(
-        model_id="dunzhang/stella_en_1.5B_v5",
-        display_name="Stella EN 1.5B v5",
-        slot_types=["embedding"],
-        dimensions=1024,
-    ),
-]
+_KNOWN_MODELS: dict[str, ModelMeta] = {}
 
-# --- OpenAI Models ---
-OPENAI_MODELS: list[ModelInfo] = [
-    # Helper LLM models
-    ModelInfo(
-        model_id="gpt-5.1-2025-11-13",
-        display_name="GPT-5.1",
-        slot_types=["helper_llm"],
-        max_output_tokens=115200,  # 128000 * 0.9
-        is_default=True,
-    ),
-    # Embedding models
-    ModelInfo(
-        model_id="text-embedding-3-small",
-        display_name="Embedding 3 Small (1536d)",
-        slot_types=["embedding"],
-        dimensions=1536,
-        is_default=True,
-    ),
-    ModelInfo(
-        model_id="text-embedding-3-large",
-        display_name="Embedding 3 Large (3072d)",
-        slot_types=["embedding"],
-        dimensions=3072,
-    ),
-]
 
-# --- Anthropic Models ---
-ANTHROPIC_MODELS: list[ModelInfo] = [
-    ModelInfo(
-        model_id="claude-opus-4-6",
-        display_name="Claude Opus 4.6",
-        slot_types=["agent"],
-        max_output_tokens=115200,  # 128000 * 0.9 (not used by Claude Agent SDK, recorded for reference)
-        is_default=True,
-    ),
-    ModelInfo(
-        model_id="claude-sonnet-4-6",
-        display_name="Claude Sonnet 4.6",
-        slot_types=["agent"],
-        max_output_tokens=115200,  # 128000 * 0.9 (not used by Claude Agent SDK, recorded for reference)
-    ),
-]
+def _register(*models: ModelMeta) -> None:
+    for m in models:
+        _KNOWN_MODELS[m.model_id] = m
 
-# --- Claude OAuth (same models as Anthropic, but no key needed) ---
-CLAUDE_OAUTH_MODELS: list[ModelInfo] = ANTHROPIC_MODELS
+
+# --- NetMind models ---
+_register(
+    ModelMeta("minimax/minimax-m2.5", "MiniMax M2.5", max_output_tokens=58982),
+    ModelMeta("google/gemini-3.1-pro-preview", "Gemini 3.1 Pro", max_output_tokens=58982),
+    ModelMeta("google/gemini-3.1-flash-lite-preview", "Gemini 3.1 Flash Lite", max_output_tokens=58982),
+    ModelMeta("moonshotai/Kimi-K2.5", "Kimi K2.5", max_output_tokens=58981),
+    ModelMeta("zai-org/GLM-5", "GLM-5", max_output_tokens=117964),
+    ModelMeta("deepseek-ai/DeepSeek-V3", "DeepSeek V3", max_output_tokens=7200),
+    ModelMeta("BAAI/bge-m3", "BGE-M3 (Multilingual)", dimensions=1024),
+    ModelMeta("nvidia/NV-Embed-v2", "NV-Embed-v2", dimensions=4096),
+    ModelMeta("dunzhang/stella_en_1.5B_v5", "Stella EN 1.5B v5", dimensions=1024),
+)
+
+# --- Anthropic / Claude models ---
+_register(
+    ModelMeta("claude-opus-4-6", "Claude Opus 4.6", max_output_tokens=115200),
+    ModelMeta("claude-sonnet-4-6", "Claude Sonnet 4.6", max_output_tokens=115200),
+)
+
+# --- OpenAI models ---
+_register(
+    ModelMeta("gpt-5.1-2025-11-13", "GPT-5.1", max_output_tokens=115200),
+    ModelMeta("text-embedding-3-small", "Embedding 3 Small", dimensions=1536),
+    ModelMeta("text-embedding-3-large", "Embedding 3 Large", dimensions=3072),
+)
 
 
 # =============================================================================
-# Catalog Registry
+# Default Model Lists (for pre-populating providers)
 # =============================================================================
 
-_CATALOG: dict[str, list[ModelInfo]] = {
-    ProviderPreset.NETMIND: NETMIND_MODELS,
-    ProviderPreset.OPENAI: OPENAI_MODELS,
-    ProviderPreset.ANTHROPIC: ANTHROPIC_MODELS,
-    ProviderPreset.CLAUDE_OAUTH: CLAUDE_OAUTH_MODELS,
-    # Custom providers have no preset catalog; users specify models manually
+# Key: (source, protocol) → list of default model IDs
+_DEFAULT_MODELS: dict[tuple[str, str], list[str]] = {
+    # NetMind Anthropic protocol → agent models
+    ("netmind", "anthropic"): [
+        "minimax/minimax-m2.5",
+    ],
+    # NetMind OpenAI protocol → helper_llm + embedding models
+    ("netmind", "openai"): [
+        "minimax/minimax-m2.5",
+        "google/gemini-3.1-pro-preview",
+        "google/gemini-3.1-flash-lite-preview",
+        "moonshotai/Kimi-K2.5",
+        "zai-org/GLM-5",
+        "deepseek-ai/DeepSeek-V3",
+        "BAAI/bge-m3",
+        "nvidia/NV-Embed-v2",
+        "dunzhang/stella_en_1.5B_v5",
+    ],
+    # Claude OAuth → agent models
+    ("claude_oauth", "anthropic"): [
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+    ],
+}
+
+# Suggested models when user adds a generic Anthropic/OpenAI provider
+_SUGGESTED_MODELS: dict[str, list[str]] = {
+    "anthropic": [
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+    ],
+    "openai": [
+        "gpt-5.1-2025-11-13",
+        "text-embedding-3-small",
+        "text-embedding-3-large",
+    ],
 }
 
 
@@ -176,82 +125,85 @@ _CATALOG: dict[str, list[ModelInfo]] = {
 # Query Functions
 # =============================================================================
 
-def get_models_for_slot(preset: str | ProviderPreset, slot: str | SlotName) -> list[ModelInfo]:
+def get_default_models(source: str, protocol: str) -> list[str]:
     """
-    Get available models for a given provider preset and slot type.
+    Get default model IDs for a provider source + protocol combination.
+
+    Used to pre-populate the models list when a provider is created.
+    For user-created providers, returns suggested models based on protocol.
 
     Args:
-        preset: Provider preset name (e.g. "netmind")
-        slot: Slot name (e.g. "embedding")
+        source: Provider source ("netmind", "claude_oauth", "user")
+        protocol: Provider protocol ("anthropic", "openai")
 
     Returns:
-        List of ModelInfo that can be used in this slot
+        List of model ID strings
     """
-    preset_str = preset.value if isinstance(preset, ProviderPreset) else preset
-    slot_str = slot.value if isinstance(slot, SlotName) else slot
-    models = _CATALOG.get(preset_str, [])
-    return [m for m in models if slot_str in m.slot_types]
+    # Check exact (source, protocol) match first
+    defaults = _DEFAULT_MODELS.get((source, protocol))
+    if defaults is not None:
+        return list(defaults)
 
+    # For user-created providers, return suggestions based on protocol
+    if source == "user":
+        return list(_SUGGESTED_MODELS.get(protocol, []))
 
-def get_default_model(preset: str | ProviderPreset, slot: str | SlotName) -> Optional[ModelInfo]:
-    """
-    Get the default model for a given provider preset and slot type.
-
-    Returns:
-        The default ModelInfo, or None if no default is set
-    """
-    candidates = get_models_for_slot(preset, slot)
-    for m in candidates:
-        if m.is_default:
-            return m
-    return candidates[0] if candidates else None
+    return []
 
 
 def get_embedding_dimensions(model_id: str) -> Optional[int]:
     """
     Look up the embedding dimensions for a given model ID.
 
-    Searches all catalogs. Returns None if the model is not found
-    or is not an embedding model.
+    Returns None if the model is not found or is not an embedding model.
     """
-    for models in _CATALOG.values():
-        for m in models:
-            if m.model_id == model_id and m.dimensions is not None:
-                return m.dimensions
-    return None
+    meta = _KNOWN_MODELS.get(model_id)
+    return meta.dimensions if meta else None
 
 
 def get_max_output_tokens(model_id: str) -> Optional[int]:
     """
     Look up the max output tokens for a given model ID.
 
-    Searches all catalogs. Returns None if the model is not found.
+    Returns None if the model is not found.
     """
-    for models in _CATALOG.values():
-        for m in models:
-            if m.model_id == model_id and m.max_output_tokens is not None:
-                return m.max_output_tokens
-    return None
+    meta = _KNOWN_MODELS.get(model_id)
+    return meta.max_output_tokens if meta else None
 
 
-def get_all_presets_summary() -> dict[str, list[dict]]:
+def get_model_display_name(model_id: str) -> str:
     """
-    Get a summary of all presets and their models for API/frontend use.
+    Get a human-readable display name for a model.
+
+    Falls back to the model_id itself if not in the catalog.
+    """
+    meta = _KNOWN_MODELS.get(model_id)
+    return meta.display_name if meta else model_id
+
+
+def get_all_known_models() -> dict[str, dict]:
+    """
+    Get all known model metadata for API/frontend use.
 
     Returns:
-        Dict mapping preset name to list of model dicts
+        Dict mapping model_id to metadata dict
     """
-    result = {}
-    for preset_name, models in _CATALOG.items():
-        result[preset_name] = [
-            {
-                "model_id": m.model_id,
-                "display_name": m.display_name,
-                "slot_types": m.slot_types,
-                "dimensions": m.dimensions,
-                "max_output_tokens": m.max_output_tokens,
-                "is_default": m.is_default,
-            }
-            for m in models
-        ]
-    return result
+    return {
+        model_id: {
+            "model_id": m.model_id,
+            "display_name": m.display_name,
+            "dimensions": m.dimensions,
+            "max_output_tokens": m.max_output_tokens,
+        }
+        for model_id, m in _KNOWN_MODELS.items()
+    }
+
+
+def get_suggested_models(protocol: str) -> list[str]:
+    """
+    Get suggested model IDs for a given protocol.
+
+    Used by the frontend to show suggestions when the user adds
+    a new Anthropic/OpenAI protocol provider.
+    """
+    return list(_SUGGESTED_MODELS.get(protocol, []))

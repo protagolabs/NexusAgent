@@ -5,18 +5,14 @@
 @description: LLM Provider configuration management
 
 Manages the llm_config.json file that stores provider definitions and
-slot assignments. Provides preset expansion, validation, and connection
-testing capabilities.
+slot assignments. Provides atomic provider addition, validation, and
+connection testing.
 
 Usage:
     from xyz_agent_context.agent_framework.provider_registry import provider_registry
 
-    # Load current config
-    config = provider_registry.load()
-
-    # Apply a preset (e.g., user enters a single NetMind key)
-    config = provider_registry.apply_preset("netmind", api_key="xxx")
-    provider_registry.save(config)
+    # Add a provider (atomic operation)
+    config, ids = provider_registry.add_provider("netmind", api_key="xxx")
 
     # Validate all slots are configured
     errors = provider_registry.validate(config)
@@ -37,13 +33,13 @@ from xyz_agent_context.schema.provider_schema import (
     AuthType,
     LLMConfig,
     ProviderConfig,
-    ProviderPreset,
     ProviderProtocol,
+    ProviderSource,
     SlotConfig,
     SlotName,
     SLOT_REQUIRED_PROTOCOLS,
 )
-from xyz_agent_context.agent_framework.model_catalog import get_default_model
+from xyz_agent_context.agent_framework.model_catalog import get_default_models
 
 
 # =============================================================================
@@ -56,6 +52,12 @@ CONFIG_FILE = CONFIG_DIR / "llm_config.json"
 # NetMind endpoint URLs
 NETMIND_ANTHROPIC_BASE_URL = "https://api.netmind.ai/inference-api/anthropic"
 NETMIND_OPENAI_BASE_URL = "https://api.netmind.ai/inference-api/openai/v1"
+
+# Default base URLs for known providers
+DEFAULT_BASE_URLS = {
+    "anthropic": "https://api.anthropic.com",
+    "openai": "https://api.openai.com/v1",
+}
 
 
 # =============================================================================
@@ -77,21 +79,27 @@ def _generate_group_id() -> str:
 
 
 # =============================================================================
-# Preset Expansion
+# Provider Builders
 # =============================================================================
 
-def _build_netmind_providers(api_key: str, group_id: str) -> list[ProviderConfig]:
-    """Expand a single NetMind API key into two providers (anthropic + openai)"""
+def _build_netmind_providers(api_key: str) -> list[ProviderConfig]:
+    """Build two providers from a single NetMind API key (anthropic + openai protocol)"""
     now = datetime.now(timezone.utc)
+    group_id = _generate_group_id()
+
+    anthropic_models = get_default_models("netmind", "anthropic")
+    openai_models = get_default_models("netmind", "openai")
+
     return [
         ProviderConfig(
             provider_id=_generate_provider_id(),
             name="NetMind (Anthropic)",
-            preset=ProviderPreset.NETMIND,
+            source=ProviderSource.NETMIND,
             protocol=ProviderProtocol.ANTHROPIC,
             auth_type=AuthType.BEARER_TOKEN,
             api_key=api_key,
             base_url=NETMIND_ANTHROPIC_BASE_URL,
+            models=anthropic_models,
             linked_group=group_id,
             created_at=now,
             updated_at=now,
@@ -99,11 +107,12 @@ def _build_netmind_providers(api_key: str, group_id: str) -> list[ProviderConfig
         ProviderConfig(
             provider_id=_generate_provider_id(),
             name="NetMind (OpenAI)",
-            preset=ProviderPreset.NETMIND,
+            source=ProviderSource.NETMIND,
             protocol=ProviderProtocol.OPENAI,
             auth_type=AuthType.API_KEY,
             api_key=api_key,
             base_url=NETMIND_OPENAI_BASE_URL,
+            models=openai_models,
             linked_group=group_id,
             created_at=now,
             updated_at=now,
@@ -111,90 +120,55 @@ def _build_netmind_providers(api_key: str, group_id: str) -> list[ProviderConfig
     ]
 
 
-def _build_openai_provider(api_key: str) -> ProviderConfig:
-    """Build a provider from an OpenAI API key"""
-    now = datetime.now(timezone.utc)
-    return ProviderConfig(
-        provider_id=_generate_provider_id(),
-        name="OpenAI",
-        preset=ProviderPreset.OPENAI,
-        protocol=ProviderProtocol.OPENAI,
-        auth_type=AuthType.API_KEY,
-        api_key=api_key,
-        base_url="",
-        created_at=now,
-        updated_at=now,
-    )
-
-
-def _build_anthropic_provider(api_key: str) -> ProviderConfig:
-    """Build a provider from an Anthropic API key"""
-    now = datetime.now(timezone.utc)
-    return ProviderConfig(
-        provider_id=_generate_provider_id(),
-        name="Anthropic",
-        preset=ProviderPreset.ANTHROPIC,
-        protocol=ProviderProtocol.ANTHROPIC,
-        auth_type=AuthType.API_KEY,
-        api_key=api_key,
-        base_url="",
-        created_at=now,
-        updated_at=now,
-    )
-
-
 def _build_claude_oauth_provider() -> ProviderConfig:
     """Build a provider for Claude Code OAuth (no key needed)"""
     now = datetime.now(timezone.utc)
+    models = get_default_models("claude_oauth", "anthropic")
     return ProviderConfig(
         provider_id=_generate_provider_id(),
         name="Claude Code (OAuth)",
-        preset=ProviderPreset.CLAUDE_OAUTH,
+        source=ProviderSource.CLAUDE_OAUTH,
         protocol=ProviderProtocol.ANTHROPIC,
         auth_type=AuthType.OAUTH,
         api_key="",
         base_url="",
+        models=models,
         created_at=now,
         updated_at=now,
     )
 
 
-def _auto_assign_slots(
-    providers: dict[str, ProviderConfig],
-    preset: ProviderPreset,
-) -> dict[str, SlotConfig]:
-    """
-    Auto-assign default models to slots based on preset type.
+def _build_user_provider(
+    name: str,
+    protocol: ProviderProtocol,
+    auth_type: AuthType,
+    api_key: str,
+    base_url: str,
+    models: list[str],
+) -> ProviderConfig:
+    """Build a user-configured provider (Anthropic or OpenAI protocol)"""
+    now = datetime.now(timezone.utc)
 
-    For each slot, find a matching provider (protocol matches) and
-    pick the default model from the catalog.
-    """
-    slots: dict[str, SlotConfig] = {}
+    # Use default base_url if empty
+    if not base_url:
+        base_url = DEFAULT_BASE_URLS.get(protocol.value, "")
 
-    for slot_name in SlotName:
-        required_protocols = SLOT_REQUIRED_PROTOCOLS.get(slot_name, [])
+    # Pre-populate models from suggestions if none provided
+    if not models:
+        models = get_default_models("user", protocol.value)
 
-        # Find the first active provider whose protocol matches
-        matching_provider: Optional[ProviderConfig] = None
-        for prov in providers.values():
-            if prov.is_active and prov.protocol in required_protocols:
-                matching_provider = prov
-                break
-
-        if matching_provider is None:
-            continue
-
-        # Get default model from catalog
-        default_model = get_default_model(matching_provider.preset, slot_name)
-        if default_model is None:
-            continue
-
-        slots[slot_name.value] = SlotConfig(
-            provider_id=matching_provider.provider_id,
-            model=default_model.model_id,
-        )
-
-    return slots
+    return ProviderConfig(
+        provider_id=_generate_provider_id(),
+        name=name or f"Custom ({protocol.value.title()})",
+        source=ProviderSource.USER,
+        protocol=protocol,
+        auth_type=auth_type,
+        api_key=api_key,
+        base_url=base_url,
+        models=models,
+        created_at=now,
+        updated_at=now,
+    )
 
 
 # =============================================================================
@@ -207,10 +181,10 @@ class ProviderRegistry:
 
     Responsible for:
     - Loading/saving the config file
-    - Expanding presets into provider + slot configurations
-    - Adding/removing custom providers
-    - Validating slot assignments
-    - Testing provider connectivity
+    - Atomic provider addition (4 card types)
+    - Removing providers (with linked group support)
+    - Slot assignment and validation
+    - Connection testing
     """
 
     def __init__(self, config_path: Optional[Path] = None):
@@ -248,190 +222,149 @@ class ProviderRegistry:
         """Check if a configuration file exists on disk."""
         return self._config_path.is_file()
 
-    # ---- Preset Application ----
+    # ---- Atomic Provider Addition ----
 
-    def apply_preset(
+    def add_provider(
         self,
-        preset: str | ProviderPreset,
+        card_type: str,
+        name: str = "",
         api_key: str = "",
-    ) -> LLMConfig:
+        base_url: str = "",
+        auth_type: str = "api_key",
+        models: Optional[list[str]] = None,
+    ) -> tuple[LLMConfig, list[str]]:
         """
-        Create a complete LLMConfig from a preset type and API key.
+        Atomic add of provider(s). Loads config, adds provider(s), saves, returns.
 
-        This replaces any existing configuration. For the NetMind preset,
-        a single key generates two providers (anthropic + openai protocol).
+        Card types:
+        - "netmind": Creates 2 providers (anthropic + openai). Unique — removes existing NetMind first.
+        - "claude_oauth": Creates 1 anthropic-protocol OAuth provider. Unique — removes existing CC first.
+        - "anthropic": Creates 1 anthropic-protocol provider. Can have multiple.
+        - "openai": Creates 1 openai-protocol provider. Can have multiple.
 
         Args:
-            preset: The preset to apply
-            api_key: The API key (not needed for claude_oauth)
+            card_type: One of "netmind", "claude_oauth", "anthropic", "openai"
+            name: Display name (for anthropic/openai cards)
+            api_key: API key (not needed for claude_oauth)
+            base_url: Base URL (defaults to official if empty)
+            auth_type: "api_key" or "bearer_token" (for anthropic/openai cards)
+            models: Model ID list (pre-populated from catalog if None)
 
         Returns:
-            A fully configured LLMConfig with providers and slot assignments
+            (Updated LLMConfig, list of new provider_ids)
         """
-        preset_enum = ProviderPreset(preset) if isinstance(preset, str) else preset
-        providers: dict[str, ProviderConfig] = {}
+        config = self.load() or LLMConfig()
+        new_ids: list[str] = []
 
-        if preset_enum == ProviderPreset.NETMIND:
-            group_id = _generate_group_id()
-            for prov in _build_netmind_providers(api_key, group_id):
-                providers[prov.provider_id] = prov
+        if card_type == "netmind":
+            # Unique: remove existing NetMind providers first
+            self._remove_by_source(config, ProviderSource.NETMIND)
+            providers = _build_netmind_providers(api_key)
+            for prov in providers:
+                config.providers[prov.provider_id] = prov
+                new_ids.append(prov.provider_id)
 
-        elif preset_enum == ProviderPreset.OPENAI:
-            prov = _build_openai_provider(api_key)
-            providers[prov.provider_id] = prov
-
-        elif preset_enum == ProviderPreset.ANTHROPIC:
-            prov = _build_anthropic_provider(api_key)
-            providers[prov.provider_id] = prov
-
-        elif preset_enum == ProviderPreset.CLAUDE_OAUTH:
+        elif card_type == "claude_oauth":
+            # Unique: remove existing Claude OAuth providers first
+            self._remove_by_source(config, ProviderSource.CLAUDE_OAUTH)
             prov = _build_claude_oauth_provider()
-            providers[prov.provider_id] = prov
-
-        # Auto-assign slots with default models
-        slots = _auto_assign_slots(providers, preset_enum)
-
-        return LLMConfig(providers=providers, slots=slots)
-
-    def merge_preset(
-        self,
-        config: LLMConfig,
-        preset: str | ProviderPreset,
-        api_key: str = "",
-    ) -> LLMConfig:
-        """
-        Add a preset's providers to an existing config without replacing it.
-
-        Useful when the user has e.g. Claude OAuth for agent but wants to
-        add OpenAI for embedding/helper_llm. Automatically fills any
-        empty slots that the new providers can serve.
-
-        Args:
-            config: Existing configuration to merge into
-            preset: The preset to add
-            api_key: The API key
-
-        Returns:
-            Updated LLMConfig with new providers added and empty slots auto-filled
-        """
-        preset_enum = ProviderPreset(preset) if isinstance(preset, str) else preset
-        new_providers: list[ProviderConfig] = []
-
-        if preset_enum == ProviderPreset.NETMIND:
-            group_id = _generate_group_id()
-            new_providers = _build_netmind_providers(api_key, group_id)
-        elif preset_enum == ProviderPreset.OPENAI:
-            new_providers = [_build_openai_provider(api_key)]
-        elif preset_enum == ProviderPreset.ANTHROPIC:
-            new_providers = [_build_anthropic_provider(api_key)]
-        elif preset_enum == ProviderPreset.CLAUDE_OAUTH:
-            new_providers = [_build_claude_oauth_provider()]
-
-        for prov in new_providers:
             config.providers[prov.provider_id] = prov
+            new_ids.append(prov.provider_id)
 
-        # Auto-fill empty slots that the new providers can serve
-        for slot_name in SlotName:
-            slot_str = slot_name.value
-            if slot_str in config.slots:
-                continue  # Already assigned, don't override
+        elif card_type in ("anthropic", "openai"):
+            protocol = ProviderProtocol(card_type)
+            auth = AuthType(auth_type)
+            prov = _build_user_provider(
+                name=name,
+                protocol=protocol,
+                auth_type=auth,
+                api_key=api_key,
+                base_url=base_url,
+                models=models or [],
+            )
+            config.providers[prov.provider_id] = prov
+            new_ids.append(prov.provider_id)
 
-            required_protocols = SLOT_REQUIRED_PROTOCOLS.get(slot_name, [])
-            for prov in new_providers:
-                if prov.is_active and prov.protocol in required_protocols:
-                    default_model = get_default_model(prov.preset, slot_name)
-                    if default_model:
-                        config.slots[slot_str] = SlotConfig(
-                            provider_id=prov.provider_id,
-                            model=default_model.model_id,
-                        )
-                    break
+        else:
+            raise ValueError(f"Unknown card_type: '{card_type}'")
 
-        return config
+        self.save(config)
+        return config, new_ids
 
-    # ---- Custom Provider ----
-
-    def add_custom_provider(
-        self,
-        config: LLMConfig,
-        name: str,
-        protocol: str | ProviderProtocol,
-        auth_type: str | AuthType,
-        api_key: str,
-        base_url: str,
-    ) -> tuple[LLMConfig, str]:
-        """
-        Add a user-defined custom provider.
-
-        Args:
-            config: Existing configuration
-            name: Display name
-            protocol: "openai" or "anthropic"
-            auth_type: "api_key" or "bearer_token"
-            api_key: The API key
-            base_url: The API base URL
-
-        Returns:
-            (Updated config, new provider_id)
-        """
-        protocol_enum = ProviderProtocol(protocol) if isinstance(protocol, str) else protocol
-        auth_enum = AuthType(auth_type) if isinstance(auth_type, str) else auth_type
-        now = datetime.now(timezone.utc)
-
-        prov = ProviderConfig(
-            provider_id=_generate_provider_id(),
-            name=name,
-            preset=ProviderPreset.CUSTOM,
-            protocol=protocol_enum,
-            auth_type=auth_enum,
-            api_key=api_key,
-            base_url=base_url,
-            created_at=now,
-            updated_at=now,
-        )
-        config.providers[prov.provider_id] = prov
-        return config, prov.provider_id
-
-    # ---- Provider Removal ----
-
-    def remove_provider(self, config: LLMConfig, provider_id: str, remove_group: bool = True) -> LLMConfig:
-        """
-        Remove a provider (and optionally its linked group).
-
-        Also clears any slots that reference the removed provider(s).
-
-        Args:
-            config: Existing configuration
-            provider_id: The provider to remove
-            remove_group: If True, remove all providers in the same linked_group
-
-        Returns:
-            Updated LLMConfig
-        """
-        ids_to_remove: set[str] = set()
-
-        if provider_id not in config.providers:
-            return config
-
-        if remove_group:
-            group = config.providers[provider_id].linked_group
-            if group:
-                ids_to_remove = {
-                    pid for pid, p in config.providers.items()
-                    if p.linked_group == group
-                }
-        if not ids_to_remove:
-            ids_to_remove = {provider_id}
-
-        # Remove providers
+    def _remove_by_source(self, config: LLMConfig, source: ProviderSource) -> None:
+        """Remove all providers with a given source, clearing affected slots."""
+        ids_to_remove = {
+            pid for pid, p in config.providers.items()
+            if p.source == source
+        }
         for pid in ids_to_remove:
             config.providers.pop(pid, None)
-
-        # Clear slots that reference removed providers
+        # Clear slots referencing removed providers
         for slot_name, slot_cfg in list(config.slots.items()):
             if slot_cfg.provider_id in ids_to_remove:
                 del config.slots[slot_name]
 
+    # ---- Provider Removal ----
+
+    def remove_provider(self, config: LLMConfig, provider_id: str) -> LLMConfig:
+        """
+        Remove a provider. For linked groups (NetMind), removes all in the group.
+        Clears any slots referencing the removed provider(s).
+
+        Args:
+            config: Existing configuration
+            provider_id: The provider to remove
+
+        Returns:
+            Updated LLMConfig
+        """
+        if provider_id not in config.providers:
+            return config
+
+        ids_to_remove: set[str] = set()
+        group = config.providers[provider_id].linked_group
+        if group:
+            ids_to_remove = {
+                pid for pid, p in config.providers.items()
+                if p.linked_group == group
+            }
+        else:
+            ids_to_remove = {provider_id}
+
+        for pid in ids_to_remove:
+            config.providers.pop(pid, None)
+
+        # Clear slots referencing removed providers
+        for slot_name, slot_cfg in list(config.slots.items()):
+            if slot_cfg.provider_id in ids_to_remove:
+                del config.slots[slot_name]
+
+        return config
+
+    # ---- Provider Model Update ----
+
+    def update_provider_models(
+        self, config: LLMConfig, provider_id: str, models: list[str]
+    ) -> LLMConfig:
+        """
+        Update the available models list for a provider.
+
+        Args:
+            config: Existing configuration
+            provider_id: The provider to update
+            models: New list of model IDs
+
+        Returns:
+            Updated LLMConfig
+
+        Raises:
+            ValueError: If provider not found
+        """
+        if provider_id not in config.providers:
+            raise ValueError(f"Provider '{provider_id}' not found")
+
+        config.providers[provider_id].models = models
+        config.providers[provider_id].updated_at = datetime.now(timezone.utc)
         return config
 
     # ---- Slot Assignment ----
@@ -486,7 +419,6 @@ class ProviderRegistry:
 
             slot_cfg = config.slots[slot_str]
 
-            # Check provider exists
             if slot_cfg.provider_id not in config.providers:
                 errors.append(
                     f"Slot '{slot_str}' references non-existent provider '{slot_cfg.provider_id}'"
@@ -495,11 +427,9 @@ class ProviderRegistry:
 
             provider = config.providers[slot_cfg.provider_id]
 
-            # Check provider is active
             if not provider.is_active:
                 errors.append(f"Slot '{slot_str}' references disabled provider '{provider.name}'")
 
-            # Check protocol match
             required = SLOT_REQUIRED_PROTOCOLS.get(slot_str, [])
             if required and provider.protocol not in required:
                 errors.append(
@@ -507,11 +437,9 @@ class ProviderRegistry:
                     f"but provider '{provider.name}' uses '{provider.protocol.value}'"
                 )
 
-            # Check model is set
             if not slot_cfg.model:
                 errors.append(f"Slot '{slot_str}' has no model specified")
 
-            # Check API key (not required for OAuth)
             if provider.auth_type != AuthType.OAUTH and not provider.api_key:
                 errors.append(f"Provider '{provider.name}' for slot '{slot_str}' has no API key")
 
@@ -522,9 +450,6 @@ class ProviderRegistry:
     async def test_provider(self, provider: ProviderConfig) -> tuple[bool, str]:
         """
         Test connectivity to a provider with a minimal API call.
-
-        Args:
-            provider: The provider configuration to test
 
         Returns:
             (success: bool, message: str)
@@ -576,7 +501,6 @@ class ProviderRegistry:
         else:
             headers["X-Api-Key"] = provider.api_key
 
-        # Use a deliberately minimal payload; we only care about auth, not model availability
         payload = {
             "model": "test-connectivity",
             "max_tokens": 1,
@@ -589,7 +513,6 @@ class ProviderRegistry:
         if resp.status_code == 200:
             return True, "Connected successfully"
         elif resp.status_code == 400:
-            # 400 = auth passed but payload invalid (e.g., model not found) — auth works
             return True, "Authentication verified (API reachable)"
         elif resp.status_code == 401:
             return False, "Authentication failed (invalid API key)"
