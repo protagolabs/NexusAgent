@@ -11,7 +11,7 @@ and assign them to different functional slots (agent, embedding, helper_llm).
 Core concepts:
 - Provider: A connection to an LLM service (api_key + base_url + protocol)
 - Slot: A functional role in the system that requires a specific protocol
-- Preset: A built-in provider template that auto-fills configuration
+- Source: How the provider was created (see ProviderSource enum)
 """
 
 from __future__ import annotations
