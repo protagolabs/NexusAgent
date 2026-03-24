@@ -1345,43 +1345,6 @@ do_install() {
     step "${current}/${total_steps}" "Starting Docker services (MySQL + Synapse)"
     ensure_docker_services
 
-    # --- Step 11: Auto-generate .env (silent, no user interaction) ---
-    current=$((current + 1))
-    step "${current}/${total_steps}" "Generating default .env"
-    if [ -f "${PROJECT_ROOT}/.env" ]; then
-        success ".env already exists, keeping"
-    else
-        # Auto-generate .env with Docker MySQL defaults, no questions asked
-        cat > "${PROJECT_ROOT}/.env" << 'ENVEOF'
-# =============================================================================
-# Optional API Keys
-# =============================================================================
-# LLM providers are configured separately via 'Configure' menu or web UI.
-# Config stored at: ~/.nexusagent/llm_config.json
-GOOGLE_API_KEY=""
-
-# =============================================================================
-# Database (MySQL) — Docker default config, no changes needed
-# =============================================================================
-DB_HOST="127.0.0.1"
-DB_PORT=3306
-DB_NAME="xyz_agent_context"
-DB_USER="root"
-DB_PASSWORD="xyz_root_pass"
-
-# =============================================================================
-# Auth
-# =============================================================================
-ADMIN_SECRET_KEY="nexus-admin-secret"
-
-# =============================================================================
-# Workspace (optional)
-# =============================================================================
-# BASE_WORKING_PATH="./agent_workspace"
-ENVEOF
-        success ".env generated with Docker defaults"
-    fi
-
     # --- Done ---
     echo ""
     echo -e "  ${BOLD}${GREEN}╔══════════════════════════════════════════════════╗${RESET}"
@@ -1629,6 +1592,19 @@ print('yes' if all(s.get('configured') for s in slots.values()) else 'no')
             echo ""
         fi
 
+        # Gemini status
+        local gemini_key=""
+        if [ -f "${PROJECT_ROOT}/.env" ]; then
+            gemini_key=$(grep -oP '^GOOGLE_API_KEY="\K[^"]*' "${PROJECT_ROOT}/.env" 2>/dev/null || true)
+        fi
+        echo -e "  ${BOLD}Optional:${RESET}"
+        if [ -n "$gemini_key" ]; then
+            echo -e "    ${GREEN}✓${RESET} Gemini RAG  ${DIM}→ ***${gemini_key: -4}${RESET}"
+        else
+            echo -e "    ${DIM}✗ Gemini RAG  (not configured)${RESET}"
+        fi
+        echo ""
+
         # Actions
         echo -e "  ${BOLD}Add provider:${RESET}"
         echo -e "    ${G1}[1]${RESET}  NetMind.AI Power  ${DIM}(one key → all 3 slots)${RESET}"
@@ -1639,6 +1615,9 @@ print('yes' if all(s.get('configured') for s in slots.values()) else 'no')
         echo ""
         echo -e "  ${BOLD}Assign slot:${RESET}"
         echo -e "    ${BOLD}[a]${RESET}  Agent      ${BOLD}[b]${RESET}  Embedding      ${BOLD}[c]${RESET}  Helper LLM"
+        echo ""
+        echo -e "  ${BOLD}Optional API:${RESET}"
+        echo -e "    ${BOLD}[g]${RESET}  Gemini API Key  ${DIM}(for RAG knowledge base)${RESET}"
         echo ""
         echo -e "    ──────────────────────────────"
         if [ "$all_valid" = "yes" ]; then
@@ -1757,6 +1736,28 @@ print('yes' if all(s.get('configured') for s in slots.values()) else 'no')
             a|A)  _assign_slot_interactive "$status_json" "agent" "anthropic" ;;
             b|B)  _assign_slot_interactive "$status_json" "embedding" "openai" ;;
             c|C)  _assign_slot_interactive "$status_json" "helper_llm" "openai" ;;
+
+            g|G)  # Gemini API Key (optional, for RAG)
+                echo -e "    ${DIM}Gemini RAG uses Google Gemini File Search to index and retrieve documents.${RESET}"
+                echo -e "    ${DIM}Without this key, RAG is unavailable but everything else works.${RESET}"
+                echo -e "    ${DIM}Get key at: https://aistudio.google.com/apikey${RESET}"
+                echo ""
+                # Ensure .env exists
+                if [ ! -f "${PROJECT_ROOT}/.env" ]; then
+                    warn ".env not found. Run Configure first to generate it."
+                    continue
+                fi
+                if [ -n "$gemini_key" ]; then
+                    echo -e "    ${DIM}Current: ***${gemini_key: -4}${RESET}"
+                fi
+                read -rp "    Google Gemini API Key (Enter to skip): " new_gemini
+                if [ -n "$new_gemini" ]; then
+                    sed_inplace "s|^GOOGLE_API_KEY=.*|GOOGLE_API_KEY=\"${new_gemini}\"|" "${PROJECT_ROOT}/.env"
+                    success "Gemini API Key saved"
+                else
+                    info "Skipped"
+                fi
+                ;;
 
             d|D)  # Done
                 if [ "$all_valid" = "yes" ]; then
@@ -1896,60 +1897,22 @@ do_configure() {
         return
     fi
 
-    # 1. .env (database, google key, admin secret)
+    # 1. .env (database, admin secret — auto-generate if missing)
+    step "1/2" "Environment variables (.env)"
     if [ ! -f "${PROJECT_ROOT}/.env" ]; then
-        step "1/2" "Environment variables (.env)"
         auto_generate_env
     else
-        step "1/2" "Environment variables (.env)"
         success ".env already exists"
-        read -rp "    Reconfigure .env? [y/N] " reconfigure
+        read -rp "    Reconfigure database / auth settings? [y/N] " reconfigure
         if [[ "$reconfigure" == "y" || "$reconfigure" == "Y" ]]; then
             configure_env
         fi
     fi
     echo ""
 
-    # 2. LLM Providers
-    step "2/3" "LLM Providers (~/.nexusagent/llm_config.json)"
+    # 2. LLM Providers + Gemini (interactive loop)
+    step "2/2" "LLM Providers & API Keys"
     configure_llm_providers
-
-    # 3. Google Gemini API Key (optional, for RAG)
-    step "3/3" "Gemini RAG Knowledge Base (optional)"
-    echo ""
-    echo -e "    ${DIM}The RAG module uses Google Gemini File Search to index and retrieve${RESET}"
-    echo -e "    ${DIM}documents. Without this key, RAG is unavailable but everything else works.${RESET}"
-    echo ""
-
-    # Show current value if exists
-    local current_gemini_key=""
-    if [ -f "${PROJECT_ROOT}/.env" ]; then
-        current_gemini_key=$(grep -oP '^GOOGLE_API_KEY="\K[^"]*' "${PROJECT_ROOT}/.env" 2>/dev/null || true)
-    fi
-    if [ -n "$current_gemini_key" ]; then
-        echo -e "    ${GREEN}✓${RESET} Currently set: ***${current_gemini_key: -4}"
-        read -rp "    Update Gemini API Key? [y/N] " update_gemini
-        if [[ "$update_gemini" != "y" && "$update_gemini" != "Y" ]]; then
-            success "Keeping existing Gemini API Key"
-        else
-            read -rp "    New Google Gemini API Key: " new_gemini_key
-            if [ -n "$new_gemini_key" ]; then
-                sed_inplace "s|^GOOGLE_API_KEY=.*|GOOGLE_API_KEY=\"${new_gemini_key}\"|" "${PROJECT_ROOT}/.env"
-                success "Gemini API Key updated"
-            fi
-        fi
-    else
-        echo -e "    ${DIM}Get key at: https://aistudio.google.com/apikey${RESET}"
-        read -rp "    Google Gemini API Key (Enter to skip): " gemini_key
-        if [ -n "$gemini_key" ]; then
-            if [ -f "${PROJECT_ROOT}/.env" ]; then
-                sed_inplace "s|^GOOGLE_API_KEY=.*|GOOGLE_API_KEY=\"${gemini_key}\"|" "${PROJECT_ROOT}/.env"
-            fi
-            success "Gemini API Key saved"
-        else
-            info "Skipped. RAG knowledge base will be unavailable."
-        fi
-    fi
 
     echo ""
     echo -e "  ${BOLD}${GREEN}Configuration complete.${RESET}"
