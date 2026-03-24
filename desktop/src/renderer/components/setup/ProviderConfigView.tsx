@@ -51,6 +51,12 @@ interface KnownModelMeta {
   max_output_tokens: number | null
 }
 
+interface EmbeddingModelInfo {
+  model_id: string
+  display_name: string
+  dimensions: number
+}
+
 interface ProviderConfigViewProps {
   onReady: () => void
   claudeAuth: ClaudeAuthInfo | null
@@ -212,6 +218,8 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
   const [providers, setProviders] = useState<Record<string, ProviderSummary>>({})
   const [slots, setSlots] = useState<Record<string, SlotData>>({})
   const [knownModels, setKnownModels] = useState<Record<string, KnownModelMeta>>({})
+  const [embeddingModels, setEmbeddingModels] = useState<EmbeddingModelInfo[]>([])
+  const [officialBaseUrls, setOfficialBaseUrls] = useState<Record<string, string[]>>({})
   const [error, setError] = useState('')
   const [testing, setTesting] = useState<string | null>(null)
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; msg: string }>>({})
@@ -250,7 +258,11 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
     fetch(`${API}/api/providers/catalog`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.success) setKnownModels(data.known_models)
+        if (data.success) {
+          setKnownModels(data.known_models)
+          if (data.embedding_models) setEmbeddingModels(data.embedding_models)
+          if (data.official_base_urls) setOfficialBaseUrls(data.official_base_urls)
+        }
       })
       .catch(() => {})
   }, [refreshConfig])
@@ -357,6 +369,24 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
   // Get providers matching a slot's required protocol
   const getProvidersForSlot = (protocol: string) =>
     providerList.filter((p) => p.protocol === protocol && p.is_active)
+
+  // Check if a provider uses an official base_url
+  const isOfficialProvider = (prov: ProviderSummary) => {
+    const urls = officialBaseUrls[prov.protocol] || []
+    return urls.includes(prov.base_url || '')
+  }
+
+  // Get filtered models for a slot + provider
+  const getModelsForSlot = (prov: ProviderSummary, slotKey: string) => {
+    if (slotKey === 'embedding') {
+      // Embedding: only show known embedding models that this provider has
+      return embeddingModels.filter((em) => prov.models.includes(em.model_id))
+    }
+    // Agent / Helper LLM: show non-embedding models only
+    return prov.models
+      .filter((mid) => !knownModels[mid]?.dimensions)
+      .map((mid) => ({ model_id: mid, display_name: knownModels[mid]?.display_name || mid }))
+  }
 
   // ---- Open protocol form with defaults ----
   const openProtocolForm = (protocol: 'anthropic' | 'openai') => {
@@ -745,9 +775,14 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
                           onChange={(e) => {
                             const pid = e.target.value
                             const prov = providers[pid]
-                            if (prov && prov.models.length > 0) {
-                              handleSlotChange(slot.key, pid, prov.models[0])
-                            } else if (prov) {
+                            if (!prov) return
+                            // Auto-select first appropriate model
+                            const slotModels = getModelsForSlot(prov, slot.key)
+                            if (slot.key === 'helper_llm' && isOfficialProvider(prov)) {
+                              handleSlotChange(slot.key, pid, 'default')
+                            } else if (slotModels.length > 0) {
+                              handleSlotChange(slot.key, pid, slotModels[0].model_id)
+                            } else {
                               handleSlotChange(slot.key, pid, '')
                             }
                           }}
@@ -762,41 +797,95 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
                         </select>
                       </div>
 
-                      {/* Model selection */}
+                      {/* Model selection — differs by slot type */}
                       <div>
                         <label className="block text-[10px] text-gray-500 mb-0.5">Model</label>
-                        {currentProvider && currentProvider.models.length > 0 ? (
-                          <select
-                            value={cfg?.model || ''}
-                            onChange={(e) => {
-                              if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value)
-                            }}
-                            className="titlebar-no-drag w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-400 outline-none"
-                          >
-                            <option value="">Select model...</option>
-                            {currentProvider.models.map((modelId) => {
-                              const meta = knownModels[modelId]
-                              const label = meta
-                                ? `${meta.display_name}${meta.dimensions ? ` (${meta.dimensions}d)` : ''}`
-                                : modelId
-                              return (
-                                <option key={modelId} value={modelId}>
-                                  {label}
-                                </option>
-                              )
-                            })}
-                          </select>
-                        ) : (
-                          <input
-                            type="text"
-                            value={cfg?.model || ''}
-                            onChange={(e) => {
-                              if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value)
-                            }}
-                            placeholder="Enter model name"
-                            className="titlebar-no-drag w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 outline-none"
-                          />
-                        )}
+                        {(() => {
+                          if (!currentProvider) {
+                            return <select disabled className="titlebar-no-drag w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-gray-50 outline-none">
+                              <option>Select provider first...</option>
+                            </select>
+                          }
+
+                          if (slot.key === 'embedding') {
+                            // Embedding: only known embedding models (hardcoded)
+                            const emModels = getModelsForSlot(currentProvider, 'embedding')
+                            return (
+                              <select
+                                value={cfg?.model || ''}
+                                onChange={(e) => {
+                                  if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value)
+                                }}
+                                className="titlebar-no-drag w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-400 outline-none"
+                              >
+                                <option value="">Select embedding model...</option>
+                                {emModels.map((em) => (
+                                  <option key={em.model_id} value={em.model_id}>
+                                    {em.display_name} ({em.dimensions}d)
+                                  </option>
+                                ))}
+                              </select>
+                            )
+                          }
+
+                          if (slot.key === 'helper_llm' && isOfficialProvider(currentProvider)) {
+                            // Official OpenAI helper_llm: offer "Default" + specific models
+                            const llmModels = getModelsForSlot(currentProvider, 'helper_llm')
+                            return (
+                              <>
+                                <select
+                                  value={cfg?.model || ''}
+                                  onChange={(e) => {
+                                    if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value)
+                                  }}
+                                  className="titlebar-no-drag w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-400 outline-none"
+                                >
+                                  <option value="default">Default (recommended)</option>
+                                  {llmModels.map((m) => (
+                                    <option key={m.model_id} value={m.model_id}>{m.display_name}</option>
+                                  ))}
+                                </select>
+                                {cfg?.model && cfg.model !== 'default' && (
+                                  <p className="text-[10px] text-amber-500 mt-0.5">
+                                    All auxiliary LLM tasks will use this model. May affect speed and cost.
+                                  </p>
+                                )}
+                              </>
+                            )
+                          }
+
+                          // Agent / non-official helper_llm: show provider's LLM models
+                          const llmModels = getModelsForSlot(currentProvider, slot.key)
+                          if (llmModels.length > 0) {
+                            return (
+                              <select
+                                value={cfg?.model || ''}
+                                onChange={(e) => {
+                                  if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value)
+                                }}
+                                className="titlebar-no-drag w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:ring-1 focus:ring-blue-400 outline-none"
+                              >
+                                <option value="">Select model...</option>
+                                {llmModels.map((m) => (
+                                  <option key={m.model_id} value={m.model_id}>{m.display_name}</option>
+                                ))}
+                              </select>
+                            )
+                          }
+
+                          // No preset models — manual input
+                          return (
+                            <input
+                              type="text"
+                              value={cfg?.model || ''}
+                              onChange={(e) => {
+                                if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value)
+                              }}
+                              placeholder="Enter model name"
+                              className="titlebar-no-drag w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 outline-none"
+                            />
+                          )
+                        })()}
                       </div>
                     </div>
                   ) : (

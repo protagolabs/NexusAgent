@@ -27,6 +27,7 @@ interface ProviderSummary {
   is_active: boolean
   models: string[]
   api_key_masked?: string
+  base_url?: string
 }
 
 interface SlotConfig {
@@ -44,6 +45,12 @@ interface KnownModelMeta {
   display_name: string
   dimensions: number | null
   max_output_tokens: number | null
+}
+
+interface EmbeddingModelInfo {
+  model_id: string
+  display_name: string
+  dimensions: number
 }
 
 // =============================================================================
@@ -115,6 +122,8 @@ export function ProviderSettings() {
   const [providers, setProviders] = useState<Record<string, ProviderSummary>>({})
   const [slots, setSlots] = useState<Record<string, SlotData>>({})
   const [knownModels, setKnownModels] = useState<Record<string, KnownModelMeta>>({})
+  const [embeddingModels, setEmbeddingModels] = useState<EmbeddingModelInfo[]>([])
+  const [officialBaseUrls, setOfficialBaseUrls] = useState<Record<string, string[]>>({})
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState(true)
   const [claudeStatus, setClaudeStatus] = useState<{ cli_installed: boolean; logged_in: boolean; expires_at: string | null } | null>(null)
@@ -157,7 +166,11 @@ export function ProviderSettings() {
         )
         if (allReady) setCollapsed(true)
       }
-      if (catRes.success) setKnownModels(catRes.known_models)
+      if (catRes.success) {
+        setKnownModels(catRes.known_models)
+        if (catRes.embedding_models) setEmbeddingModels(catRes.embedding_models)
+        if (catRes.official_base_urls) setOfficialBaseUrls(catRes.official_base_urls)
+      }
     } catch {}
   }, [])
 
@@ -249,6 +262,20 @@ export function ProviderSettings() {
 
   const getProvidersForSlot = (protocol: string) =>
     providerList.filter((p) => p.protocol === protocol && p.is_active)
+
+  const isOfficialProvider = (prov: ProviderSummary) => {
+    const urls = officialBaseUrls[prov.protocol] || []
+    return urls.includes(prov.base_url || '')
+  }
+
+  const getModelsForSlot = (prov: ProviderSummary, slotKey: string) => {
+    if (slotKey === 'embedding') {
+      return embeddingModels.filter((em) => prov.models.includes(em.model_id))
+    }
+    return prov.models
+      .filter((mid) => !knownModels[mid]?.dimensions)
+      .map((mid) => ({ model_id: mid, display_name: knownModels[mid]?.display_name || mid }))
+  }
 
   // ---- Collapsed summary ----
   if (collapsed && allSlotsReady) {
@@ -507,29 +534,60 @@ export function ProviderSettings() {
                       onChange={(e) => {
                         const pid = e.target.value
                         const prov = providers[pid]
-                        if (prov?.models.length) handleSlotChange(slot.key, pid, prov.models[0])
-                        else if (prov) handleSlotChange(slot.key, pid, '')
+                        if (!prov) return
+                        const slotModels = getModelsForSlot(prov, slot.key)
+                        if (slot.key === 'helper_llm' && isOfficialProvider(prov)) {
+                          handleSlotChange(slot.key, pid, 'default')
+                        } else if (slotModels.length > 0) {
+                          handleSlotChange(slot.key, pid, slotModels[0].model_id)
+                        } else {
+                          handleSlotChange(slot.key, pid, '')
+                        }
                       }}
                       className="px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
                       <option value="">Provider...</option>
                       {matching.map((p) => <option key={p.provider_id} value={p.provider_id}>{p.name}</option>)}
                     </select>
-                    {curProv && curProv.models.length > 0 ? (
-                      <select value={cfg?.model || ''}
-                        onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
-                        className="px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
-                        <option value="">Model...</option>
-                        {curProv.models.map((mid) => {
-                          const meta = knownModels[mid]
-                          return <option key={mid} value={mid}>{meta?.display_name || mid}{meta?.dimensions ? ` (${meta.dimensions}d)` : ''}</option>
-                        })}
-                      </select>
-                    ) : (
-                      <input type="text" value={cfg?.model || ''}
-                        onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
-                        placeholder="Model name"
-                        className="px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none" />
-                    )}
+                    <div>
+                      {(() => {
+                        if (!curProv) return <select disabled className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-tertiary)] outline-none"><option>Select provider...</option></select>
+
+                        if (slot.key === 'embedding') {
+                          const emModels = embeddingModels.filter((em) => curProv.models.includes(em.model_id))
+                          return <select value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
+                            <option value="">Embedding model...</option>
+                            {emModels.map((em) => <option key={em.model_id} value={em.model_id}>{em.display_name} ({em.dimensions}d)</option>)}
+                          </select>
+                        }
+
+                        if (slot.key === 'helper_llm' && isOfficialProvider(curProv)) {
+                          const llmModels = getModelsForSlot(curProv, 'helper_llm')
+                          return <>
+                            <select value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
+                              <option value="default">Default (recommended)</option>
+                              {llmModels.map((m) => <option key={m.model_id} value={m.model_id}>{m.display_name}</option>)}
+                            </select>
+                            {cfg?.model && cfg.model !== 'default' && (
+                              <p className="text-[10px] text-[var(--color-warning)] mt-0.5">All auxiliary tasks will use this model. May affect speed/cost.</p>
+                            )}
+                          </>
+                        }
+
+                        const llmModels = getModelsForSlot(curProv, slot.key)
+                        if (llmModels.length > 0) {
+                          return <select value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
+                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
+                            <option value="">Model...</option>
+                            {llmModels.map((m) => <option key={m.model_id} value={m.model_id}>{m.display_name}</option>)}
+                          </select>
+                        }
+
+                        return <input type="text" value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
+                          placeholder="Model name" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none" />
+                      })()}
+                    </div>
                   </div>
                 ) : (
                   <p className="text-xs text-[var(--color-error)]">No {slot.protocol} provider. Add one above.</p>

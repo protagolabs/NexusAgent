@@ -207,3 +207,40 @@ def get_suggested_models(protocol: str) -> list[str]:
     a new Anthropic/OpenAI protocol provider.
     """
     return list(_SUGGESTED_MODELS.get(protocol, []))
+
+
+# =============================================================================
+# Official Provider Detection
+# =============================================================================
+
+OFFICIAL_BASE_URLS: dict[str, set[str]] = {
+    "openai": {"", "https://api.openai.com/v1", "https://api.openai.com/v1/"},
+    "anthropic": {"", "https://api.anthropic.com", "https://api.anthropic.com/"},
+}
+
+
+def is_official_provider(protocol: str, base_url: str) -> bool:
+    """Check if a base_url belongs to an official provider."""
+    return base_url in OFFICIAL_BASE_URLS.get(protocol, set())
+
+
+def get_official_models(protocol: str) -> list[str]:
+    """Get the full model list for an official provider (OpenAI or Anthropic)."""
+    return list(_SUGGESTED_MODELS.get(protocol, []))
+
+
+def get_known_embedding_models() -> list[dict]:
+    """
+    Get all known embedding models (hardcoded, not user-configurable).
+
+    Returns list of {model_id, display_name, dimensions} for the frontend.
+    """
+    return [
+        {
+            "model_id": m.model_id,
+            "display_name": m.display_name,
+            "dimensions": m.dimensions,
+        }
+        for m in _KNOWN_MODELS.values()
+        if m.dimensions is not None
+    ]

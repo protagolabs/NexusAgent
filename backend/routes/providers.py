@@ -28,6 +28,8 @@ from xyz_agent_context.agent_framework.model_catalog import (
     get_all_known_models,
     get_suggested_models,
     get_model_display_name,
+    get_known_embedding_models,
+    OFFICIAL_BASE_URLS,
 )
 from xyz_agent_context.schema.provider_schema import (
     LLMConfig,
@@ -224,6 +226,11 @@ async def get_catalog():
         "suggestions": {
             "anthropic": get_suggested_models("anthropic"),
             "openai": get_suggested_models("openai"),
+        },
+        "embedding_models": get_known_embedding_models(),
+        "official_base_urls": {
+            protocol: list(urls)
+            for protocol, urls in OFFICIAL_BASE_URLS.items()
         },
         "slot_protocols": {
             slot.value: [p.value for p in protos]

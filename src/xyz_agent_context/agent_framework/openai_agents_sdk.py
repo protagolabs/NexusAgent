@@ -64,18 +64,31 @@ class OpenAIAgentsSDK:
     @staticmethod
     def _resolve_model(requested_model: str | None) -> str:
         """
-        Resolve which model to use based on the provider endpoint.
+        Resolve which model to use based on the provider endpoint and slot config.
 
-        - Official OpenAI endpoint: honor the requested model (e.g., caller
-          can specify 'gpt-4o-mini' for cheap tasks). This works because
-          OpenAI's endpoint supports all OpenAI models.
-        - Non-official endpoint (NetMind, custom proxy, etc.): ignore the
-          requested model and use the user-configured slot model, because
-          the endpoint may not support the requested model name.
+        Three modes:
+        1. Slot model is "default" + official OpenAI → honor per-call-site model
+           (e.g., narrative uses gpt-4o-mini, instance decision uses gpt-4o-mini).
+           This is the recommended mode for official OpenAI users.
+
+        2. Slot model is a specific name + official OpenAI → force that model
+           for ALL helper_llm calls. User explicitly chose this.
+
+        3. Non-official endpoint → always use slot config model, because the
+           endpoint may not support OpenAI model names.
         """
         is_official = openai_config.base_url in _OFFICIAL_OPENAI_BASE_URLS
-        if is_official and requested_model:
+        is_default = openai_config.model == "default"
+
+        if is_official and is_default and requested_model:
+            # Mode 1: let each call site pick its best model
             return requested_model
+
+        if is_official and not is_default:
+            # Mode 2: user forced a specific model
+            return openai_config.model
+
+        # Mode 3: non-official endpoint, use slot config
         return openai_config.model
 
     async def agent_loop(self) -> AsyncGenerator[str, None]:
