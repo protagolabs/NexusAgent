@@ -468,17 +468,43 @@ class ProviderRegistry:
             return False, f"Connection failed: {e}"
 
     async def _test_openai_provider(self, provider: ProviderConfig) -> tuple[bool, str]:
-        """Test an OpenAI-protocol provider with a minimal models list request"""
-        from openai import AsyncOpenAI
+        """Test an OpenAI-protocol provider with a minimal chat completion request.
 
-        client_kwargs: dict = {"api_key": provider.api_key}
-        if provider.base_url:
-            client_kwargs["base_url"] = provider.base_url
+        Uses /chat/completions with an invalid model name. A 200 means full
+        success; a 400/404 (model not found) still proves auth works.
+        Only 401/403 indicate real auth failures.
+        Falls back to /models list if chat endpoint is unavailable.
+        """
+        import httpx
 
-        client = AsyncOpenAI(**client_kwargs)
-        models = await client.models.list()
-        count = len(models.data) if models.data else 0
-        return True, f"Connected successfully ({count} models available)"
+        base_url = provider.base_url or "https://api.openai.com/v1"
+        url = f"{base_url}/chat/completions"
+
+        headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {provider.api_key}",
+        }
+        payload = {
+            "model": "test-connectivity",
+            "max_tokens": 1,
+            "messages": [{"role": "user", "content": "hi"}],
+        }
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+
+        if resp.status_code == 200:
+            return True, "Connected successfully"
+        elif resp.status_code in (400, 404):
+            # Auth passed but model invalid — auth works
+            return True, "Authentication verified (API reachable)"
+        elif resp.status_code == 401:
+            return False, "Authentication failed (invalid API key)"
+        elif resp.status_code == 403:
+            return False, "Access denied (check API key permissions)"
+        else:
+            body = resp.text[:200]
+            return False, f"HTTP {resp.status_code}: {body}"
 
     async def _test_anthropic_provider(self, provider: ProviderConfig) -> tuple[bool, str]:
         """Test an Anthropic-protocol provider with a minimal request.

@@ -74,7 +74,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   const [emFields, setEmFields] = useState<EverMemOSEnvField[]>([])
   const [emValues, setEmValues] = useState<Record<string, string>>({})
   const [emAdvancedOpen, setEmAdvancedOpen] = useState(false)
-  const [emMode, setEmMode] = useState<'netmind' | 'custom'>('netmind')
+  const [emMode, setEmMode] = useState<'skip' | 'netmind' | 'custom'>('netmind')
   const [everMemOSInstalled, setEverMemOSInstalled] = useState(false)
 
   // Claude Code authentication state
@@ -128,12 +128,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   // Compute derived state
   const PLACEHOLDER_VALUES = ['sk-or-v1-xxxx', 'xxxxx']
 
-  const emConfigured = emMode === 'netmind'
-    ? !!values['NETMIND_API_KEY']?.trim()
-    : emFields.filter((f) => f.required).every((f) => {
-        const v = emValues[f.key]?.trim()
-        return v && !PLACEHOLDER_VALUES.includes(v)
-      })
+  const emConfigured = emMode === 'skip'
+    ? false
+    : emMode === 'netmind'
+      ? !!values['NETMIND_API_KEY']?.trim()
+      : emFields.filter((f) => f.required).every((f) => {
+          const v = emValues[f.key]?.trim()
+          return v && !PLACEHOLDER_VALUES.includes(v)
+        })
 
   // Docker gets ~50% of system RAM (same formula as Colima allocation, capped 2-12GB)
   const dockerMemoryGb = preflightResult
@@ -375,6 +377,16 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                       <input
                         type="radio"
                         name="emMode"
+                        checked={emMode === 'skip'}
+                        onChange={() => setEmMode('skip')}
+                        className="accent-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Skip</span>
+                    </label>
+                    <label className="titlebar-no-drag flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="emMode"
                         checked={emMode === 'netmind'}
                         onChange={() => setEmMode('netmind')}
                         className="accent-blue-500"
@@ -392,6 +404,15 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                       <span className="text-sm font-medium text-gray-700">Custom Configuration</span>
                     </label>
                   </div>
+
+                  {emMode === 'skip' && (
+                    <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <p className="text-xs text-gray-600">
+                        EverMemOS will not be started. The core Agent will still work without long-term memory features.
+                        You can configure this later in settings.
+                      </p>
+                    </div>
+                  )}
 
                   {emMode === 'netmind' && (
                     <>

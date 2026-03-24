@@ -57,7 +57,7 @@ const SLOT_DEFS: { key: string; label: string; desc: string; protocol: string }[
 // =============================================================================
 
 function ModelBubbleInput({
-  models, onChange, placeholder = 'Model name'
+  models, onChange, placeholder = 'model name'
 }: {
   models: string[]; onChange: (m: string[]) => void; placeholder?: string
 }) {
@@ -68,25 +68,24 @@ function ModelBubbleInput({
     setInput('')
   }
   return (
-    <div>
-      <div className="flex flex-wrap gap-1 mb-1">
-        {models.map((m) => (
-          <span key={m} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20">
-            {m}
-            <button onClick={() => onChange(models.filter((x) => x !== m))} className="text-[var(--accent-primary)]/50 hover:text-[var(--accent-primary)] ml-0.5">&times;</button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-1">
+    <div className="flex flex-wrap items-center gap-1">
+      {models.map((m) => (
+        <span key={m} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20 whitespace-nowrap">
+          {m}
+          <button onClick={() => onChange(models.filter((x) => x !== m))} className="text-[var(--accent-primary)]/50 hover:text-[var(--accent-primary)]">&times;</button>
+        </span>
+      ))}
+      <span className="inline-flex items-center gap-0.5">
         <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addModel() } }}
           placeholder={placeholder}
-          className="flex-1 px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
+          style={{ width: Math.max(70, (input.length + 1) * 6) }}
+          className="px-1.5 py-0.5 text-[10px] rounded-full border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
         <button onClick={addModel} disabled={!input.trim()}
-          className="px-1.5 py-1 text-[10px] rounded border border-[var(--accent-primary)]/20 text-[var(--accent-primary)] bg-[var(--accent-primary)]/5 hover:bg-[var(--accent-primary)]/10 disabled:opacity-30">
-          + Add
+          className="px-1 py-0.5 text-[10px] rounded-full border border-[var(--accent-primary)]/20 text-[var(--accent-primary)] bg-[var(--accent-primary)]/5 hover:bg-[var(--accent-primary)]/10 disabled:opacity-30">
+          +
         </button>
-      </div>
+      </span>
     </div>
   )
 }
@@ -271,32 +270,29 @@ export function ProviderSettings() {
         )}
       </div>
 
-      {/* ---- NetMind Card ---- */}
-      <div className="p-2.5 rounded-lg border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/5">
+      {/* ---- NetMind.AI Power Card ---- */}
+      <div className="p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[11px] font-medium text-[var(--text-primary)]">NetMind</span>
-          <span className="text-[8px] px-1 py-0.5 rounded-full bg-[var(--accent-secondary)]/20 text-[var(--accent-secondary)]">Recommended</span>
-          {hasNetMind && <span className="text-[var(--color-success)] text-[10px] ml-auto">{'\u2713'}</span>}
+          <span className="text-[11px] font-medium text-[var(--text-primary)]">NetMind.AI Power</span>
+          {hasNetMind && <span className="text-[var(--color-success)] text-[10px] ml-auto">{'\u2713'} Added</span>}
         </div>
-        <p className="text-[9px] text-[var(--text-tertiary)] mb-1.5">One API key covers Anthropic + OpenAI protocol endpoints.</p>
-        {!hasNetMind && (
-          <div className="flex gap-1.5">
-            <input type="password" value={netmindKey} onChange={(e) => setNetmindKey(e.target.value)} placeholder="NetMind API Key"
-              className="flex-1 px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
-            <button onClick={handleAddNetMind} disabled={netmindAdding}
-              className="px-2 py-1 text-[10px] font-medium rounded bg-[var(--accent-secondary)]/20 text-[var(--accent-secondary)] hover:bg-[var(--accent-secondary)]/30 disabled:opacity-40">
-              {netmindAdding ? '...' : 'Add'}
-            </button>
-          </div>
-        )}
+        <p className="text-[9px] text-[var(--text-tertiary)] mb-1.5">A single API key covers both Anthropic and OpenAI protocol endpoints.</p>
+        <div className="flex gap-1.5">
+          <input type="password" value={netmindKey} onChange={(e) => setNetmindKey(e.target.value)}
+            placeholder={hasNetMind ? 'New key to re-configure...' : 'NetMind API Key'}
+            className="flex-1 px-2 py-1 text-[10px] rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" />
+          <button onClick={handleAddNetMind} disabled={netmindAdding}
+            className="px-2 py-1 text-[10px] font-medium rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 disabled:opacity-40">
+            {netmindAdding ? '...' : hasNetMind ? 'Update' : 'Add'}
+          </button>
+        </div>
       </div>
 
       {/* ---- Claude Code Card ---- */}
       <div className="p-2.5 rounded-lg border border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[11px] font-medium text-[var(--text-primary)]">Claude Code Login</span>
-          <span className="text-[8px] px-1 py-0.5 rounded-full bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]">Recommended</span>
-          {hasClaude && <span className="text-[var(--color-success)] text-[10px] ml-auto">{'\u2713'}</span>}
+          {hasClaude && <span className="text-[var(--color-success)] text-[10px] ml-auto">{'\u2713'} Added</span>}
         </div>
         <p className="text-[9px] text-[var(--text-tertiary)] mb-1.5">OAuth login via Claude Code CLI. No API key needed.</p>
         {!hasClaude && claudeStatus && (

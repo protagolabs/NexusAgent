@@ -78,7 +78,7 @@ const ModelBubbleInput: React.FC<{
   models: string[]
   onChange: (models: string[]) => void
   placeholder?: string
-}> = ({ models, onChange, placeholder = 'Model name' }) => {
+}> = ({ models, onChange, placeholder = 'model name' }) => {
   const [input, setInput] = useState('')
 
   const addModel = () => {
@@ -90,37 +90,36 @@ const ModelBubbleInput: React.FC<{
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap gap-1.5 mb-1.5">
-        {models.map((m) => (
-          <span key={m} className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] bg-blue-50 text-blue-700 rounded-full border border-blue-200">
-            {m}
-            <button
-              onClick={() => onChange(models.filter((x) => x !== m))}
-              className="titlebar-no-drag text-blue-400 hover:text-blue-600 ml-0.5"
-            >
-              &times;
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
+      {models.map((m) => (
+        <span key={m} className="inline-flex items-center gap-0.5 px-2 py-0.5 text-[11px] bg-blue-50 text-blue-700 rounded-full border border-blue-200 whitespace-nowrap">
+          {m}
+          <button
+            onClick={() => onChange(models.filter((x) => x !== m))}
+            className="titlebar-no-drag text-blue-400 hover:text-blue-600"
+          >
+            &times;
+          </button>
+        </span>
+      ))}
+      <span className="inline-flex items-center gap-1">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addModel() } }}
           placeholder={placeholder}
-          className="titlebar-no-drag flex-1 px-2 py-1 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 outline-none"
+          style={{ width: Math.max(80, (input.length + 1) * 7) }}
+          className="titlebar-no-drag px-1.5 py-0.5 text-[11px] border border-gray-200 rounded-full focus:ring-1 focus:ring-blue-400 outline-none"
         />
         <button
           onClick={addModel}
           disabled={!input.trim()}
-          className="titlebar-no-drag px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-30 border border-blue-200"
+          className="titlebar-no-drag px-1.5 py-0.5 text-[11px] text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 disabled:opacity-30 border border-blue-200 whitespace-nowrap"
         >
-          + Add
+          +
         </button>
-      </div>
+      </span>
     </div>
   )
 }
@@ -144,7 +143,7 @@ const ProviderCard: React.FC<{
           {prov.protocol}
         </span>
         {prov.source === 'netmind' && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600">NetMind</span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">NetMind.AI</span>
         )}
         {prov.source === 'claude_oauth' && (
           <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600">OAuth</span>
@@ -364,49 +363,45 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
           Add one or more providers below. Each provider connects to an LLM API endpoint.
         </p>
 
-        {/* ---- NetMind Card (unique) ---- */}
-        <div className="p-3 rounded-lg border border-purple-200 bg-purple-50/30">
+        {/* ---- NetMind.AI Power Card (unique) ---- */}
+        <div className="p-3 rounded-lg border border-gray-200 bg-gray-50/30">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-gray-700">NetMind</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600 font-medium">Recommended</span>
-            {hasNetMind && <span className="text-green-500 text-xs ml-auto">&#10003; Configured</span>}
+            <span className="text-sm font-medium text-gray-700">NetMind.AI Power</span>
+            {hasNetMind && <span className="text-green-500 text-[11px] ml-auto">&#10003; Added</span>}
           </div>
           <p className="text-[11px] text-gray-500 mb-2">
-            NetMind provides access to multiple AI models through a single API key.
-            One key automatically configures both Anthropic and OpenAI protocol endpoints.
+            A single API key covers both Anthropic and OpenAI protocol endpoints.
+            No extra configuration needed — just paste the key.
           </p>
-          {!hasNetMind && (
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={netmindKey}
-                onChange={(e) => setNetmindKey(e.target.value)}
-                placeholder="Your NetMind API Key"
-                className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
-              />
-              <button
-                onClick={() => window.nexus.openExternal('https://www.netmind.ai/user/dashboard')}
-                className="titlebar-no-drag px-3 py-1.5 text-xs text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 whitespace-nowrap border border-purple-200"
-              >
-                Get Key
-              </button>
-              <button
-                onClick={handleAddNetMind}
-                disabled={netmindAdding}
-                className="titlebar-no-drag px-4 py-1.5 text-xs font-medium text-white bg-purple-500 rounded-lg hover:bg-purple-600 disabled:opacity-40 whitespace-nowrap"
-              >
-                {netmindAdding ? 'Adding...' : 'Add'}
-              </button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={netmindKey}
+              onChange={(e) => setNetmindKey(e.target.value)}
+              placeholder={hasNetMind ? 'Enter new key to re-configure...' : 'Your NetMind API Key'}
+              className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
+            />
+            <button
+              onClick={() => window.nexus.openExternal('https://www.netmind.ai/user/dashboard')}
+              className="titlebar-no-drag px-3 py-1.5 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 whitespace-nowrap border border-blue-200"
+            >
+              Get Key
+            </button>
+            <button
+              onClick={handleAddNetMind}
+              disabled={netmindAdding}
+              className="titlebar-no-drag px-4 py-1.5 text-xs font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-40 whitespace-nowrap"
+            >
+              {netmindAdding ? 'Adding...' : hasNetMind ? 'Update' : 'Add'}
+            </button>
+          </div>
         </div>
 
         {/* ---- Claude Code Login Card (unique) ---- */}
         <div className="p-3 rounded-lg border border-indigo-200 bg-indigo-50/30">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-medium text-gray-700">Claude Code Login</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-medium">Recommended</span>
-            {hasClaude && <span className="text-green-500 text-xs ml-auto">&#10003; Configured</span>}
+            {hasClaude && <span className="text-green-500 text-[11px] ml-auto">&#10003; Added</span>}
           </div>
           <p className="text-[11px] text-gray-500 mb-2">
             Use Claude Code CLI's OAuth login. No API key needed — authenticates through your browser.
