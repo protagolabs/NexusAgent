@@ -1345,20 +1345,41 @@ do_install() {
     step "${current}/${total_steps}" "Starting Docker services (MySQL + Synapse)"
     ensure_docker_services
 
-    # --- Step 11: .env configuration ---
+    # --- Step 11: Auto-generate .env (silent, no user interaction) ---
     current=$((current + 1))
-    step "${current}/${total_steps}" "Configuring environment variables (.env)"
+    step "${current}/${total_steps}" "Generating default .env"
     if [ -f "${PROJECT_ROOT}/.env" ]; then
-        success ".env already exists"
-        read -rp "    Reconfigure .env? [y/N] " reconfigure
-        if [[ "$reconfigure" == "y" || "$reconfigure" == "Y" ]]; then
-            configure_env
-        else
-            info "Keeping existing .env, skipping"
-        fi
+        success ".env already exists, keeping"
     else
-        # Auto-generate .env: copy from .env.example, then ask about API keys
-        auto_generate_env
+        # Auto-generate .env with Docker MySQL defaults, no questions asked
+        cat > "${PROJECT_ROOT}/.env" << 'ENVEOF'
+# =============================================================================
+# Optional API Keys
+# =============================================================================
+# LLM providers are configured separately via 'Configure' menu or web UI.
+# Config stored at: ~/.nexusagent/llm_config.json
+GOOGLE_API_KEY=""
+
+# =============================================================================
+# Database (MySQL) — Docker default config, no changes needed
+# =============================================================================
+DB_HOST="127.0.0.1"
+DB_PORT=3306
+DB_NAME="xyz_agent_context"
+DB_USER="root"
+DB_PASSWORD="xyz_root_pass"
+
+# =============================================================================
+# Auth
+# =============================================================================
+ADMIN_SECRET_KEY="nexus-admin-secret"
+
+# =============================================================================
+# Workspace (optional)
+# =============================================================================
+# BASE_WORKING_PATH="./agent_workspace"
+ENVEOF
+        success ".env generated with Docker defaults"
     fi
 
     # --- Done ---
@@ -1574,7 +1595,7 @@ configure_llm_providers() {
 
         echo -e "  ${BOLD}Providers:${RESET}"
         if [ "$provider_count" = "0" ]; then
-            echo -e "    ${DIM}(none)${RESET}"
+            echo -e "    ${DIM}(none added yet)${RESET}"
         else
             echo "$status_json" | python3 -c "
 import sys, json
@@ -1585,8 +1606,8 @@ for p in data['providers']:
         fi
         echo ""
 
-        # Print slot status
-        echo -e "  ${BOLD}Slots:${RESET}"
+        # Print slot status with selectable labels
+        echo -e "  ${BOLD}Slots:${RESET}  ${DIM}(press a/b/c to assign provider + model)${RESET}"
         _print_slot_status "agent" "Agent     " "Anthropic" "$status_json"
         _print_slot_status "embedding" "Embedding " "OpenAI" "$status_json"
         _print_slot_status "helper_llm" "Helper LLM" "OpenAI" "$status_json"
@@ -1617,7 +1638,7 @@ print('yes' if all(s.get('configured') for s in slots.values()) else 'no')
         echo -e "    ${CYAN}[5]${RESET}  Custom endpoint"
         echo ""
         echo -e "  ${BOLD}Assign slot:${RESET}"
-        echo -e "    ${BOLD}[a]${RESET}  Assign a provider + model to a slot"
+        echo -e "    ${BOLD}[a]${RESET}  Agent      ${BOLD}[b]${RESET}  Embedding      ${BOLD}[c]${RESET}  Helper LLM"
         echo ""
         echo -e "    ──────────────────────────────"
         if [ "$all_valid" = "yes" ]; then
@@ -1668,7 +1689,6 @@ print('yes' if all(s.get('configured') for s in slots.values()) else 'no')
                     if [ "$cc_wait" = "b" ] || [ "$cc_wait" = "B" ]; then
                         continue
                     fi
-                    # Re-check
                     cc_status=$(_provider_cli claude-status)
                     cc_logged_in=$(echo "$cc_status" | python3 -c "import sys,json; print(json.load(sys.stdin)['logged_in'])" 2>/dev/null)
                     if [ "$cc_logged_in" != "True" ]; then
@@ -1693,17 +1713,12 @@ print('yes' if all(s.get('configured') for s in slots.values()) else 'no')
                 anth_url="${anth_url:-https://api.anthropic.com}"
                 read -rsp "    API Key: " anth_key
                 echo ""
-                if [ -z "$anth_key" ]; then
-                    warn "No key entered"
-                    continue
-                fi
+                if [ -z "$anth_key" ]; then warn "No key entered"; continue; fi
                 local add_result
                 add_result=$(_provider_cli add anthropic --name "$anth_name" --api-key "$anth_key" --base-url "$anth_url")
                 if echo "$add_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
                     success "Added ${anth_name} (Anthropic protocol)"
-                else
-                    fail "Failed to add provider"
-                fi
+                else fail "Failed to add provider"; fi
                 ;;
 
             4)  # OpenAI API Key
@@ -1713,17 +1728,12 @@ print('yes' if all(s.get('configured') for s in slots.values()) else 'no')
                 oai_url="${oai_url:-https://api.openai.com/v1}"
                 read -rsp "    API Key: " oai_key
                 echo ""
-                if [ -z "$oai_key" ]; then
-                    warn "No key entered"
-                    continue
-                fi
+                if [ -z "$oai_key" ]; then warn "No key entered"; continue; fi
                 local add_result
                 add_result=$(_provider_cli add openai --name "$oai_name" --api-key "$oai_key" --base-url "$oai_url")
                 if echo "$add_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
                     success "Added ${oai_name} (OpenAI protocol)"
-                else
-                    fail "Failed to add provider"
-                fi
+                else fail "Failed to add provider"; fi
                 ;;
 
             5)  # Custom endpoint
@@ -1736,37 +1746,50 @@ print('yes' if all(s.get('configured') for s in slots.values()) else 'no')
                 read -rp "    Base URL: " custom_url
                 read -rsp "    API Key: " custom_key
                 echo ""
-                if [ -z "$custom_key" ] || [ -z "$custom_url" ]; then
-                    warn "Key and URL are required"
-                    continue
-                fi
+                if [ -z "$custom_key" ] || [ -z "$custom_url" ]; then warn "Key and URL are required"; continue; fi
                 local add_result
                 add_result=$(_provider_cli add "$custom_proto" --name "${custom_name:-Custom}" --api-key "$custom_key" --base-url "$custom_url")
                 if echo "$add_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
                     success "Added ${custom_name:-Custom} (${custom_proto} protocol)"
+                else fail "Failed to add provider"; fi
+                ;;
+
+            a|A)  _assign_slot_interactive "$status_json" "agent" "anthropic" ;;
+            b|B)  _assign_slot_interactive "$status_json" "embedding" "openai" ;;
+            c|C)  _assign_slot_interactive "$status_json" "helper_llm" "openai" ;;
+
+            d|D)  # Done
+                if [ "$all_valid" = "yes" ]; then
+                    success "LLM provider configuration complete"
+                    return 0
                 else
-                    fail "Failed to add provider"
+                    warn "Not all slots are configured yet."
                 fi
                 ;;
 
-            a|A)  # Assign slot
-                echo -e "    ${BOLD}Which slot?${RESET}"
-                echo -e "    [1] Agent   [2] Embedding   [3] Helper LLM"
-                read -rp "    : " slot_choice
-                local slot_name=""
-                local slot_protocol=""
-                case "$slot_choice" in
-                    1) slot_name="agent";      slot_protocol="anthropic" ;;
-                    2) slot_name="embedding";  slot_protocol="openai" ;;
-                    3) slot_name="helper_llm"; slot_protocol="openai" ;;
-                    *) warn "Invalid slot"; continue ;;
-                esac
+            s|S)  # Skip
+                warn "Skipping LLM configuration. Configure later in web UI (CPU icon in header)."
+                return 0
+                ;;
 
-                # List matching providers
-                echo ""
-                echo -e "    ${BOLD}Available ${slot_protocol} providers:${RESET}"
-                local matching_providers
-                matching_providers=$(echo "$status_json" | python3 -c "
+            *)  warn "Invalid option: $llm_choice" ;;
+        esac
+        echo ""
+    done
+}
+
+# Helper: interactive slot assignment (provider → model)
+_assign_slot_interactive() {
+    local status_json="$1"
+    local slot_name="$2"
+    local slot_protocol="$3"
+
+    local label="$slot_name"
+    [ "$slot_name" = "helper_llm" ] && label="Helper LLM"
+
+    # List matching providers
+    local matching_providers
+    matching_providers=$(echo "$status_json" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 matches = [p for p in data['providers'] if p['protocol'] == '${slot_protocol}']
@@ -1774,19 +1797,21 @@ if not matches:
     print('NONE')
 else:
     for i, p in enumerate(matches, 1):
-        print(f'    [{i}] {p[\"name\"]}  ({p[\"id\"]})')
+        print(f'    [{i}] {p[\"name\"]}  ({p[\"key_hint\"]})')
 " 2>/dev/null)
 
-                if [ "$matching_providers" = "NONE" ]; then
-                    warn "No ${slot_protocol} protocol providers. Add one first."
-                    continue
-                fi
-                echo "$matching_providers"
-                read -rp "    Select provider #: " prov_idx
+    if [ "$matching_providers" = "NONE" ]; then
+        warn "No ${slot_protocol} protocol providers available. Add one first."
+        return
+    fi
 
-                # Get provider ID
-                local selected_pid
-                selected_pid=$(echo "$status_json" | python3 -c "
+    echo -e "    ${BOLD}${label} — select provider:${RESET}"
+    echo "$matching_providers"
+    read -rp "    #: " prov_idx
+
+    # Get provider ID
+    local selected_pid
+    selected_pid=$(echo "$status_json" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 matches = [p for p in data['providers'] if p['protocol'] == '${slot_protocol}']
@@ -1797,39 +1822,37 @@ else:
     print('INVALID')
 " 2>/dev/null)
 
-                if [ "$selected_pid" = "INVALID" ] || [ -z "$selected_pid" ]; then
-                    warn "Invalid selection"
-                    continue
-                fi
+    if [ "$selected_pid" = "INVALID" ] || [ -z "$selected_pid" ]; then
+        warn "Invalid selection"
+        return
+    fi
 
-                # List models for this provider
-                echo ""
-                echo -e "    ${BOLD}Available models:${RESET}"
-                local models_json
-                models_json=$(_provider_cli list-models "$selected_pid")
-                local model_count
-                model_count=$(echo "$models_json" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['models']))" 2>/dev/null)
+    # List models (filtered by slot type)
+    local models_json
+    models_json=$(_provider_cli list-models "$selected_pid" --slot "$slot_name")
+    local model_count
+    model_count=$(echo "$models_json" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['models']))" 2>/dev/null)
 
-                if [ "$model_count" = "0" ]; then
-                    echo -e "    ${DIM}No preset models. Enter model name manually.${RESET}"
-                    read -rp "    Model name: " manual_model
-                    if [ -z "$manual_model" ]; then
-                        warn "No model entered"
-                        continue
-                    fi
-                    local assign_result
-                    assign_result=$(_provider_cli assign "$slot_name" "$selected_pid" "$manual_model")
-                else
-                    echo "$models_json" | python3 -c "
+    local selected_model=""
+    if [ "$model_count" = "0" ]; then
+        echo -e "    ${DIM}No preset models for this slot. Enter model name:${RESET}"
+        read -rp "    Model: " selected_model
+        if [ -z "$selected_model" ]; then
+            warn "No model entered"
+            return
+        fi
+    else
+        echo ""
+        echo -e "    ${BOLD}Select model:${RESET}"
+        echo "$models_json" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 for i, m in enumerate(data['models'], 1):
     print(f'    [{i}] {m[\"display\"]}  ({m[\"id\"]})')
 " 2>/dev/null
-                    read -rp "    Select model #: " model_idx
+        read -rp "    #: " model_idx
 
-                    local selected_model
-                    selected_model=$(echo "$models_json" | python3 -c "
+        selected_model=$(echo "$models_json" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 idx = int('${model_idx}') - 1
@@ -1839,43 +1862,22 @@ else:
     print('INVALID')
 " 2>/dev/null)
 
-                    if [ "$selected_model" = "INVALID" ] || [ -z "$selected_model" ]; then
-                        warn "Invalid selection"
-                        continue
-                    fi
-                    local assign_result
-                    assign_result=$(_provider_cli assign "$slot_name" "$selected_pid" "$selected_model")
-                fi
+        if [ "$selected_model" = "INVALID" ] || [ -z "$selected_model" ]; then
+            warn "Invalid selection"
+            return
+        fi
+    fi
 
-                if echo "${assign_result:-}" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
-                    success "Slot '${slot_name}' assigned"
-                else
-                    local err_msg
-                    err_msg=$(echo "${assign_result:-}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','Unknown error'))" 2>/dev/null)
-                    fail "Assignment failed: ${err_msg}"
-                fi
-                ;;
-
-            d|D)  # Done
-                if [ "$all_valid" = "yes" ]; then
-                    success "LLM provider configuration complete"
-                    return 0
-                else
-                    warn "Not all slots are configured yet. Please configure all 3 slots."
-                fi
-                ;;
-
-            s|S)  # Skip
-                warn "Skipping LLM configuration. You can configure later in the web UI (CPU icon in header)."
-                return 0
-                ;;
-
-            *)
-                warn "Invalid option: $llm_choice"
-                ;;
-        esac
-        echo ""
-    done
+    # Assign
+    local assign_result
+    assign_result=$(_provider_cli assign "$slot_name" "$selected_pid" "$selected_model")
+    if echo "$assign_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
+        success "${label} → ${selected_model}"
+    else
+        local err_msg
+        err_msg=$(echo "$assign_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','Unknown error'))" 2>/dev/null)
+        fail "Assignment failed: ${err_msg}"
+    fi
 }
 
 # ============================================================================

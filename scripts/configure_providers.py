@@ -165,7 +165,9 @@ def cmd_claude_status() -> None:
 
 
 def cmd_list_models(args: argparse.Namespace) -> None:
-    """List models available on a provider."""
+    """List models available on a provider, optionally filtered by slot type."""
+    from xyz_agent_context.agent_framework.model_catalog import get_embedding_dimensions
+
     config = provider_registry.load()
     if config is None or args.provider_id not in config.providers:
         print(json.dumps({"models": []}))
@@ -174,6 +176,15 @@ def cmd_list_models(args: argparse.Namespace) -> None:
     prov = config.providers[args.provider_id]
     models = []
     for mid in prov.models:
+        is_embedding = get_embedding_dimensions(mid) is not None
+
+        # Filter by slot type if specified
+        if args.slot:
+            if args.slot == "embedding" and not is_embedding:
+                continue
+            if args.slot in ("agent", "helper_llm") and is_embedding:
+                continue
+
         models.append({
             "id": mid,
             "display": get_model_display_name(mid),
@@ -216,6 +227,8 @@ def main():
     # list-models
     lm_p = sub.add_parser("list-models", help="List models for a provider")
     lm_p.add_argument("provider_id")
+    lm_p.add_argument("--slot", default=None, choices=["agent", "embedding", "helper_llm"],
+                       help="Filter models by slot type (embedding vs LLM)")
 
     args = parser.parse_args()
 
