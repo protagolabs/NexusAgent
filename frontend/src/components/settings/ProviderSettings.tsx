@@ -271,6 +271,7 @@ export function ProviderSettings() {
       </div>
       <div className="text-[9px] text-[var(--text-tertiary)] space-y-0.5">
         <p>Need at least: <span className="text-[var(--text-secondary)]">one OpenAI-compatible provider</span> (Embedding &amp; Helper LLM) + <span className="text-[var(--text-secondary)]">one Anthropic-compatible provider or Claude Code Login</span> (Agent).</p>
+        <p>Embedding is required — currently only <span className="text-[var(--text-secondary)]">OpenAI official API</span> and <span className="text-[var(--text-secondary)]">NetMind.AI Power</span> are supported. More providers coming soon.</p>
         <p>A <span className="text-[var(--text-secondary)]">NetMind.AI Power</span> key meets the minimum in one step, though model selection is limited.</p>
       </div>
 

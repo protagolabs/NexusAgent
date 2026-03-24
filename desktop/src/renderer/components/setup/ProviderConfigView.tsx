@@ -365,6 +365,10 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
             and <strong>one Anthropic-compatible provider or Claude Code Login</strong> (for Agent).
           </p>
           <p className="text-gray-400">
+            Embedding is required and currently only supports <span className="text-gray-500">OpenAI official API</span> and
+            {' '}<span className="text-gray-500">NetMind.AI Power</span>. More embedding providers will be supported in the future.
+          </p>
+          <p className="text-gray-400">
             With a <span className="text-gray-500">NetMind.AI Power</span> key you can meet the minimum
             requirements in one step, though the available model selection is limited.
           </p>
