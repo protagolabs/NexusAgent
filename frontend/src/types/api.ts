@@ -436,7 +436,6 @@ export interface EmbeddingMigrationProgress {
 
 export interface EmbeddingStatusData {
   model: string;
-  dimensions: number | null;
   stats: Record<string, EmbeddingEntityStats>;
   all_done: boolean;
   migration: EmbeddingMigrationProgress;

@@ -148,13 +148,14 @@ def _load_from_llm_config() -> Optional[tuple[ClaudeConfig, OpenAIConfig, Embedd
     emb_provider = config.providers.get(emb_slot.provider_id) if emb_slot else None
 
     if emb_provider:
-        from xyz_agent_context.agent_framework.model_catalog import get_embedding_dimensions
-        dims = get_embedding_dimensions(emb_slot.model)
+        # dimensions is NOT passed to EmbeddingConfig — it's metadata only
+        # (for UI display / storage sizing). Passing it as an API request
+        # parameter causes errors when switching between models with
+        # different native dimensions.
         embedding = EmbeddingConfig(
             api_key=emb_provider.api_key,
             base_url=emb_provider.base_url,
             model=emb_slot.model,
-            dimensions=dims,
         )
     else:
         embedding = EmbeddingConfig()
@@ -281,3 +282,6 @@ gemini_config: GeminiConfig = _ConfigProxy("gemini")  # type: ignore
 def reload_llm_config() -> None:
     """Reload LLM config from disk. Call after llm_config.json changes."""
     _holder.reload()
+    # Reset the global embedding client so it picks up the new model/config
+    from xyz_agent_context.agent_framework.llm_api.embedding import reset_global_client
+    reset_global_client()

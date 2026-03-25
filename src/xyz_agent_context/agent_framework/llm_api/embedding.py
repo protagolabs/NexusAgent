@@ -139,7 +139,7 @@ class EmbeddingClient:
             )
 
         self.model = model or embedding_config.model
-        self.dimensions = embedding_config.dimensions or MODEL_DIMENSIONS.get(self.model, 1536)
+        self.dimensions = MODEL_DIMENSIONS.get(self.model, 1536)
         self.enable_cache = enable_cache
 
         # Initialize OpenAI client; only pass base_url when configured
@@ -216,8 +216,8 @@ class EmbeddingClient:
         with automatic retry for transient failures.
         """
         create_kwargs: dict = {"model": self.model, "input": text}
-        if embedding_config.dimensions is not None:
-            create_kwargs["dimensions"] = embedding_config.dimensions
+        # Don't pass dimensions — let each model use its native output size.
+        # Passing catalog dimensions across model switches causes 400 errors.
         response = await self._client.embeddings.create(**create_kwargs)
         # Record embedding cost if tracking context is set
         await self._try_record_cost(getattr(response, "usage", None))
@@ -352,8 +352,7 @@ class EmbeddingClient:
         with automatic retry for transient failures.
         """
         create_kwargs: dict = {"model": self.model, "input": texts}
-        if embedding_config.dimensions is not None:
-            create_kwargs["dimensions"] = embedding_config.dimensions
+        # Don't pass dimensions — let each model use its native output size.
         response = await self._client.embeddings.create(**create_kwargs)
         await self._try_record_cost(getattr(response, "usage", None))
         return response
@@ -382,6 +381,12 @@ def _get_global_client() -> EmbeddingClient:
     if _global_client is None:
         _global_client = EmbeddingClient()
     return _global_client
+
+
+def reset_global_client() -> None:
+    """Reset the global embedding client so the next call picks up new config."""
+    global _global_client
+    _global_client = None
 
 
 # =============================================================================

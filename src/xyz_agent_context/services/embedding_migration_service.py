@@ -8,6 +8,15 @@ When users switch embedding models, this service scans all entity types
 (narrative, event, job, entity) and generates missing embeddings for the
 new model. Supports progress tracking and batch processing.
 
+Key design decisions:
+  - Each _source_text builder mirrors the ORIGINAL embedding generation
+    logic exactly (see docstrings for cross-references).
+  - SQL queries extract fields from JSON columns where needed — e.g.
+    narratives.narrative_info is a JSON object containing {name, description,
+    current_summary, actors}; there is no top-level 'name' column.
+  - tags in instance_social_entities is a JSON array; raw SQL returns it
+    as a string, so we JSON-parse it before joining.
+
 Usage:
     from xyz_agent_context.services.embedding_migration_service import EmbeddingMigrationService
 
@@ -19,8 +28,9 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import json as _json
 from dataclasses import dataclass, field
-from typing import Optional, Callable, Awaitable
+from typing import Optional, Callable
 
 from loguru import logger
 
@@ -86,29 +96,49 @@ def get_migration_progress() -> MigrationProgress:
 
 
 # =============================================================================
-# Source Text Builders (match original embedding generation logic exactly)
+# Source Text Builders
+#
+# Each function reconstructs the text that was ORIGINALLY used to generate
+# the embedding for that entity type. The cross-reference comment tells you
+# which production code path produces the same text so you can verify they
+# stay in sync.
 # =============================================================================
 
 def _narrative_source_text(row: dict) -> str:
-    """Build embedding source text for a narrative (matches updater._regenerate_topic_hint)"""
-    # topic_hint is the pre-built source; if available, use it directly
+    """
+    Build embedding source text for a narrative.
+
+    Cross-ref: narrative/_narrative_impl/updater.py → _regenerate_topic_hint()
+
+    Priority:
+      1. topic_hint (pre-built by the updater, best source)
+      2. Reconstruct from name + current_summary (both extracted from
+         narrative_info JSON column via SQL JSON_EXTRACT)
+    """
     hint = row.get("topic_hint", "")
     if hint:
         return hint
-    name = row.get("name", "")
-    summary = row.get("current_summary", "")
+    name = row.get("name", "") or ""
+    summary = row.get("current_summary", "") or ""
     if name and summary:
         return f"{name}: {summary}"
     return summary or name or f"Conversation {row.get('narrative_id', '')}"
 
 
 def _event_source_text(row: dict) -> str:
-    """Build embedding source text for an event (matches processor._generate_embedding)"""
-    # The events table stores the pre-built embedding_text
-    text = row.get("embedding_text", "")
+    """
+    Build embedding source text for an event.
+
+    Cross-ref: narrative/_event_impl/processor.py → _generate_embedding()
+
+    Priority:
+      1. embedding_text (pre-built by the processor, best source)
+      2. Reconstruct from env_context.input + final_output
+    """
+    text = row.get("embedding_text", "") or ""
     if text:
         return text
-    # Fallback: reconstruct from input/output
+    # Fallback: reconstruct from input/output (same logic as processor)
     inp = row.get("input_content", "") or ""
     out = row.get("final_output", "") or ""
     max_len = 2000
@@ -120,7 +150,13 @@ def _event_source_text(row: dict) -> str:
 
 
 def _job_source_text(row: dict) -> str:
-    """Build embedding source text for a job (matches prepare_job_text_for_embedding)"""
+    """
+    Build embedding source text for a job.
+
+    Cross-ref: agent_framework/llm_api/embedding.py → prepare_job_text_for_embedding()
+
+    Delegates to the exact same function used in production.
+    """
     title = row.get("title", "") or ""
     description = row.get("description", "") or ""
     payload = row.get("payload", "") or ""
@@ -128,20 +164,57 @@ def _job_source_text(row: dict) -> str:
 
 
 def _entity_source_text(row: dict) -> str:
-    """Build embedding source text for a social entity (matches _entity_updater)"""
+    """
+    Build embedding source text for a social entity.
+
+    Cross-ref: module/social_network_module/_entity_updater.py → update_entity_embedding()
+
+    Note: tags is a JSON array in MySQL. Raw SQL returns it as a JSON string
+    (e.g. '["tag1","tag2"]'), so we parse it before joining.
+    """
     parts = []
-    name = row.get("entity_name", "")
-    desc = row.get("entity_description", "")
-    tags = row.get("tags", "")
+    name = row.get("entity_name", "") or ""
+    desc = row.get("entity_description", "") or ""
+    tags_raw = row.get("tags", "")
     if name:
         parts.append(f"Name: {name}")
     if desc:
         parts.append(f"Description: {desc}")
-    if tags:
-        if isinstance(tags, list):
-            tags = ", ".join(tags)
-        parts.append(f"Tags: {tags}")
+    if tags_raw:
+        # Parse JSON string → list if needed
+        if isinstance(tags_raw, str):
+            try:
+                tags_raw = _json.loads(tags_raw)
+            except (ValueError, TypeError):
+                pass
+        if isinstance(tags_raw, list) and tags_raw:
+            parts.append(f"Tags: {', '.join(str(t) for t in tags_raw)}")
+        elif isinstance(tags_raw, str) and tags_raw:
+            parts.append(f"Tags: {tags_raw}")
     return "\n".join(parts)
+
+
+# =============================================================================
+# SQL Queries
+#
+# Centralised here so get_status() and _rebuild_*() always use identical
+# WHERE clauses. A mismatch would cause "missing" to never reach 0.
+# =============================================================================
+
+# Events that have embeddable content (pre-built embedding_text, OR
+# env_context with input, OR final_output). This is the broadest set
+# we can meaningfully re-embed.
+_EVENT_WHERE = (
+    "WHERE (embedding_text IS NOT NULL AND embedding_text != '') "
+    "OR final_output IS NOT NULL"
+)
+
+_STATUS_QUERIES: list[tuple[str, str]] = [
+    ("narrative", "SELECT COUNT(*) as cnt FROM narratives"),
+    ("event",    f"SELECT COUNT(*) as cnt FROM events {_EVENT_WHERE}"),
+    ("job",      "SELECT COUNT(*) as cnt FROM instance_jobs"),
+    ("entity",   "SELECT COUNT(*) as cnt FROM instance_social_entities"),
+]
 
 
 # =============================================================================
@@ -174,7 +247,6 @@ class EmbeddingMigrationService:
         if not use_embedding_store():
             return {
                 "model": embedding_config.model,
-                "dimensions": embedding_config.dimensions,
                 "stats": {},
                 "all_done": True,
                 "migration": _progress.to_dict(),
@@ -184,12 +256,7 @@ class EmbeddingMigrationService:
         model = embedding_config.model
         stats = {}
 
-        for entity_type, count_sql in [
-            ("narrative", "SELECT COUNT(*) as cnt FROM narratives"),
-            ("event", "SELECT COUNT(*) as cnt FROM events WHERE event_embedding IS NOT NULL OR embedding_text IS NOT NULL OR embedding_text != ''"),
-            ("job", "SELECT COUNT(*) as cnt FROM instance_jobs"),
-            ("entity", "SELECT COUNT(*) as cnt FROM instance_social_entities"),
-        ]:
+        for entity_type, count_sql in _STATUS_QUERIES:
             total_rows = await self.db.execute(count_sql, fetch=True)
             total = total_rows[0]["cnt"] if total_rows else 0
             existing = await self.emb_repo.count_by_model(entity_type, model)
@@ -202,7 +269,6 @@ class EmbeddingMigrationService:
         all_done = all(s["missing"] == 0 for s in stats.values())
         return {
             "model": model,
-            "dimensions": embedding_config.dimensions,
             "stats": stats,
             "all_done": all_done,
             "migration": _progress.to_dict(),
@@ -221,16 +287,15 @@ class EmbeddingMigrationService:
             return
 
         model = embedding_config.model
-        dims = embedding_config.dimensions
 
         _progress = MigrationProgress(is_running=True, current_model=model)
         logger.info(f"Starting embedding migration for model={model}")
 
         try:
-            await self._rebuild_narratives(model, dims)
-            await self._rebuild_events(model, dims)
-            await self._rebuild_jobs(model, dims)
-            await self._rebuild_entities(model, dims)
+            await self._rebuild_narratives(model)
+            await self._rebuild_events(model)
+            await self._rebuild_jobs(model)
+            await self._rebuild_entities(model)
 
             _progress.finished = True
             logger.info(
@@ -245,40 +310,45 @@ class EmbeddingMigrationService:
 
     # ---- Per-entity-type rebuild ----
 
-    async def _rebuild_narratives(self, model: str, dims: Optional[int]) -> None:
+    async def _rebuild_narratives(self, model: str) -> None:
         entity_type = "narrative"
+        # name and current_summary live inside narrative_info JSON column;
+        # topic_hint is a standalone TEXT column.
         rows = await self.db.execute(
-            "SELECT narrative_id, name, current_summary, topic_hint FROM narratives",
+            "SELECT narrative_id, "
+            "JSON_UNQUOTE(JSON_EXTRACT(narrative_info, '$.name')) as name, "
+            "JSON_UNQUOTE(JSON_EXTRACT(narrative_info, '$.current_summary')) as current_summary, "
+            "topic_hint FROM narratives",
             fetch=True,
         )
-        await self._process_rows(entity_type, model, dims, rows, "narrative_id", _narrative_source_text)
+        await self._process_rows(entity_type, model, rows, "narrative_id", _narrative_source_text)
 
-    async def _rebuild_events(self, model: str, dims: Optional[int]) -> None:
+    async def _rebuild_events(self, model: str) -> None:
         entity_type = "event"
+        # Use the same WHERE as _STATUS_QUERIES to keep total/missing in sync
         rows = await self.db.execute(
             "SELECT event_id, embedding_text, "
             "JSON_UNQUOTE(JSON_EXTRACT(env_context, '$.input')) as input_content, "
-            "final_output FROM events "
-            "WHERE embedding_text IS NOT NULL AND embedding_text != ''",
+            f"final_output FROM events {_EVENT_WHERE}",
             fetch=True,
         )
-        await self._process_rows(entity_type, model, dims, rows, "event_id", _event_source_text)
+        await self._process_rows(entity_type, model, rows, "event_id", _event_source_text)
 
-    async def _rebuild_jobs(self, model: str, dims: Optional[int]) -> None:
+    async def _rebuild_jobs(self, model: str) -> None:
         entity_type = "job"
         rows = await self.db.execute(
             "SELECT job_id, title, description, payload FROM instance_jobs",
             fetch=True,
         )
-        await self._process_rows(entity_type, model, dims, rows, "job_id", _job_source_text)
+        await self._process_rows(entity_type, model, rows, "job_id", _job_source_text)
 
-    async def _rebuild_entities(self, model: str, dims: Optional[int]) -> None:
+    async def _rebuild_entities(self, model: str) -> None:
         entity_type = "entity"
         rows = await self.db.execute(
             "SELECT entity_id, entity_name, entity_description, tags FROM instance_social_entities",
             fetch=True,
         )
-        await self._process_rows(entity_type, model, dims, rows, "entity_id", _entity_source_text)
+        await self._process_rows(entity_type, model, rows, "entity_id", _entity_source_text)
 
     # ---- Core batch processor ----
 
@@ -286,7 +356,6 @@ class EmbeddingMigrationService:
         self,
         entity_type: str,
         model: str,
-        dims: Optional[int],
         rows: list[dict],
         id_field: str,
         source_text_fn: Callable[[dict], str],

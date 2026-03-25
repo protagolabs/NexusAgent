@@ -4,7 +4,10 @@
  *
  * Two-layer architecture (same as desktop ProviderConfigView):
  *   Layer 1 — Provider Atomic Cards: add/remove providers
- *   Layer 2 — Slot Model Selection: 3 tabs with green/red indicators
+ *   Layer 2 — Slot Model Selection: all 3 slots shown simultaneously
+ *
+ * Slot changes are accumulated locally and submitted together via Apply button,
+ * so users can adjust multiple slots without the panel collapsing.
  *
  * Uses the bioluminescent terminal design system CSS variables.
  */
@@ -141,9 +144,12 @@ export function ProviderSettings() {
   const [formModels, setFormModels] = useState<string[]>([])
   const [formAdding, setFormAdding] = useState(false)
 
-  // Slot tab
-  const [activeTab, setActiveTab] = useState('agent')
+  // Agent framework
   const [agentFramework, setAgentFramework] = useState<string>(AGENT_FRAMEWORKS[0].id)
+
+  // Pending slot changes (local draft, not yet submitted)
+  const [pendingSlots, setPendingSlots] = useState<Record<string, SlotConfig>>({})
+  const [applying, setApplying] = useState(false)
 
   // Testing
   const [testing, setTesting] = useState<string | null>(null)
@@ -161,10 +167,8 @@ export function ProviderSettings() {
       if (cfgRes.success) {
         setProviders(cfgRes.data.providers)
         setSlots(cfgRes.data.slots)
-        const allReady = SLOT_DEFS.every(
-          (s) => cfgRes.data.slots[s.key]?.config?.provider_id && cfgRes.data.slots[s.key]?.config?.model
-        )
-        if (allReady) setCollapsed(true)
+        // Clear pending slots since we just loaded fresh state
+        setPendingSlots({})
       }
       if (catRes.success) {
         setKnownModels(catRes.known_models)
@@ -180,9 +184,19 @@ export function ProviderSettings() {
   const hasProviders = providerList.length > 0
   const hasNetMind = providerList.some((p) => p.source === 'netmind')
   const hasClaude = providerList.some((p) => p.source === 'claude_oauth')
-  const allSlotsReady = SLOT_DEFS.every(
-    (s) => slots[s.key]?.config?.provider_id && slots[s.key]?.config?.model
-  )
+
+  // Compute effective config per slot: pending overrides server state
+  const getEffectiveSlotConfig = (slotKey: string): SlotConfig | null => {
+    if (pendingSlots[slotKey]) return pendingSlots[slotKey]
+    return slots[slotKey]?.config || null
+  }
+
+  const allSlotsReady = SLOT_DEFS.every((s) => {
+    const cfg = getEffectiveSlotConfig(s.key)
+    return cfg?.provider_id && cfg?.model
+  })
+
+  const hasPendingChanges = Object.keys(pendingSlots).length > 0
 
   // ---- Provider actions ----
   const addProvider = async (body: Record<string, unknown>) => {
@@ -231,6 +245,14 @@ export function ProviderSettings() {
 
   const handleDelete = async (id: string) => {
     await fetch(`${API_BASE}/api/providers/${id}`, { method: 'DELETE' })
+    // Clear any pending slots that reference the deleted provider
+    setPendingSlots((prev) => {
+      const next = { ...prev }
+      for (const [k, v] of Object.entries(next)) {
+        if (v.provider_id === id) delete next[k]
+      }
+      return next
+    })
     await refreshConfig()
   }
 
@@ -245,12 +267,47 @@ export function ProviderSettings() {
     setTesting(null)
   }
 
-  const handleSlotChange = async (slot: string, pid: string, model: string) => {
-    await fetch(`${API_BASE}/api/providers/slots/${slot}`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider_id: pid, model }),
-    })
-    await refreshConfig()
+  // Local slot change — just update pending state, no API call
+  const handleLocalSlotChange = (slot: string, pid: string, model: string) => {
+    setPendingSlots((prev) => ({ ...prev, [slot]: { provider_id: pid, model } }))
+  }
+
+  // Apply all pending slot changes to backend
+  const handleApply = async () => {
+    setApplying(true)
+    setError('')
+    try {
+      // Submit all pending slot changes sequentially (order doesn't matter but
+      // sequential is safer for error handling)
+      for (const [slot, cfg] of Object.entries(pendingSlots)) {
+        const res = await fetch(`${API_BASE}/api/providers/slots/${slot}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider_id: cfg.provider_id, model: cfg.model }),
+        }).then((r) => r.json())
+        if (!res.success) {
+          setError(`Failed to set ${slot}: ${res.detail || 'Unknown error'}`)
+          break
+        }
+      }
+      await refreshConfig()
+      // If all slots are ready after apply, collapse
+      // (we check via refreshConfig's fresh data, but collapsed is set here)
+      const cfgRes = await fetch(`${API_BASE}/api/providers`).then((r) => r.json())
+      if (cfgRes.success) {
+        const allReady = SLOT_DEFS.every(
+          (s) => cfgRes.data.slots[s.key]?.config?.provider_id && cfgRes.data.slots[s.key]?.config?.model
+        )
+        if (allReady) setCollapsed(true)
+      }
+    } catch {
+      setError('Network error applying changes')
+    }
+    setApplying(false)
+  }
+
+  // Discard pending changes
+  const handleDiscard = () => {
+    setPendingSlots({})
   }
 
   const openForm = (protocol: 'anthropic' | 'openai') => {
@@ -281,7 +338,7 @@ export function ProviderSettings() {
   }
 
   // ---- Collapsed summary ----
-  if (collapsed && allSlotsReady) {
+  if (collapsed && allSlotsReady && !hasPendingChanges) {
     return (
       <div className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
         <div className="flex items-center justify-between">
@@ -311,12 +368,127 @@ export function ProviderSettings() {
     )
   }
 
+  // ---- Slot row renderer (used for all 3 slots) ----
+  const renderSlotRow = (slot: typeof SLOT_DEFS[number]) => {
+    // For agent slot, protocol is driven by the selected framework
+    const selectedFramework = AGENT_FRAMEWORKS.find((f) => f.id === agentFramework)
+    const effectiveProtocol = slot.key === 'agent' && selectedFramework
+      ? selectedFramework.protocol
+      : slot.protocol
+
+    const cfg = getEffectiveSlotConfig(slot.key)
+    const ready = !!(cfg?.provider_id && cfg?.model)
+    const matching = getProvidersForSlot(effectiveProtocol)
+    const curProv = cfg?.provider_id ? providers[cfg.provider_id] : null
+    const isChanged = !!pendingSlots[slot.key]
+
+    return (
+      <div key={slot.key} className={cn('p-3 rounded-lg border',
+        isChanged ? 'border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/5' :
+        ready ? 'border-[var(--color-success)]/20 bg-[var(--color-success)]/5' : 'border-[var(--color-error)]/20 bg-[var(--color-error)]/5'
+      )}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-[var(--text-primary)]">
+            {slot.label} <span className="text-[var(--text-tertiary)] font-normal">({slot.desc}, {effectiveProtocol})</span>
+          </span>
+          <div className="flex items-center gap-1.5">
+            {isChanged && <span className="text-[10px] text-[var(--accent-primary)]">modified</span>}
+            {ready ? <span className="text-[var(--color-success)] text-sm">{'\u2713'}</span> : <span className="text-xs text-[var(--color-error)]">Needed</span>}
+          </div>
+        </div>
+        {/* Agent Framework selector (agent slot only) */}
+        {slot.key === 'agent' && (
+          <div className="mb-2">
+            <label className="block text-[11px] text-[var(--text-tertiary)] mb-0.5">Agent Framework</label>
+            <select
+              value={agentFramework}
+              onChange={(e) => setAgentFramework(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+            >
+              {AGENT_FRAMEWORKS.map((fw) => (
+                <option key={fw.id} value={fw.id}>{fw.label} — {fw.desc}</option>
+              ))}
+            </select>
+            {AGENT_FRAMEWORKS.length <= 1 && (
+              <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">More frameworks coming soon.</p>
+            )}
+          </div>
+        )}
+
+        {matching.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2">
+            <select value={cfg?.provider_id || ''}
+              onChange={(e) => {
+                const pid = e.target.value
+                const prov = providers[pid]
+                if (!prov) return
+                const slotModels = getModelsForSlot(prov, slot.key)
+                if (slot.key === 'helper_llm' && isOfficialProvider(prov)) {
+                  handleLocalSlotChange(slot.key, pid, 'default')
+                } else if (slotModels.length > 0) {
+                  handleLocalSlotChange(slot.key, pid, slotModels[0].model_id)
+                } else {
+                  handleLocalSlotChange(slot.key, pid, '')
+                }
+              }}
+              className="px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
+              <option value="">Provider...</option>
+              {matching.map((p) => <option key={p.provider_id} value={p.provider_id}>{p.name}</option>)}
+            </select>
+            <div>
+              {(() => {
+                if (!curProv) return <select disabled className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-tertiary)] outline-none"><option>Select provider...</option></select>
+
+                if (slot.key === 'embedding') {
+                  const emModels = embeddingModels.filter((em) => curProv.models.includes(em.model_id))
+                  return <select value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleLocalSlotChange(slot.key, cfg.provider_id, e.target.value) }}
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
+                    <option value="">Embedding model...</option>
+                    {emModels.map((em) => <option key={em.model_id} value={em.model_id}>{em.display_name} ({em.dimensions}d)</option>)}
+                  </select>
+                }
+
+                if (slot.key === 'helper_llm' && isOfficialProvider(curProv)) {
+                  const llmModels = getModelsForSlot(curProv, 'helper_llm')
+                  return <>
+                    <select value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleLocalSlotChange(slot.key, cfg.provider_id, e.target.value) }}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
+                      <option value="default">Default (recommended)</option>
+                      {llmModels.map((m) => <option key={m.model_id} value={m.model_id}>{m.display_name}</option>)}
+                    </select>
+                    {cfg?.model && cfg.model !== 'default' && (
+                      <p className="text-[10px] text-[var(--color-warning)] mt-0.5">All auxiliary tasks will use this model. May affect speed/cost.</p>
+                    )}
+                  </>
+                }
+
+                const llmModels = getModelsForSlot(curProv, slot.key)
+                if (llmModels.length > 0) {
+                  return <select value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleLocalSlotChange(slot.key, cfg.provider_id, e.target.value) }}
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
+                    <option value="">Model...</option>
+                    {llmModels.map((m) => <option key={m.model_id} value={m.model_id}>{m.display_name}</option>)}
+                  </select>
+                }
+
+                return <input type="text" value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleLocalSlotChange(slot.key, cfg.provider_id, e.target.value) }}
+                  placeholder="Model name" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none" />
+              })()}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-[var(--color-error)]">No {slot.protocol} provider. Add one above.</p>
+        )}
+      </div>
+    )
+  }
+
   // ---- Full view ----
   return (
     <div className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-[var(--text-primary)]">LLM Providers</span>
-        {allSlotsReady && (
+        {allSlotsReady && !hasPendingChanges && (
           <button onClick={() => setCollapsed(true)} className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">Collapse</button>
         )}
       </div>
@@ -467,137 +639,36 @@ export function ProviderSettings() {
         </div>
       )}
 
-      {/* ---- Slot Tabs ---- */}
+      {/* ---- All Slot Rows (shown simultaneously, no tabs) ---- */}
       {hasProviders && (
-        <div className="space-y-2.5 pt-2.5 border-t border-[var(--border-subtle)]">
+        <div className="space-y-2 pt-2.5 border-t border-[var(--border-subtle)]">
           <span className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Model Assignment</span>
+          {SLOT_DEFS.map((slot) => renderSlotRow(slot))}
 
-          {/* Tab row */}
-          <div className="flex rounded-lg border border-[var(--border-subtle)] overflow-hidden">
-            {SLOT_DEFS.map((s) => {
-              const cfg = slots[s.key]?.config
-              const ready = !!(cfg?.provider_id && cfg?.model)
-              return (
-                <button key={s.key} onClick={() => setActiveTab(s.key)}
-                  className={cn('flex-1 py-2 text-xs font-medium transition-colors',
-                    activeTab === s.key ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]' : 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)]'
-                  )}>
-                  <span className={cn('inline-block w-2 h-2 rounded-full mr-1.5', ready ? 'bg-[var(--color-success)]' : 'bg-[var(--color-error)]')} />
-                  {s.label}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Active tab content */}
-          {SLOT_DEFS.filter((s) => s.key === activeTab).map((slot) => {
-            // For agent slot, protocol is driven by the selected framework
-            const selectedFramework = AGENT_FRAMEWORKS.find((f) => f.id === agentFramework)
-            const effectiveProtocol = slot.key === 'agent' && selectedFramework
-              ? selectedFramework.protocol
-              : slot.protocol
-
-            const cfg = slots[slot.key]?.config
-            const ready = !!(cfg?.provider_id && cfg?.model)
-            const matching = getProvidersForSlot(effectiveProtocol)
-            const curProv = cfg?.provider_id ? providers[cfg.provider_id] : null
-
-            return (
-              <div key={slot.key} className={cn('p-3 rounded-lg border',
-                ready ? 'border-[var(--color-success)]/20 bg-[var(--color-success)]/5' : 'border-[var(--color-error)]/20 bg-[var(--color-error)]/5'
-              )}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-[var(--text-primary)]">
-                    {slot.label} <span className="text-[var(--text-tertiary)] font-normal">({slot.desc}, {effectiveProtocol})</span>
-                  </span>
-                  {ready ? <span className="text-[var(--color-success)] text-sm">{'\u2713'}</span> : <span className="text-xs text-[var(--color-error)]">Needed</span>}
-                </div>
-                {/* Agent Framework selector (agent slot only) */}
-                {slot.key === 'agent' && (
-                  <div className="mb-2">
-                    <label className="block text-[11px] text-[var(--text-tertiary)] mb-0.5">Agent Framework</label>
-                    <select
-                      value={agentFramework}
-                      onChange={(e) => setAgentFramework(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
-                    >
-                      {AGENT_FRAMEWORKS.map((fw) => (
-                        <option key={fw.id} value={fw.id}>{fw.label} — {fw.desc}</option>
-                      ))}
-                    </select>
-                    {AGENT_FRAMEWORKS.length <= 1 && (
-                      <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">More frameworks coming soon.</p>
-                    )}
-                  </div>
+          {/* ---- Apply / Discard buttons ---- */}
+          {hasPendingChanges && (
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleApply}
+                disabled={applying}
+                className={cn(
+                  'flex-1 py-2 text-xs font-medium rounded-lg transition-colors',
+                  'bg-[var(--accent-primary)] text-[var(--bg-primary)]',
+                  'hover:bg-[var(--accent-primary)]/90',
+                  'disabled:opacity-40'
                 )}
-
-                {matching.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <select value={cfg?.provider_id || ''}
-                      onChange={(e) => {
-                        const pid = e.target.value
-                        const prov = providers[pid]
-                        if (!prov) return
-                        const slotModels = getModelsForSlot(prov, slot.key)
-                        if (slot.key === 'helper_llm' && isOfficialProvider(prov)) {
-                          handleSlotChange(slot.key, pid, 'default')
-                        } else if (slotModels.length > 0) {
-                          handleSlotChange(slot.key, pid, slotModels[0].model_id)
-                        } else {
-                          handleSlotChange(slot.key, pid, '')
-                        }
-                      }}
-                      className="px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
-                      <option value="">Provider...</option>
-                      {matching.map((p) => <option key={p.provider_id} value={p.provider_id}>{p.name}</option>)}
-                    </select>
-                    <div>
-                      {(() => {
-                        if (!curProv) return <select disabled className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-tertiary)] outline-none"><option>Select provider...</option></select>
-
-                        if (slot.key === 'embedding') {
-                          const emModels = embeddingModels.filter((em) => curProv.models.includes(em.model_id))
-                          return <select value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
-                            <option value="">Embedding model...</option>
-                            {emModels.map((em) => <option key={em.model_id} value={em.model_id}>{em.display_name} ({em.dimensions}d)</option>)}
-                          </select>
-                        }
-
-                        if (slot.key === 'helper_llm' && isOfficialProvider(curProv)) {
-                          const llmModels = getModelsForSlot(curProv, 'helper_llm')
-                          return <>
-                            <select value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
-                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
-                              <option value="default">Default (recommended)</option>
-                              {llmModels.map((m) => <option key={m.model_id} value={m.model_id}>{m.display_name}</option>)}
-                            </select>
-                            {cfg?.model && cfg.model !== 'default' && (
-                              <p className="text-[10px] text-[var(--color-warning)] mt-0.5">All auxiliary tasks will use this model. May affect speed/cost.</p>
-                            )}
-                          </>
-                        }
-
-                        const llmModels = getModelsForSlot(curProv, slot.key)
-                        if (llmModels.length > 0) {
-                          return <select value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
-                            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none">
-                            <option value="">Model...</option>
-                            {llmModels.map((m) => <option key={m.model_id} value={m.model_id}>{m.display_name}</option>)}
-                          </select>
-                        }
-
-                        return <input type="text" value={cfg?.model || ''} onChange={(e) => { if (cfg?.provider_id) handleSlotChange(slot.key, cfg.provider_id, e.target.value) }}
-                          placeholder="Model name" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] outline-none" />
-                      })()}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-[var(--color-error)]">No {slot.protocol} provider. Add one above.</p>
-                )}
-              </div>
-            )
-          })}
+              >
+                {applying ? 'Applying...' : 'Apply Changes'}
+              </button>
+              <button
+                onClick={handleDiscard}
+                disabled={applying}
+                className="px-4 py-2 text-xs rounded-lg border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-40"
+              >
+                Discard
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

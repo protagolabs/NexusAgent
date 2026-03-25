@@ -3,14 +3,16 @@
  *
  * Displayed at the top of the chat panel when embedding rebuild
  * is in progress or incomplete. Auto-hides when all_done.
+ * Includes a Rebuild button so users can trigger rebuild directly.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useEmbeddingStore } from '@/stores/embeddingStore';
 import { cn } from '@/lib/utils';
 
 export function EmbeddingBanner() {
-  const { status, fetchStatus, startPolling } = useEmbeddingStore();
+  const { status, fetchStatus, startPolling, startRebuild } = useEmbeddingStore();
+  const [rebuilding, setRebuilding] = useState(false);
 
   useEffect(() => {
     fetchStatus();
@@ -27,6 +29,12 @@ export function EmbeddingBanner() {
 
   if (totalMissing === 0 && !isRebuilding) return null;
 
+  const handleRebuild = async () => {
+    setRebuilding(true);
+    await startRebuild();
+    setRebuilding(false);
+  };
+
   return (
     <div
       className={cn(
@@ -39,11 +47,25 @@ export function EmbeddingBanner() {
       ) : (
         <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-warning)]" />
       )}
-      <span>
+      <span className="flex-1">
         {isRebuilding
           ? `Rebuilding vector index (${migration.progress_pct}%)... History search may be incomplete.`
           : `Vector index incomplete (${totalMissing} missing). History search may be incomplete.`}
       </span>
+      {!isRebuilding && totalMissing > 0 && (
+        <button
+          onClick={handleRebuild}
+          disabled={rebuilding}
+          className={cn(
+            'px-2 py-0.5 rounded text-[10px] font-medium shrink-0 transition-colors',
+            'bg-[var(--color-warning)]/15 hover:bg-[var(--color-warning)]/25',
+            'border border-[var(--color-warning)]/30',
+            'disabled:opacity-40'
+          )}
+        >
+          {rebuilding ? '...' : 'Rebuild'}
+        </button>
+      )}
     </div>
   );
 }
