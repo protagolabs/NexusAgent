@@ -201,17 +201,24 @@ def _entity_source_text(row: dict) -> str:
 # WHERE clauses. A mismatch would cause "missing" to never reach 0.
 # =============================================================================
 
-# Events that have embeddable text content. Both status and rebuild queries
-# share this clause so "total" always matches what can actually be processed.
-# Note: final_output must be non-empty, not just non-NULL.
+# Shared WHERE clauses — used by both get_status() and _rebuild_*() so the
+# "total" count always matches what can actually be processed.
+#
+# TRIM() is used to align with Python's str.strip(): a whitespace-only value
+# like '  ' passes `!= ''` in SQL but becomes empty after strip(), causing
+# a permanent "1 missing" if we don't trim here.
 _EVENT_WHERE = (
-    "WHERE (embedding_text IS NOT NULL AND embedding_text != '') "
-    "OR (final_output IS NOT NULL AND final_output != '')"
+    "WHERE (embedding_text IS NOT NULL AND TRIM(embedding_text) != '') "
+    "OR (final_output IS NOT NULL AND TRIM(final_output) != '')"
 )
-
-# Jobs and entities need at least one non-empty text field to be embeddable.
-_JOB_WHERE = "WHERE (title IS NOT NULL AND title != '') OR (description IS NOT NULL AND description != '')"
-_ENTITY_WHERE = "WHERE (entity_name IS NOT NULL AND entity_name != '') OR (entity_description IS NOT NULL AND entity_description != '')"
+_JOB_WHERE = (
+    "WHERE (title IS NOT NULL AND TRIM(title) != '') "
+    "OR (description IS NOT NULL AND TRIM(description) != '')"
+)
+_ENTITY_WHERE = (
+    "WHERE (entity_name IS NOT NULL AND TRIM(entity_name) != '') "
+    "OR (entity_description IS NOT NULL AND TRIM(entity_description) != '')"
+)
 
 _STATUS_QUERIES: list[tuple[str, str]] = [
     # Narratives always produce text (fallback to "Conversation {id}")
@@ -259,6 +266,14 @@ class EmbeddingMigrationService:
             }
 
         model = embedding_config.model
+
+        # Exclude sentinel records (dimensions=0) from count_by_model,
+        # left by a previous buggy run — they shouldn't count as "migrated".
+        await self.db.execute(
+            f"DELETE FROM {self.emb_repo.TABLE} WHERE dimensions = 0 AND model = %s",
+            (model,),
+        )
+
         stats = {}
 
         for entity_type, count_sql in _STATUS_QUERIES:
@@ -297,6 +312,15 @@ class EmbeddingMigrationService:
         logger.info(f"Starting embedding migration for model={model}")
 
         try:
+            # Clean up any sentinel records (dimensions=0) left by a previous
+            # buggy run. They inflate count_by_model and must be removed.
+            cleaned = await self.db.execute(
+                f"DELETE FROM {self.emb_repo.TABLE} WHERE dimensions = 0 AND model = %s",
+                (model,),
+            )
+            if cleaned:
+                logger.info(f"Cleaned {cleaned} sentinel records from previous run")
+
             await self._rebuild_narratives(model)
             await self._rebuild_events(model)
             await self._rebuild_jobs(model)
