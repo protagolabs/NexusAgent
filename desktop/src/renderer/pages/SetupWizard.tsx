@@ -24,12 +24,9 @@ interface SetupWizardProps {
 
 type SetupPhase = 'preflight' | 'install' | 'launch' | 'config'
 
-/** External link mapping */
+/** External link mapping (for EverMemOS custom config fields) */
 const KEY_LINKS: Record<string, { label: string; url: string }> = {
-  OPENAI_API_KEY: { label: 'Get Key', url: 'https://platform.openai.com/api-keys' },
-  GOOGLE_API_KEY: { label: 'Get Key', url: 'https://aistudio.google.com/apikey' },
   NETMIND_API_KEY: { label: 'Get Key', url: 'https://www.netmind.ai' },
-  ANTHROPIC_API_KEY: { label: 'Get Key', url: 'https://console.anthropic.com/settings/keys' },
   LLM_API_KEY: { label: 'Get Key', url: 'https://openrouter.ai/keys' }
 }
 
@@ -213,7 +210,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   const handleConfigComplete = async () => {
     setFinishing(true)
     try {
-      // Save .env
+      // Save .env (database defaults are baked in — no user input needed)
       await window.nexus.setEnv(values)
       // Save EverMemOS env
       await window.nexus.setEverMemOSEnv(buildFinalEmValues())
@@ -230,11 +227,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     setFinishing(false)
   }
 
-  // Field groups
-  const apiFields = fields.filter(
-    (f) => f.key.includes('API_KEY') || f.key.includes('SECRET') || f.key.includes('BASE_URL')
-  )
-  const dbFields = fields.filter((f) => f.key.startsWith('DB_'))
+  // (Database and Gemini RAG fields removed from DMG setup — power users
+  //  can configure these via .env or the web UI's Advanced Settings.)
 
   return (
     <div className="flex flex-col h-screen bg-white">
@@ -315,7 +309,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
         {/* ─── Phase: Config ─────────────────────────── */}
         {phase === 'config' && (
           <>
-            {/* LLM Provider Configuration */}
+            {/* LLM Provider Configuration (2-step wizard) */}
             <ProviderConfigView
               onReady={() => setProviderReady(true)}
               claudeAuth={claudeAuth}
@@ -327,32 +321,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
               onCancelClaudeLogin={() => window.nexus.cancelClaudeLogin()}
               onSendClaudeLoginInput={(input) => window.nexus.sendClaudeLoginInput(input)}
             />
-
-            {/* Divider */}
-            <div className="my-5 border-t border-gray-200" />
-
-            {/* Database configuration */}
-            <div>
-              <p className="text-xs text-gray-400 mb-3">
-                Database (defaults usually work fine)
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {dbFields.map((field) => (
-                  <div key={field.key}>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
-                      {field.label}
-                    </label>
-                    <input
-                      type={field.key === 'DB_PASSWORD' ? 'password' : 'text'}
-                      value={values[field.key] || ''}
-                      onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                      placeholder={field.placeholder}
-                      className="titlebar-no-drag w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
 
             {/* EverMemOS configuration — only show if installed */}
             {everMemOSInstalled && (
@@ -533,42 +501,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
               </>
             )}
 
-            {/* Google Gemini API Key (for RAG) */}
-            <div className="my-5 border-t border-gray-200" />
-            <div>
-              <h2 className="text-sm font-semibold text-gray-700 mb-1">
-                Gemini RAG Knowledge Base
-              </h2>
-              <p className="text-[11px] text-gray-400 mb-3">
-                Optional. Enables the RAG (Retrieval-Augmented Generation) module powered by
-                Gemini File Search. Without this key, the RAG knowledge base feature is unavailable
-                but all other Agent capabilities work normally.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={values['GOOGLE_API_KEY'] || ''}
-                  onChange={(e) => setValues((v) => ({ ...v, GOOGLE_API_KEY: e.target.value }))}
-                  placeholder="Google Gemini API Key"
-                  className="titlebar-no-drag flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-                <button
-                  onClick={() => window.nexus.openExternal('https://aistudio.google.com/apikey')}
-                  className="titlebar-no-drag px-3 py-1.5 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 whitespace-nowrap border border-blue-200"
-                >
-                  Get Key
-                </button>
-              </div>
-            </div>
-
             {/* Finish button */}
             <div className="mt-6">
               <button
                 onClick={handleConfigComplete}
-                disabled={finishing || !providerReady}
+                disabled={finishing}
                 className="titlebar-no-drag w-full py-2.5 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {finishing ? 'Finishing...' : !providerReady ? 'Configure LLM Providers First' : 'Finish Setup'}
+                {finishing ? 'Finishing...' : 'Finish Setup'}
               </button>
               {everMemOSInstalled && emConfigured && !lowMemory && (
                 <p className="text-xs text-green-600 mt-1.5 text-center">
