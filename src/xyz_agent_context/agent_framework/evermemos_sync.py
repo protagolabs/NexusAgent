@@ -150,7 +150,8 @@ def sync_evermemos_from_config(config: LLMConfig) -> bool:
             # This ensures switching embedding models (1536d, 3072d, 4096d, etc.)
             # won't cause a Milvus SchemaNotReadyException — the collection
             # always stores 1024d vectors regardless of the upstream model.
-            env_data["VECTORIZE_DIMENSIONS"] = "1024"
+            vectorize_dimensions = "1024"
+            env_data["VECTORIZE_DIMENSIONS"] = vectorize_dimensions
 
             # Disable fallback — we rely on the primary provider
             env_data["VECTORIZE_FALLBACK_PROVIDER"] = "none"
@@ -158,7 +159,7 @@ def sync_evermemos_from_config(config: LLMConfig) -> bool:
             updated = True
             logger.info(
                 f"EverMemOS VECTORIZE synced: model={emb_slot.model}, "
-                f"base_url={provider.base_url}, dims={dims}"
+                f"base_url={provider.base_url}, dims={vectorize_dimensions}"
             )
 
     # ── Disable rerank by default (can be configured manually) ──

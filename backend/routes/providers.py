@@ -206,8 +206,13 @@ async def set_slot(slot_name: str, req: SetSlotRequest):
 
         # Sync EverMemOS .env when embedding or helper_llm slot changes
         if slot_name in ("embedding", "helper_llm"):
-            from xyz_agent_context.agent_framework.evermemos_sync import sync_evermemos_from_config
-            sync_evermemos_from_config(config)
+            try:
+                from xyz_agent_context.agent_framework.evermemos_sync import sync_evermemos_from_config
+                sync_evermemos_from_config(config)
+            except Exception:
+                logger.exception(
+                    f"[set_slot] EverMemOS sync failed after saving slot '{slot_name}'"
+                )
 
         errors = provider_registry.validate(config)
         return {
