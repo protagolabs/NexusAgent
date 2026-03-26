@@ -78,16 +78,9 @@ async function apiFetch<T = any>(path: string, init?: RequestInit, retries = 3):
     try {
       console.log(`[apiFetch] ${init?.method || 'GET'} ${url} (attempt ${i + 1}/${retries + 1})`)
       const res = await fetch(url, init)
-      console.log(`[apiFetch] Response: ${res.status} ${res.statusText}`)
-      if (!res.ok) {
-        const text = await res.text()
-        console.error(`[apiFetch] HTTP error ${res.status}: ${text.slice(0, 500)}`)
-        // Don't retry on 4xx client errors
-        if (res.status >= 400 && res.status < 500) {
-          return JSON.parse(text) as T
-        }
-      }
-      return await res.json() as T
+      const text = await res.text()
+      console.log(`[apiFetch] Response: ${res.status} ${res.statusText}, body: ${text.slice(0, 200)}`)
+      return JSON.parse(text) as T
     } catch (err) {
       console.error(`[apiFetch] Attempt ${i + 1} failed:`, err instanceof Error ? err.message : err)
       if (i < retries) {
