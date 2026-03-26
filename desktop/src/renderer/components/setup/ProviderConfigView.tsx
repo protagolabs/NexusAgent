@@ -16,7 +16,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { PRESET_PROVIDERS, type PresetProvider, type PresetSlotDefaults } from '../../../shared/provider-presets'
+import { PRESET_PROVIDERS, type PresetProvider } from '../../../shared/provider-presets'
 
 const API = 'http://localhost:8000'
 
@@ -284,42 +284,6 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
 
   const currentPreset = PRESET_PROVIDERS.find((p) => p.id === selectedPreset)
 
-  // ---- Auto slot assignment helper ----
-
-  /**
-   * After creating providers from a preset, auto-assign models to all 3 slots
-   * using the preset's default_slots config. Matches provider by protocol.
-   */
-  const autoAssignSlots = async (
-    defaults: PresetSlotDefaults,
-    newProviderIds: string[],
-    allProviders: Record<string, ProviderSummary>,
-  ) => {
-    // Only use the newly created providers for slot assignment
-    const newProvs = newProviderIds
-      .map((id) => allProviders[id])
-      .filter(Boolean)
-    console.log('[autoAssignSlots] new providers:', newProvs.map((p) => `${p.provider_id} (${p.protocol})`))
-    console.log('[autoAssignSlots] defaults:', defaults)
-
-    for (const [slotName, slotDef] of Object.entries(defaults)) {
-      const match = newProvs.find((p) => p.protocol === slotDef.protocol && p.is_active)
-      if (match) {
-        console.log(`[autoAssignSlots] ${slotName}: assigning provider=${match.provider_id} model=${slotDef.model}`)
-        const res = await apiFetch<any>(`/api/providers/slots/${slotName}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ provider_id: match.provider_id, model: slotDef.model }),
-        })
-        if (!res.success) {
-          console.error(`[autoAssignSlots] ${slotName} FAILED:`, res)
-        }
-      } else {
-        console.warn(`[autoAssignSlots] ${slotName}: no provider found for protocol=${slotDef.protocol}`)
-      }
-    }
-  }
-
   // ---- Actions ----
 
   const handleQuickSetup = async () => {
@@ -328,22 +292,18 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
     setPresetAdding(true)
     setError('')
     try {
+      // Send provider + default_slots together — backend assigns slots atomically
       const res = await apiPost<any>('/api/providers', {
         card_type: currentPreset.id,
         api_key: presetKey.trim(),
+        default_slots: currentPreset.default_slots,
       })
       if (!res.success) {
         setError(res.detail || `Failed to add ${currentPreset.name}`)
         setPresetAdding(false)
         return
       }
-      // Auto-assign slots using preset defaults — only use the newly created providers
-      if (res.provider_ids?.length && res.data?.providers) {
-        console.log('[handleQuickSetup] New provider IDs:', res.provider_ids)
-        await autoAssignSlots(currentPreset.default_slots, res.provider_ids, res.data.providers)
-      } else {
-        console.warn('[handleQuickSetup] POST response missing provider_ids or providers:', JSON.stringify(res).slice(0, 300))
-      }
+      console.log('[handleQuickSetup] Success, provider_ids:', res.provider_ids)
       await refreshConfig()
       setStep('summary')
     } catch (err) {

@@ -44,14 +44,24 @@ router = APIRouter()
 # Request/Response Models
 # =============================================================================
 
+class SlotDefault(BaseModel):
+    """Default model assignment for a slot (used by Quick Setup)"""
+    protocol: str   # "anthropic" | "openai"
+    model: str      # e.g. "claude-sonnet-4-6"
+
+
 class AddProviderRequest(BaseModel):
     """Unified request for adding a provider (all 4 card types)"""
-    card_type: str          # "netmind" | "claude_oauth" | "anthropic" | "openai"
+    card_type: str          # "netmind" | "yunwu" | "openrouter" | "claude_oauth" | "anthropic" | "openai"
     name: str = ""          # Display name (for anthropic/openai cards)
     api_key: str = ""       # API key (not needed for claude_oauth)
     base_url: str = ""      # Base URL (defaults to official if empty)
     auth_type: str = "api_key"  # "api_key" | "bearer_token"
     models: list[str] = []  # User-specified model IDs
+    # Quick Setup: auto-assign slots after creating providers.
+    # Keys: "agent", "embedding", "helper_llm". Values: {protocol, model}.
+    # When provided, the backend assigns all specified slots atomically.
+    default_slots: dict[str, SlotDefault] | None = None
 
 
 class SetSlotRequest(BaseModel):
@@ -138,6 +148,31 @@ async def add_provider(req: AddProviderRequest):
             models=req.models if req.models else None,
         )
         logger.info(f"[add_provider] Success: created {new_ids}")
+
+        # Auto-assign slots if default_slots provided (Quick Setup flow)
+        if req.default_slots:
+            new_providers = [config.providers[pid] for pid in new_ids if pid in config.providers]
+            for slot_name, slot_def in req.default_slots.items():
+                match = next(
+                    (p for p in new_providers if p.protocol.value == slot_def.protocol),
+                    None,
+                )
+                if match:
+                    config = provider_registry.set_slot(config, slot_name, match.provider_id, slot_def.model)
+                    logger.info(f"[add_provider] Auto-assigned slot {slot_name}: provider={match.provider_id}, model={slot_def.model}")
+                else:
+                    logger.warning(f"[add_provider] No new provider with protocol={slot_def.protocol} for slot {slot_name}")
+            provider_registry.save(config)
+
+            # Hot-reload + EverMemOS sync
+            from xyz_agent_context.agent_framework.api_config import reload_llm_config
+            reload_llm_config()
+            try:
+                from xyz_agent_context.agent_framework.evermemos_sync import sync_evermemos_from_config
+                sync_evermemos_from_config(config)
+            except Exception:
+                logger.exception("[add_provider] EverMemOS sync failed")
+
         return {
             "success": True,
             "provider_ids": new_ids,
