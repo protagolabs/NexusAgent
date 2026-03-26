@@ -135,4 +135,32 @@ export const PRESET_PROVIDERS: PresetProvider[] = [
       helper_llm: { protocol: 'openai',    model: 'gpt-5.1-2025-11-13' },
     },
   },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    tagline: 'Claude + OpenAI proxy',
+    description:
+      'OpenRouter proxies official Claude and OpenAI APIs. One key gives you access to ' +
+      'Claude Sonnet / Opus for the Agent, and GPT models + embeddings for everything else.',
+    get_key_url: 'https://openrouter.ai/keys',
+    endpoints: [
+      {
+        protocol: 'anthropic',
+        base_url: 'https://openrouter.ai/api',
+        models: ['claude-sonnet-4-6', 'claude-opus-4-6'],
+      },
+      {
+        protocol: 'openai',
+        base_url: 'https://openrouter.ai/api/v1',
+        models: ['gpt-5.1-2025-11-13'],
+        embedding_models: ['text-embedding-3-small', 'text-embedding-3-large'],
+      },
+    ],
+    covers_all_slots: true,
+    default_slots: {
+      agent:      { protocol: 'anthropic', model: 'claude-sonnet-4-6' },
+      embedding:  { protocol: 'openai',    model: 'text-embedding-3-small' },
+      helper_llm: { protocol: 'openai',    model: 'gpt-5.1-2025-11-13' },
+    },
+  },
 ]

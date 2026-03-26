@@ -111,6 +111,17 @@ _DEFAULT_MODELS: dict[tuple[str, str], list[str]] = {
         "text-embedding-3-small",
         "text-embedding-3-large",
     ],
+    # OpenRouter Anthropic protocol → Claude models (OpenRouter proxies official Claude)
+    ("openrouter", "anthropic"): [
+        "claude-sonnet-4-6",
+        "claude-opus-4-6",
+    ],
+    # OpenRouter OpenAI protocol → OpenAI models (OpenRouter proxies official OpenAI)
+    ("openrouter", "openai"): [
+        "gpt-5.1-2025-11-13",
+        "text-embedding-3-small",
+        "text-embedding-3-large",
+    ],
     # Claude OAuth → agent models
     ("claude_oauth", "anthropic"): [
         "claude-opus-4-6",
