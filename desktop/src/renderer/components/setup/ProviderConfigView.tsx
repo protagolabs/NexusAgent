@@ -204,6 +204,29 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
   const [slots, setSlots] = useState<Record<string, SlotData>>({})
   const [error, setError] = useState('')
   const [configComplete, setConfigComplete] = useState(false)
+  const [backendReady, setBackendReady] = useState(false)
+
+  // ---- Wait for backend to be ready before allowing any interaction ----
+  useEffect(() => {
+    let cancelled = false
+    const waitForBackend = async () => {
+      for (let i = 0; i < 30; i++) {  // Try for up to 30 seconds
+        if (cancelled) return
+        try {
+          const res = await fetch(`${API}/api/providers`)
+          if (res.ok) {
+            setBackendReady(true)
+            return
+          }
+        } catch { /* backend not ready yet */ }
+        await new Promise((r) => setTimeout(r, 1000))
+      }
+      // After 30s, give up and let user try anyway
+      setBackendReady(true)
+    }
+    waitForBackend()
+    return () => { cancelled = true }
+  }, [])
 
   // ---- Data loading ----
   const refreshConfig = useCallback(async () => {
@@ -216,7 +239,10 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
     } catch {}
   }, [])
 
-  useEffect(() => { refreshConfig() }, [refreshConfig])
+  // Only load config after backend is confirmed ready
+  useEffect(() => {
+    if (backendReady) refreshConfig()
+  }, [backendReady, refreshConfig])
 
   // ---- Derived state ----
   const allSlotsReady = SLOT_DEFS.every(
@@ -357,6 +383,16 @@ const ProviderConfigView: React.FC<ProviderConfigViewProps> = ({
   }
 
   // ---- Render ----
+
+  // ---- Show loading until backend is ready ----
+  if (!backendReady) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-12">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-gray-500">Waiting for backend to be ready...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
