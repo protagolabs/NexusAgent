@@ -2,28 +2,28 @@
 @file_name: database.py
 @author: NetMind.AI
 @date: 2025-11-28
-@description: Truly asynchronous database client (using aiomysql)
+@description: Truly asynchronous database client with pluggable backend support
 
-This is the project's main database client, using aiomysql for native async I/O.
+This is the project's main database client. It supports two modes:
+1. Direct aiomysql mode (legacy) - uses aiomysql for native async I/O
+2. Backend-delegated mode - delegates all operations to a DatabaseBackend instance
+   (e.g., SQLiteBackend for local/desktop, MySQLBackend for cloud)
 
-Features:
-- Native async using aiomysql, no need for asyncio.to_thread()
-- Supports high-concurrency scenarios (not limited by thread pool)
-- Interface is fully compatible with the old DatabaseClient
-
-Performance comparison:
-- Synchronous driver + asyncio.to_thread(): limited by thread pool (default 40 threads)
-- aiomysql: can support thousands of concurrent connections
+When a DatabaseBackend is provided via create_with_backend(), all CRUD and
+transaction operations are delegated to it. When no backend is provided,
+the client falls back to the original aiomysql code path.
 
 Usage examples:
-    # Create client
+    # Legacy MySQL mode
     db = await AsyncDatabaseClient.create()
 
-    # Or use context manager
-    async with AsyncDatabaseClient.create() as db:
-        results = await db.get("users", {"agent_id": "agent_1"})
+    # Backend-delegated mode (SQLite)
+    from xyz_agent_context.utils.db_backend_sqlite import SQLiteBackend
+    backend = SQLiteBackend("/path/to/db.sqlite")
+    await backend.initialize()
+    db = await AsyncDatabaseClient.create_with_backend(backend)
 
-    # Interface is identical to the old DatabaseClient
+    # Interface is identical regardless of mode
     await db.insert("chat_history", {"message": "Hello"})
     await db.get("chat_history", {"agent_id": "agent_1"})
 """
@@ -34,12 +34,15 @@ import json
 import re
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar, TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
 import aiomysql
 from loguru import logger
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from xyz_agent_context.utils.db_backend import DatabaseBackend
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -167,26 +170,33 @@ class AsyncDatabaseClient:
         pool_size: int = 10,
         pool_recycle: int = 3600,
         _pool: Optional[aiomysql.Pool] = None,
+        _backend: Optional["DatabaseBackend"] = None,
     ):
         """
         Initialize AsyncDatabaseClient
 
-        Supports two methods:
+        Supports three methods:
         1. Direct instantiation (lazy init, recommended): db = AsyncDatabaseClient()
         2. Using create() factory method (immediate init): db = await AsyncDatabaseClient.create()
+        3. Using create_with_backend() factory method: db = await AsyncDatabaseClient.create_with_backend(backend)
+
+        When _backend is provided, all CRUD and transaction operations are delegated
+        to the backend. The aiomysql pool is not used in this mode.
 
         Args:
             db_config: Database configuration, None to load from environment variables
             pool_size: Connection pool size (default 10)
             pool_recycle: Connection recycle time in seconds (default 3600)
             _pool: Internal use, for passing a pre-created pool from create() method
+            _backend: Optional DatabaseBackend instance for delegated mode
         """
         self._db_config = db_config
         self._pool_size = pool_size
         self._pool_recycle = pool_recycle
         self._pool: Optional[aiomysql.Pool] = _pool
         self._transaction_connection: Optional[aiomysql.Connection] = None
-        self._initialized = _pool is not None
+        self._initialized = _pool is not None or _backend is not None
+        self._backend: Optional["DatabaseBackend"] = _backend
 
     async def _ensure_pool(self) -> aiomysql.Pool:
         """
@@ -262,6 +272,27 @@ class AsyncDatabaseClient:
         logger.info(f"AsyncDatabaseClient created with pool_size={pool_size}")
         return cls(db_config=db_config, pool_size=pool_size, pool_recycle=pool_recycle, _pool=pool)
 
+    @classmethod
+    async def create_with_backend(cls, backend: "DatabaseBackend") -> 'AsyncDatabaseClient':
+        """
+        Create an AsyncDatabaseClient that delegates all operations to a DatabaseBackend.
+
+        The backend must already be initialized (initialize() called) before passing it here.
+
+        Args:
+            backend: An initialized DatabaseBackend instance (e.g., SQLiteBackend, MySQLBackend).
+
+        Returns:
+            AsyncDatabaseClient instance in backend-delegated mode.
+
+        Example:
+            backend = SQLiteBackend("/path/to/db.sqlite")
+            await backend.initialize()
+            db = await AsyncDatabaseClient.create_with_backend(backend)
+        """
+        logger.info(f"AsyncDatabaseClient created with {backend.dialect} backend")
+        return cls(_backend=backend)
+
     # ===== Basic CRUD Operations =====
 
     async def execute(
@@ -281,6 +312,12 @@ class AsyncDatabaseClient:
         Returns:
             List of query results
         """
+        if self._backend:
+            if fetch:
+                return await self._backend.execute(query, params)
+            else:
+                return await self._backend.execute_write(query, params)
+
         pool = await self._ensure_pool()
 
         if self._transaction_connection:
@@ -320,6 +357,9 @@ class AsyncDatabaseClient:
         Returns:
             List of query results
         """
+        if self._backend:
+            return await self._backend.get(table, filters, limit, offset, order_by)
+
         safe_table = validate_identifier(table)
         query = f"SELECT * FROM `{safe_table}`"
         params = []
@@ -353,6 +393,9 @@ class AsyncDatabaseClient:
         filters: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """Query a single record"""
+        if self._backend:
+            return await self._backend.get_one(table, filters)
+
         logger.debug(f"              → DB.get_one('{table}', filters={filters})")
         results = await self.get(table, filters, limit=1)
         logger.debug(f"              ← DB.get_one: {'Found' if results else 'Not found'}")
@@ -385,6 +428,9 @@ class AsyncDatabaseClient:
             # After (batch):
             events = await db.get_by_ids("events", "event_id", event_ids)
         """
+        if self._backend:
+            return await self._backend.get_by_ids(table, id_field, ids)
+
         if not ids:
             return []
 
@@ -421,6 +467,13 @@ class AsyncDatabaseClient:
         Returns:
             Auto-increment ID of the inserted row
         """
+        if self._backend:
+            # Filter out None values (same as MySQL path below)
+            filtered = {k: v for k, v in data.items() if v is not None}
+            if not filtered:
+                raise ValueError("Insert data cannot be empty (no valid fields after filtering None values)")
+            return await self._backend.insert(table, filtered)
+
         if not data:
             raise ValueError("Insert data cannot be empty")
 
@@ -473,6 +526,9 @@ class AsyncDatabaseClient:
         Returns:
             Number of rows updated
         """
+        if self._backend:
+            return await self._backend.update(table, filters, data)
+
         if not data:
             raise ValueError("Update data cannot be empty")
         if not filters:
@@ -531,6 +587,9 @@ class AsyncDatabaseClient:
         Returns:
             Number of rows deleted
         """
+        if self._backend:
+            return await self._backend.delete(table, filters)
+
         if not filters:
             raise ValueError("Delete operation must specify filter conditions")
 
@@ -587,6 +646,9 @@ class AsyncDatabaseClient:
                 "narrative_id"
             )
         """
+        if self._backend:
+            return await self._backend.upsert(table, data, id_field)
+
         if not data:
             raise ValueError("Insert data cannot be empty")
 
@@ -698,6 +760,9 @@ class AsyncDatabaseClient:
 
     async def begin_transaction(self) -> None:
         """Begin a transaction"""
+        if self._backend:
+            return await self._backend.begin_transaction()
+
         if self._transaction_connection:
             raise RuntimeError("Already in a transaction")
 
@@ -707,6 +772,9 @@ class AsyncDatabaseClient:
 
     async def commit(self) -> None:
         """Commit the transaction"""
+        if self._backend:
+            return await self._backend.commit()
+
         if not self._transaction_connection:
             raise RuntimeError("No active transaction")
 
@@ -717,6 +785,9 @@ class AsyncDatabaseClient:
 
     async def rollback(self) -> None:
         """Rollback the transaction"""
+        if self._backend:
+            return await self._backend.rollback()
+
         if not self._transaction_connection:
             raise RuntimeError("No active transaction")
 
@@ -870,7 +941,13 @@ class AsyncDatabaseClient:
             return False
 
     async def close(self) -> None:
-        """Close the connection pool"""
+        """Close the connection pool or backend"""
+        if self._backend:
+            await self._backend.close()
+            self._backend = None
+            logger.info("AsyncDatabaseClient (backend-delegated) closed")
+            return
+
         if self._pool is None:
             # Connection pool not initialized, no need to close
             return

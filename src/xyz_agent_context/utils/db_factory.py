@@ -159,8 +159,22 @@ async def get_db_client() -> "AsyncDatabaseClient":
                     _shared_async_client = None
 
                 from xyz_agent_context.utils.database import AsyncDatabaseClient
-                logger.info("Creating shared AsyncDatabaseClient instance")
-                _shared_async_client = await AsyncDatabaseClient.create()
+                from xyz_agent_context.settings import settings
+
+                db_url = getattr(settings, 'database_url', None) or ''
+
+                if db_url.startswith('sqlite'):
+                    from xyz_agent_context.utils.db_backend_sqlite import SQLiteBackend
+
+                    db_path = parse_sqlite_url(db_url)
+                    logger.info(f"Creating shared AsyncDatabaseClient with SQLite backend (path={db_path})")
+                    backend = SQLiteBackend(db_path)
+                    await backend.initialize()
+                    _shared_async_client = await AsyncDatabaseClient.create_with_backend(backend)
+                else:
+                    logger.info("Creating shared AsyncDatabaseClient instance")
+                    _shared_async_client = await AsyncDatabaseClient.create()
+
                 _client_event_loop = current_loop
                 logger.success("Shared AsyncDatabaseClient created successfully")
 
