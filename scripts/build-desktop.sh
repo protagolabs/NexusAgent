@@ -89,7 +89,7 @@ echo ""
 echo "--- Step 7: Bundling app ---"
 find "$SRC_TAURI/target/release" -type f -exec xattr -c {} \; 2>/dev/null || true
 cargo tauri build 2>&1 || {
-    # If bundling fails due to codesign, try manual bundle
+    # If bundling fails due to codesign, do manual sign + DMG
     echo ""
     echo "--- Bundling failed, trying manual approach ---"
     APP_DIR="$SRC_TAURI/target/release/bundle/macos/NarraNexus.app"
@@ -97,6 +97,16 @@ cargo tauri build 2>&1 || {
         find "$APP_DIR" -type f -exec xattr -c {} \; 2>/dev/null || true
         codesign --force --deep --sign - "$APP_DIR" 2>/dev/null || true
         echo "Manual signing done"
+
+        # Generate DMG
+        echo ""
+        echo "--- Creating DMG ---"
+        DMG_DIR="$SRC_TAURI/target/release/bundle/dmg"
+        mkdir -p "$DMG_DIR"
+        DMG_PATH="$DMG_DIR/NarraNexus.dmg"
+        rm -f "$DMG_PATH"
+        hdiutil create -volname NarraNexus -srcfolder "$APP_DIR" -ov -format UDZO "$DMG_PATH"
+        echo "DMG created: $DMG_PATH"
     fi
 }
 
@@ -109,17 +119,10 @@ DMG=$(find "$SRC_TAURI/target/release/bundle/dmg/" -name "*.dmg" 2>/dev/null | h
 APP=$(find "$SRC_TAURI/target/release/bundle/macos/" -name "*.app" -maxdepth 1 2>/dev/null | head -1)
 
 if [ -n "$DMG" ]; then
-    echo "DMG: $DMG"
     ls -lh "$DMG"
-elif [ -n "$APP" ]; then
-    echo "APP: $APP"
     echo ""
-    echo "To open directly:"
-    echo "  open \"$APP\""
-    echo ""
-    echo "To create DMG manually:"
-    echo "  hdiutil create -volname NarraNexus -srcfolder \"$APP\" -ov NarraNexus.dmg"
+    echo "Install: open $DMG"
 else
-    echo "Binary at: $SRC_TAURI/target/release/narranexus"
-    echo "Run directly: $SRC_TAURI/target/release/narranexus"
+    echo "APP: $APP"
+    echo "Run: open \"$APP\""
 fi
