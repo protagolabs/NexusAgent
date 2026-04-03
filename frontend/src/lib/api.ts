@@ -52,9 +52,27 @@ import type {
 // 2. Tauri app: backend runs on localhost:8000, no proxy available
 // 3. Dev mode: empty string, Vite proxy handles /api/* routes
 export const getBaseUrl = (): string => {
+  // Explicit env var always wins (deployment override)
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
+
+  // Check runtime mode from persisted store
+  try {
+    const stored = localStorage.getItem('narranexus-runtime');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const state = parsed?.state || parsed;
+      // Cloud mode: use configured cloud API URL
+      if (state.mode === 'cloud-app' || state.mode === 'cloud-web') {
+        return state.cloudApiUrl || '';
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+
+  // Tauri app or local mode: backend on localhost:8000
   if (typeof window !== 'undefined' && '__TAURI__' in window) {
     return 'http://localhost:8000';
   }

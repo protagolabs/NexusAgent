@@ -35,6 +35,9 @@ export function Sidebar() {
   const { mode, features, setMode } = useRuntimeStore();
 
   const handleSwitchMode = () => {
+    // Clear all session data when switching modes
+    logout();
+    clearAll();
     setMode(null);
     setShowModePopup(false);
     navigate('/mode-select');

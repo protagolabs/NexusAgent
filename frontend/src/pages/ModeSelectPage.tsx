@@ -5,11 +5,13 @@
  * @description: First-launch mode selection page
  *
  * Displays two large cards for choosing between Local Mode and Cloud Mode.
- * Sets the mode in runtimeStore and navigates to the appropriate next step.
+ * Cloud mode prompts for API URL before proceeding.
  */
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Cloud, Sparkles } from 'lucide-react';
+import { Monitor, Cloud, Sparkles, ArrowRight } from 'lucide-react';
+import { Button, Input } from '@/components/ui';
 import { useRuntimeStore } from '@/stores/runtimeStore';
 import { cn } from '@/lib/utils';
 
@@ -17,22 +19,25 @@ interface ModeCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
+  selected?: boolean;
   onClick: () => void;
 }
 
-function ModeCard({ icon, title, description, onClick }: ModeCardProps) {
+function ModeCard({ icon, title, description, selected, onClick }: ModeCardProps) {
   return (
     <button
       onClick={onClick}
       className={cn(
         'group relative flex flex-col items-center gap-5 p-10 rounded-2xl',
-        'bg-[var(--bg-secondary)] border border-[var(--border-default)]',
+        'bg-[var(--bg-secondary)] border',
         'hover:border-[var(--accent-primary)] hover:shadow-[0_0_30px_var(--accent-glow)]',
         'transition-all duration-300 cursor-pointer',
         'w-80',
+        selected
+          ? 'border-[var(--accent-primary)] shadow-[0_0_30px_var(--accent-glow)]'
+          : 'border-[var(--border-default)]',
       )}
     >
-      {/* Glow effect on hover */}
       <div className="absolute inset-0 rounded-2xl bg-[var(--accent-primary)] opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
 
       <div className="relative w-16 h-16 rounded-2xl bg-[var(--gradient-primary)] flex items-center justify-center shadow-[0_0_20px_var(--accent-glow)]">
@@ -54,14 +59,24 @@ function ModeCard({ icon, title, description, onClick }: ModeCardProps) {
 
 export function ModeSelectPage() {
   const navigate = useNavigate();
-  const { setMode } = useRuntimeStore();
+  const { setMode, setCloudApiUrl } = useRuntimeStore();
+  const [showCloudConfig, setShowCloudConfig] = useState(false);
+  const [apiUrl, setApiUrl] = useState('https://');
 
   const handleLocal = () => {
     setMode('local');
     navigate('/setup');
   };
 
-  const handleCloud = () => {
+  const handleCloudSelect = () => {
+    setShowCloudConfig(true);
+  };
+
+  const handleCloudConnect = () => {
+    if (!apiUrl || apiUrl === 'https://') return;
+    // Remove trailing slash
+    const cleanUrl = apiUrl.replace(/\/+$/, '');
+    setCloudApiUrl(cleanUrl);
     setMode('cloud-app');
     navigate('/login');
   };
@@ -95,9 +110,40 @@ export function ModeSelectPage() {
           icon={<Cloud className="w-7 h-7 text-[var(--text-inverse)] dark:text-[var(--bg-deep)]" />}
           title="Cloud Mode"
           description="Connect to cloud services. Access from any device. Share with others."
-          onClick={handleCloud}
+          selected={showCloudConfig}
+          onClick={handleCloudSelect}
         />
       </div>
+
+      {/* Cloud API URL input */}
+      {showCloudConfig && (
+        <div className="animate-fade-in flex flex-col items-center gap-4 w-full max-w-md">
+          <div className="w-full space-y-2">
+            <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Cloud Server URL
+            </label>
+            <div className="flex gap-2">
+              <Input
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                placeholder="https://api.your-server.com"
+                className="flex-1"
+              />
+              <Button
+                variant="accent"
+                onClick={handleCloudConnect}
+                disabled={!apiUrl || apiUrl === 'https://'}
+              >
+                Connect
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              Enter the URL of your NarraNexus cloud server
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

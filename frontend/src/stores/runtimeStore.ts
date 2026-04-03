@@ -17,9 +17,11 @@ interface RuntimeState {
   userType: UserType;
   features: FeatureFlags;
   initialized: boolean;
+  cloudApiUrl: string;
 
   setMode: (mode: AppMode | null) => void;
   setUserType: (type: UserType) => void;
+  setCloudApiUrl: (url: string) => void;
   initialize: () => void;
 }
 
@@ -61,6 +63,7 @@ export const useRuntimeStore = create<RuntimeState>()(
       mode: null,
       userType: 'internal',
       initialized: false,
+      cloudApiUrl: '',
       features: deriveFeatures(null, 'internal', false),
 
       setMode: (mode) => {
@@ -76,6 +79,8 @@ export const useRuntimeStore = create<RuntimeState>()(
         });
       },
 
+      setCloudApiUrl: (url) => set({ cloudApiUrl: url }),
+
       initialize: () => {
         const { mode, userType } = get();
         set({
@@ -90,6 +95,7 @@ export const useRuntimeStore = create<RuntimeState>()(
         mode: state.mode,
         userType: state.userType,
         initialized: state.initialized,
+        cloudApiUrl: state.cloudApiUrl,
       }),
       merge: (persisted, current) => {
         const p = persisted as Partial<RuntimeState>;
@@ -101,6 +107,7 @@ export const useRuntimeStore = create<RuntimeState>()(
           mode,
           userType,
           initialized,
+          cloudApiUrl: p.cloudApiUrl ?? current.cloudApiUrl,
           features: deriveFeatures(mode, userType, initialized),
         };
       },
