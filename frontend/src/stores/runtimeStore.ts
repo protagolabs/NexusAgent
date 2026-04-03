@@ -13,7 +13,7 @@ import { persist } from 'zustand/middleware';
 import type { AppMode, UserType, FeatureFlags } from '@/types/platform';
 
 interface RuntimeState {
-  mode: AppMode;
+  mode: AppMode | null;
   userType: UserType;
   features: FeatureFlags;
   initialized: boolean;
@@ -24,7 +24,7 @@ interface RuntimeState {
 }
 
 function deriveFeatures(
-  mode: AppMode,
+  mode: AppMode | null,
   userType: UserType,
   initialized: boolean,
 ): FeatureFlags {
@@ -58,10 +58,10 @@ function deriveFeatures(
 export const useRuntimeStore = create<RuntimeState>()(
   persist(
     (set, get) => ({
-      mode: 'local',
+      mode: null,
       userType: 'internal',
       initialized: false,
-      features: deriveFeatures('local', 'internal', false),
+      features: deriveFeatures(null, 'internal', false),
 
       setMode: (mode) => {
         const { userType, initialized } = get();
