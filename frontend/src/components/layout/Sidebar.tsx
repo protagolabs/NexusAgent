@@ -14,6 +14,9 @@ import {
   Sparkles,
   Sliders,
   Server,
+  Monitor,
+  Cloud,
+  RotateCcw,
 } from 'lucide-react';
 import { Button, ThemeToggle } from '@/components/ui';
 import { useConfigStore, useChatStore, useRuntimeStore } from '@/stores';
@@ -23,12 +26,19 @@ import { AgentList } from './AgentList';
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [showModePopup, setShowModePopup] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const { userId, agentId, logout } = useConfigStore();
   const { clearAll } = useChatStore();
-  const { features } = useRuntimeStore();
+  const { mode, features, setMode } = useRuntimeStore();
+
+  const handleSwitchMode = () => {
+    setMode(null);
+    setShowModePopup(false);
+    navigate('/mode-select');
+  };
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to logout?')) {
@@ -131,6 +141,42 @@ export function Sidebar() {
       <div className="px-3 py-2 border-t border-[var(--border-subtle)] space-y-1">
         {!collapsed ? (
           <>
+            {/* Mode Switcher */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowModePopup(!showModePopup)}
+                className="w-full justify-start gap-2 text-[var(--text-secondary)]"
+              >
+                {mode === 'local' ? (
+                  <Monitor className="w-4 h-4" />
+                ) : (
+                  <Cloud className="w-4 h-4" />
+                )}
+                {mode === 'local' ? 'Local' : 'Cloud'}
+              </Button>
+              {showModePopup && (
+                <div className="absolute bottom-full left-0 mb-1 w-full p-3 rounded-lg border shadow-lg z-50"
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderColor: 'var(--border-default)',
+                  }}>
+                  <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Current: {mode === 'local' ? 'Local Mode' : 'Cloud Mode'}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleSwitchMode}
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" />
+                    Switch to {mode === 'local' ? 'Cloud' : 'Local'}
+                  </Button>
+                </div>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -162,6 +208,18 @@ export function Sidebar() {
           </>
         ) : (
           <div className="flex flex-col items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowModePopup(!showModePopup)}
+              title={mode === 'local' ? 'Local Mode' : 'Cloud Mode'}
+            >
+              {mode === 'local' ? (
+                <Monitor className="w-4 h-4" />
+              ) : (
+                <Cloud className="w-4 h-4" />
+              )}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
