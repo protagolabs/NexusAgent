@@ -174,6 +174,14 @@ def _mysql_to_sqlite_sql(query: str) -> str:
     q = re.sub(r'\bUNSIGNED\b', '', q, flags=re.IGNORECASE)
     # Remove AUTO_INCREMENT (standalone, after we already handled BIGINT combo)
     q = re.sub(r'\bAUTO_INCREMENT\b', '', q, flags=re.IGNORECASE)
+    # NOW() -> datetime('now')
+    q = re.sub(r'\bNOW\(\)', "datetime('now')", q, flags=re.IGNORECASE)
+    # DATE_SUB(datetime('now'), INTERVAL ? DAY) -> datetime('now', '-' || ? || ' days')
+    q = re.sub(
+        r"DATE_SUB\s*\(\s*datetime\('now'\)\s*,\s*INTERVAL\s+\?\s+DAY\s*\)",
+        "datetime('now', '-' || ? || ' days')",
+        q, flags=re.IGNORECASE
+    )
     # Clean up extra whitespace
     q = re.sub(r'  +', ' ', q)
     return q

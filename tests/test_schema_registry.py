@@ -31,7 +31,7 @@ from xyz_agent_context.utils.schema_registry import (
 # Helpers
 # ============================================================================
 
-EXPECTED_TABLE_COUNT = 24
+EXPECTED_TABLE_COUNT = 26
 
 
 class _InMemorySQLiteBackend:
@@ -303,6 +303,7 @@ class TestRegistryCompleteness:
         "instance_social_entities", "instance_jobs", "instance_rag_store",
         "instance_narrative_links", "instance_awareness",
         "instance_module_report_memory", "instance_json_format_memory",
+        "instance_json_format_memory_chat", "module_report_memory",
         "matrix_credentials", "cost_records", "matrix_processed_events",
         "embeddings_store",
         "bus_channels", "bus_channel_members", "bus_messages",

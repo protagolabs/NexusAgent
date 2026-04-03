@@ -42,16 +42,20 @@ async def get_agent_costs(
 
         # Fetch records within the time window
         # Special agent_id "_all" returns all agents' records
+        # Calculate cutoff date in Python (works for both MySQL and SQLite)
+        from datetime import datetime, timedelta, timezone as dt_tz
+        cutoff = (datetime.now(dt_tz.utc) - timedelta(days=days)).isoformat()
+
         if agent_id == "_all":
             rows = await db.execute(
                 """
                 SELECT id, agent_id, event_id, call_type, model,
                        input_tokens, output_tokens, total_cost_usd, created_at
                 FROM cost_records
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                WHERE created_at >= %s
                 ORDER BY created_at DESC
                 """,
-                (days,),
+                (cutoff,),
             )
         else:
             rows = await db.execute(
@@ -60,10 +64,10 @@ async def get_agent_costs(
                        input_tokens, output_tokens, total_cost_usd, created_at
                 FROM cost_records
                 WHERE agent_id = %s
-                  AND created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                  AND created_at >= %s
                 ORDER BY created_at DESC
                 """,
-                (agent_id, days),
+                (agent_id, cutoff),
             )
 
         if not rows:

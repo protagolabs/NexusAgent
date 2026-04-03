@@ -482,6 +482,40 @@ _register(
     )
 )
 
+# 15b. instance_json_format_memory_chat (dynamic per-module table for ChatModule)
+_register(
+    TableDef(
+        name="instance_json_format_memory_chat",
+        columns=[
+            Column("id", "INTEGER", "BIGINT UNSIGNED", nullable=False, auto_increment=True, primary_key=True),
+            Column("instance_id", "TEXT", "VARCHAR(128)", nullable=False, unique=True),
+            Column("memory", "TEXT", "MEDIUMTEXT"),
+            Column("created_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
+            Column("updated_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
+        ],
+        indexes=[
+            Index("idx_json_memory_chat_instance_id", ["instance_id"], unique=True),
+        ],
+    )
+)
+
+# 15c. module_report_memory (dynamic table for module status reports)
+_register(
+    TableDef(
+        name="module_report_memory",
+        columns=[
+            Column("id", "INTEGER", "BIGINT UNSIGNED", nullable=False, auto_increment=True, primary_key=True),
+            Column("instance_id", "TEXT", "VARCHAR(128)", nullable=False, unique=True),
+            Column("memory", "TEXT", "MEDIUMTEXT"),
+            Column("created_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
+            Column("updated_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
+        ],
+        indexes=[
+            Index("idx_report_memory_instance_id", ["instance_id"], unique=True),
+        ],
+    )
+)
+
 # 16. matrix_credentials
 _register(
     TableDef(
