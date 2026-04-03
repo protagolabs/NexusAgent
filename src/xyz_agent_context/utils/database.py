@@ -226,12 +226,30 @@ class AsyncDatabaseClient:
         Ensure the connection pool is initialized (lazy loading)
 
         If the connection pool is not initialized, create it.
+        If DATABASE_URL is sqlite://, auto-creates a SQLiteBackend instead.
         Supports calling methods after direct DatabaseClient() instantiation.
 
         Returns:
-            aiomysql connection pool
+            aiomysql connection pool (or None if using SQLite backend)
         """
+        if self._backend:
+            return None  # Using backend delegation, no pool needed
+
         if self._pool is None:
+            # Check if we should use SQLite instead of MySQL
+            from xyz_agent_context.settings import settings
+            url = getattr(settings, 'database_url', None) or ''
+            if url.startswith('sqlite'):
+                from xyz_agent_context.utils.db_backend_sqlite import SQLiteBackend
+                from xyz_agent_context.utils.db_factory import parse_sqlite_url
+                db_path = parse_sqlite_url(url)
+                backend = SQLiteBackend(db_path)
+                await backend.initialize()
+                self._backend = backend
+                self._initialized = True
+                logger.info(f"AsyncDatabaseClient auto-switched to SQLite backend: {db_path}")
+                return None
+
             if self._db_config is None:
                 self._db_config = load_db_config()
 
