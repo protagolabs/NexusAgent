@@ -115,9 +115,9 @@ pub fn is_bundled() -> bool {
 
 /// Resolve the SQLite database path using platform app-data directory.
 pub fn resolve_db_path() -> PathBuf {
-    dirs::data_dir()
+    dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("NarraNexus")
+        .join(".narranexus")
         .join("nexus.db")
 }
 

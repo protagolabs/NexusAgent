@@ -13,8 +13,8 @@ SESSION="nexus-dev"
 
 # --- Platform-aware SQLite path ---
 case "$(uname -s)" in
-  Darwin) DB_DIR="$HOME/Library/Application Support/NarraNexus" ;;
-  *)      DB_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/NarraNexus" ;;
+  Darwin) DB_DIR="$HOME/.narranexus" ;;
+  *)      DB_DIR="$HOME/.narranexus" ;;
 esac
 mkdir -p "$DB_DIR"
 export DATABASE_URL="sqlite:///$DB_DIR/nexus.db"
@@ -81,7 +81,7 @@ echo "                              "  # Jobs
 echo ""
 echo -e "  ${Y}Navigation${R}"
 echo ""
-echo -e "  ${C}Ctrl+B N${R}  Next window       ${C}Ctrl+B 1-5${R}  Jump to service"
+echo -e "  ${C}Ctrl+B N${R}  Next window       ${C}Ctrl+B 1-6${R}  Jump to service"
 echo -e "  ${C}Ctrl+B P${R}  Previous window   ${C}Ctrl+B D${R}    Detach"
 echo ""
 echo -e "  Press ${RED}q${R} to stop all services and exit"
@@ -97,6 +97,7 @@ while true; do
   status_line "MCP Server"          "pgrep -f 'module_runner.py mcp' >/dev/null"
   status_line "Module Poller"       "pgrep -f 'module_poller' >/dev/null"
   status_line "Job Trigger"         "pgrep -f 'job_trigger' >/dev/null"
+  status_line "Bus Trigger"         "pgrep -f 'message_bus_trigger' >/dev/null"
 
   # Move cursor below the UI
   printf "\033[20;0H"
@@ -133,6 +134,10 @@ tmux new-window -t "$SESSION" -n "Poller" \
 # --- Job Trigger ---
 tmux new-window -t "$SESSION" -n "Jobs" \
   "$ENV_CMD; echo '=== Job Trigger ==='; uv run python src/xyz_agent_context/module/job_module/job_trigger.py; echo 'Jobs stopped. Press Enter to close.'; read"
+
+# --- Bus Trigger ---
+tmux new-window -t "$SESSION" -n "BusTrigger" \
+  "$ENV_CMD; echo '=== Bus Trigger ==='; uv run python -m xyz_agent_context.message_bus.message_bus_trigger; echo 'Bus Trigger stopped. Press Enter to close.'; read"
 
 # --- Frontend ---
 tmux new-window -t "$SESSION" -n "Frontend" \
