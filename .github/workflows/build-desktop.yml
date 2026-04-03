@@ -47,10 +47,9 @@ jobs:
           tar xzf python.tar.gz -C tauri/src-tauri/resources/python --strip-components=1
           rm python.tar.gz
 
-      - name: Create Python venv with dependencies
+      - name: Install Python dependencies (no venv, direct into standalone)
         run: |
-          tauri/src-tauri/resources/python/bin/python3 -m venv tauri/src-tauri/resources/venv
-          tauri/src-tauri/resources/venv/bin/pip install --no-cache-dir -e .
+          tauri/src-tauri/resources/python/bin/python3 -m pip install --no-cache-dir -e .
 
       - name: Copy project source to resources
         run: |
