@@ -3,6 +3,8 @@ mod sidecar;
 mod state;
 mod tray;
 
+use tauri::Manager;
+
 use state::AppState;
 
 pub fn run() {
@@ -33,10 +35,11 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 log::info!("Window close requested, stopping services...");
-                let state = window.state::<AppState>();
+                let state: tauri::State<'_, AppState> = window.state();
+                let pm = state.process_manager.clone();
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async {
-                    state.process_manager.lock().await.stop_all().await;
+                    pm.lock().await.stop_all().await;
                 });
             }
         })

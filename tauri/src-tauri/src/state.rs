@@ -107,7 +107,7 @@ impl ServiceDef {
 
 pub struct AppState {
     pub config: Mutex<AppConfig>,
-    pub process_manager: Mutex<ProcessManager>,
+    pub process_manager: Arc<Mutex<ProcessManager>>,
     pub health_monitor: Arc<HealthMonitor>,
     pub service_defs: Vec<ServiceDef>,
 }
@@ -116,7 +116,7 @@ impl Default for AppState {
     fn default() -> Self {
         Self {
             config: Mutex::new(AppConfig::default()),
-            process_manager: Mutex::new(ProcessManager::new()),
+            process_manager: Arc::new(Mutex::new(ProcessManager::new())),
             health_monitor: Arc::new(HealthMonitor::new()),
             service_defs: ServiceDef::default_services(),
         }

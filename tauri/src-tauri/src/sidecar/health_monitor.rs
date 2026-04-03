@@ -1,4 +1,3 @@
-use log;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::net::TcpStream;
