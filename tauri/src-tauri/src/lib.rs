@@ -5,7 +5,7 @@ mod tray;
 
 use tauri::Manager;
 
-use state::{resolve_db_path, AppState};
+use state::{resolve_db_path, resolve_project_root, AppState};
 
 pub fn run() {
     env_logger::init();
@@ -39,6 +39,23 @@ pub fn run() {
             );
 
             tray::create_tray(app)?;
+
+            // Auto-start Python services in local mode (non-blocking)
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let state = app_handle.state::<AppState>();
+                let defs = state.service_defs.clone();
+                let project_root = resolve_project_root();
+                let project_root_str = project_root.to_string_lossy().to_string();
+                let mut pm = state.process_manager.lock().await;
+
+                if let Err(e) = pm.start_all(&defs, &project_root_str).await {
+                    log::error!("Failed to auto-start services: {}", e);
+                } else {
+                    log::info!("All services started successfully");
+                }
+            });
+
             log::info!("NarraNexus started, DB: {}", db_path.display());
             Ok(())
         })

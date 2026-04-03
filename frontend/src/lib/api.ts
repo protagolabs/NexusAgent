@@ -47,13 +47,18 @@ import type {
   EmbeddingRebuildResponse,
 } from '@/types';
 
-// In development, use relative paths (Vite proxy handles it)
-// In production, can be configured via environment variable
-const getBaseUrl = () => {
-  if (import.meta.env.DEV) {
-    return ''; // Empty = relative path, Vite proxy will handle /api/*
+// Determine API base URL based on runtime environment:
+// 1. Explicit env var always wins (cloud deployment)
+// 2. Tauri app: backend runs on localhost:8000, no proxy available
+// 3. Dev mode: empty string, Vite proxy handles /api/* routes
+const getBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
   }
-  return import.meta.env.VITE_API_BASE_URL || '';
+  if (typeof window !== 'undefined' && '__TAURI__' in window) {
+    return 'http://localhost:8000';
+  }
+  return '';
 };
 
 class ApiClient {
