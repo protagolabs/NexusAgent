@@ -104,7 +104,13 @@ async def get_agent_costs(
             by_model[model]["call_count"] += 1
 
             # Daily aggregation
-            day_str = row["created_at"].strftime("%Y-%m-%d") if row["created_at"] else "unknown"
+            ca = row["created_at"]
+            if ca is None:
+                day_str = "unknown"
+            elif isinstance(ca, str):
+                day_str = ca[:10]  # "2026-04-03T..." -> "2026-04-03"
+            else:
+                day_str = ca.strftime("%Y-%m-%d")
             if day_str not in daily_map:
                 daily_map[day_str] = {"input_tokens": 0, "output_tokens": 0}
             daily_map[day_str]["input_tokens"] += inp

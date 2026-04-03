@@ -29,6 +29,52 @@ import aiosqlite
 from xyz_agent_context.utils.db_backend import DatabaseBackend
 
 
+# Regex for ISO 8601 timestamp detection (covers common SQLite datetime formats)
+_ISO_TIMESTAMP_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}"
+)
+
+# Column name suffixes that indicate timestamp fields
+_TIMESTAMP_SUFFIXES = (
+    "_at", "_time", "created_at", "updated_at", "completed_at",
+    "archived_at", "last_used_at", "registered_at", "last_seen_at",
+    "joined_at", "last_read_at", "last_processed_at", "last_retry_at",
+    "last_login_time", "create_time", "update_time", "agent_create_time",
+    "agent_update_time", "linked_at", "unlinked_at",
+)
+
+
+def _try_parse_timestamp(value: str) -> Any:
+    """Try to parse an ISO 8601 timestamp string into a datetime object."""
+    cleaned = value.rstrip("Z")
+    try:
+        from datetime import timezone
+        dt = datetime.fromisoformat(cleaned)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (ValueError, TypeError):
+        return value
+
+
+def _auto_parse_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Auto-convert timestamp strings in a SQLite row to datetime objects.
+
+    SQLite stores all timestamps as TEXT. This function detects timestamp
+    columns by name suffix and value format, and converts them to Python
+    datetime objects so the rest of the codebase can call .strftime(),
+    .tzinfo, etc. without errors.
+    """
+    for key, value in row.items():
+        if value is None or not isinstance(value, str):
+            continue
+        # Only parse columns with known timestamp suffixes (safe, no false positives)
+        if any(key.endswith(suffix) for suffix in _TIMESTAMP_SUFFIXES):
+            row[key] = _try_parse_timestamp(value)
+    return row
+
+
 def _validate_identifier(identifier: str) -> str:
     """
     Validate table/column names to prevent SQL injection.
@@ -149,7 +195,7 @@ class SQLiteBackend(DatabaseBackend):
         rows = await cursor.fetchall()
         if rows:
             columns = [desc[0] for desc in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
+            return [_auto_parse_row(dict(zip(columns, row))) for row in rows]
         return []
 
     async def execute_write(
