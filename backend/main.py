@@ -34,19 +34,15 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting FastAPI application...")
 
-    # Auto-initialize SQLite tables on first launch (idempotent)
-    from xyz_agent_context.settings import settings as core_settings
-    db_url = getattr(core_settings, 'database_url', None) or ''
-    if db_url.startswith('sqlite'):
-        from xyz_agent_context.utils.database_table_management.create_all_tables_sqlite import init_local_database
-        from xyz_agent_context.utils.db_factory import parse_sqlite_url
-        db_path = parse_sqlite_url(db_url)
-        await init_local_database(db_path)
-        logger.info(f"SQLite database initialized: {db_path}")
-
+    # Initialize database connection pool
     logger.info("Initializing database connection pool...")
-    await get_db_client()
+    db = await get_db_client()
     logger.info("Database connection pool initialized")
+
+    # Auto-migrate schema (works for both SQLite and MySQL)
+    from xyz_agent_context.utils.schema_registry import auto_migrate
+    await auto_migrate(db._backend)
+    logger.info("Schema auto-migration complete")
 
     yield
 
