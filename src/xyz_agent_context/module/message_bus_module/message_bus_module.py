@@ -90,62 +90,54 @@ class MessageBusModule(XYZBaseModule):
     # =========================================================================
 
     async def get_instructions(self, ctx_data: ContextData) -> str:
-        unread_info = ctx_data.extra_data.get("bus_unread_messages", [])
+        parts = [
+            "## MessageBus — Agent Communication",
+            "",
+            "You can communicate with other agents via the MessageBus.",
+            "",
+            "### Available Tools",
+            "- **bus_send_message**: Send a message to a channel (supports @mentions via mention_list)",
+            "- **bus_send_to_agent**: Direct message another agent by agent_id",
+            "- **bus_create_channel**: Create a group or direct channel",
+            "- **bus_get_messages**: Get message history from a channel",
+            "- **bus_get_unread**: Get all your unread messages",
+            "- **bus_get_channel_members**: List members of a channel",
+            "- **bus_leave_channel**: Leave a channel",
+            "- **bus_kick_member**: Remove another agent from a channel",
+            "- **bus_get_agent_profile**: View another agent's profile",
+            "- **bus_search_agents**: Search for agents by capability or description",
+            "- **bus_register_agent**: Register or update your agent profile",
+            "",
+            "### Mention Rules",
+            "- In group channels, agents only receive messages that @mention them",
+            "- In direct channels, all messages are delivered",
+            "- Use mention_list='@everyone' to notify all channel members",
+            "- Use mention_list='agent_id1,agent_id2' to mention specific agents",
+        ]
+
+        # Add known agents
+        known = ctx_data.extra_data.get("bus_known_agents", [])
+        if known:
+            parts.append("")
+            parts.append("### Known Agents")
+            for a in known:
+                parts.append(f"- **{a.get('agent_id', '')}**: {a.get('description', 'No description')}")
+
+        # Add channels
         channels = ctx_data.extra_data.get("bus_channels", [])
-        known_agents = ctx_data.extra_data.get("known_agents", [])
-
-        instructions = """
-#### MessageBus Communication
-
-MessageBus is your **inter-agent messaging channel**. Use it to collaborate with
-other Agents, exchange information, and coordinate tasks.
-
-Available tools (prefix: bus_*):
-- `bus_send_to_agent`: Send a direct message to another agent by agent_id
-- `bus_send_message`: Send a message to a channel
-- `bus_create_channel`: Create a new channel and invite members
-- `bus_search_agents`: Search for agents in the registry
-- `bus_get_unread`: Get your unread messages
-- `bus_register_agent`: Register yourself in the agent discovery registry
-
-##### When to Use MessageBus
-- You need to **contact another Agent** (use `bus_send_to_agent` with their agent_id)
-- You want to **discover agents** by capability or description (use `bus_search_agents`)
-- Your owner asks you to **send a message** to another agent
-"""
-
-        # Show known agents (from DB + registry)
-        if known_agents:
-            instructions += "\n##### Known Agents (you can contact them)\n"
-            for agent in known_agents[:30]:
-                agent_id = agent.get("agent_id", "unknown")
-                name = agent.get("agent_name", agent.get("name", agent_id))
-                desc = agent.get("agent_description", agent.get("description", ""))
-                instructions += f"- **{name}** (agent_id: `{agent_id}`)"
-                if desc:
-                    instructions += f" — {desc[:80]}"
-                instructions += "\n"
-            instructions += "\nTo message an agent: `bus_send_to_agent(to_agent_id='<agent_id>', content='...')`\n"
-
-        # Show current channels
         if channels:
-            instructions += "\n##### Your Channels\n"
-            for ch in channels[:20]:
-                ch_name = ch.get("name", ch.get("channel_id", "?"))
-                ch_id = ch.get("channel_id", "?")
-                instructions += f"- {ch_name} (`{ch_id}`)\n"
+            parts.append("")
+            parts.append("### Your Channels")
+            for ch in channels:
+                parts.append(f"- {ch.get('channel_id', '')}: {ch.get('name', 'unnamed')}")
 
-        # Show unread messages
-        if unread_info:
-            instructions += "\n##### Unread Messages\n"
-            for msg in unread_info[:10]:
-                instructions += (
-                    f"- [{msg.get('from_agent', 'unknown')}] "
-                    f"in channel {msg.get('channel_id', '?')}: "
-                    f"{msg.get('content', '')[:80]}\n"
-                )
+        # Add unread count
+        unread = ctx_data.extra_data.get("bus_unread_messages", [])
+        if unread:
+            parts.append("")
+            parts.append(f"### Unread Messages: {len(unread)}")
 
-        return instructions
+        return "\n".join(parts)
 
     # =========================================================================
     # Hooks
