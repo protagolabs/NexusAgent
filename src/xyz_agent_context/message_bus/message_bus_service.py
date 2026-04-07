@@ -94,6 +94,31 @@ class MessageBusService(ABC):
         """
         ...
 
+    @abstractmethod
+    async def send_to_agent(
+        self,
+        from_agent: str,
+        to_agent: str,
+        content: str,
+        msg_type: str = "text",
+    ) -> str:
+        """
+        Send a message directly to another agent by agent_id.
+
+        Auto-creates a direct channel between the two agents if one
+        doesn't already exist.
+
+        Args:
+            from_agent: The agent ID of the sender.
+            to_agent: The agent ID of the recipient.
+            content: The message content.
+            msg_type: The message type (default: "text").
+
+        Returns:
+            The generated message_id.
+        """
+        ...
+
     # ===== Channel Management =====
 
     @abstractmethod

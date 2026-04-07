@@ -17,6 +17,7 @@
 /reference/
 CLAUDE.md
 AGENT.md
+/deploy/synapse/
 
 # ── Python bytecode & cache ────────────────────────────────────────────────
 __pycache__/

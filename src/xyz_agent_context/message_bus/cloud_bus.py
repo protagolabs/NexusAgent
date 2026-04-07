@@ -48,6 +48,11 @@ class CloudMessageBus(MessageBusService):
     async def mark_read(self, agent_id: str, message_ids: List[str]) -> None:
         raise NotImplementedError("Cloud MessageBus not yet implemented")
 
+    async def send_to_agent(
+        self, from_agent: str, to_agent: str, content: str, msg_type: str = "text"
+    ) -> str:
+        raise NotImplementedError("Cloud MessageBus not yet implemented")
+
     async def create_channel(
         self, name: str, members: List[str], channel_type: str = "group"
     ) -> str:

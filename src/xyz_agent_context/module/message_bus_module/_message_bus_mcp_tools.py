@@ -160,6 +160,41 @@ def register_message_bus_mcp_tools(
             return {"success": False, "error": str(e)}
 
     @mcp.tool()
+    async def bus_send_to_agent(
+        agent_id: str,
+        to_agent_id: str,
+        content: str,
+    ) -> dict:
+        """
+        Send a direct message to another agent by their agent_id.
+
+        Auto-creates a direct channel between you and the target agent if one
+        doesn't already exist. Use this when you want to contact a specific agent
+        directly rather than through a shared channel.
+
+        Args:
+            agent_id: Your agent ID (the sender)
+            to_agent_id: Target agent's ID (the recipient)
+            content: Message text to send
+
+        Returns:
+            Result dict with message_id on success, or error details
+        """
+        bus = get_message_bus_fn()
+        if bus is None:
+            return {"success": False, "error": "MessageBus not available"}
+
+        try:
+            msg_id = await bus.send_to_agent(
+                from_agent=agent_id,
+                to_agent=to_agent_id,
+                content=content,
+            )
+            return {"success": True, "message_id": msg_id, "to_agent": to_agent_id}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @mcp.tool()
     async def bus_register_agent(
         agent_id: str,
         capabilities: str,

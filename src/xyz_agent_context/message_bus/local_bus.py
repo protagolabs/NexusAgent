@@ -131,6 +131,37 @@ class LocalMessageBus(MessageBusService):
                 {"last_read_at": latest_ts},
             )
 
+    async def send_to_agent(
+        self,
+        from_agent: str,
+        to_agent: str,
+        content: str,
+        msg_type: str = "text",
+    ) -> str:
+        """Send a direct message to another agent, auto-creating a DM channel if needed."""
+        ph = self._db.placeholder
+
+        # Find existing direct channel between these two agents
+        rows = await self._db.execute(
+            f"SELECT c.channel_id FROM bus_channels c "
+            f"JOIN bus_channel_members m1 ON c.channel_id = m1.channel_id AND m1.agent_id = {ph} "
+            f"JOIN bus_channel_members m2 ON c.channel_id = m2.channel_id AND m2.agent_id = {ph} "
+            f"WHERE c.channel_type = 'direct'",
+            (from_agent, to_agent),
+        )
+
+        if rows:
+            channel_id = rows[0]["channel_id"]
+        else:
+            # Auto-create direct channel
+            channel_id = await self.create_channel(
+                name=f"dm_{from_agent}_{to_agent}",
+                members=[from_agent, to_agent],
+                channel_type="direct",
+            )
+
+        return await self.send_message(from_agent, channel_id, content, msg_type)
+
     # ===== Channel Management =====
 
     async def create_channel(
