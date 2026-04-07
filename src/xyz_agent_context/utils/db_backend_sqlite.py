@@ -25,6 +25,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import aiosqlite
+from loguru import logger
 
 from xyz_agent_context.utils.db_backend import DatabaseBackend
 
@@ -167,7 +168,7 @@ class SQLiteBackend(DatabaseBackend):
         await self._conn.execute("PRAGMA cache_size=-64000")  # 64MB
         await self._conn.execute("PRAGMA mmap_size=268435456")  # 256MB
         await self._conn.execute("PRAGMA temp_store=MEMORY")
-        await self._conn.execute("PRAGMA busy_timeout=5000")  # 5s per attempt, retries handle the rest
+        await self._conn.execute("PRAGMA busy_timeout=30000")  # 30s — generous wait for multi-process writes
         await self._conn.execute("PRAGMA foreign_keys=ON")
 
     async def close(self) -> None:
@@ -181,6 +182,42 @@ class SQLiteBackend(DatabaseBackend):
         if self._conn is None:
             raise RuntimeError("SQLiteBackend is not initialized. Call initialize() first.")
         return self._conn
+
+    # ===== Write Retry Helper =====
+
+    _MAX_WRITE_RETRIES: int = 10
+    _BASE_BACKOFF: float = 0.2  # seconds
+    _MAX_JITTER: float = 0.3    # seconds
+
+    async def _retry_write(self, fn, description: str = "write") -> Any:
+        """Execute a write callable with retry on 'database is locked'.
+
+        All write operations (execute_write, insert, update, delete, upsert)
+        funnel through this method so that cross-process SQLite lock contention
+        is handled uniformly.
+
+        Args:
+            fn: An async callable that performs the actual write under _write_lock.
+            description: Human-readable label for log messages.
+
+        Returns:
+            Whatever *fn* returns (rowcount, lastrowid, etc.).
+        """
+        import random
+        for attempt in range(self._MAX_WRITE_RETRIES):
+            try:
+                async with self._write_lock:
+                    return await fn()
+            except Exception as e:
+                if "database is locked" in str(e) and attempt < self._MAX_WRITE_RETRIES - 1:
+                    wait = self._BASE_BACKOFF * (2 ** min(attempt, 4)) + random.uniform(0, self._MAX_JITTER)
+                    logger.warning(
+                        f"SQLite {description} locked (attempt {attempt + 1}/{self._MAX_WRITE_RETRIES}), "
+                        f"retrying in {wait:.2f}s"
+                    )
+                    await asyncio.sleep(wait)
+                else:
+                    raise
 
     # ===== Raw SQL Execution =====
 
@@ -202,32 +239,18 @@ class SQLiteBackend(DatabaseBackend):
         self,
         query: str,
         params: Optional[tuple] = None,
-        _max_retries: int = 5,
+        _max_retries: int = 10,
     ) -> int:
-        """Execute a write SQL statement, returning affected row count.
-
-        Retries with randomized backoff on 'database is locked' to avoid
-        starvation when multiple processes write concurrently.
-        """
-        import random
+        """Execute a write SQL statement, returning affected row count."""
         conn = self._ensure_conn()
-        for attempt in range(_max_retries):
-            try:
-                async with self._write_lock:
-                    cursor = await conn.execute(query, params or ())
-                    if not self._in_transaction:
-                        await conn.commit()
-                    return cursor.rowcount
-            except Exception as e:
-                if "database is locked" in str(e) and attempt < _max_retries - 1:
-                    wait = 0.1 * (2 ** attempt) + random.uniform(0, 0.1)
-                    logger.warning(
-                        f"SQLite write locked (attempt {attempt + 1}/{_max_retries}), "
-                        f"retrying in {wait:.2f}s"
-                    )
-                    await asyncio.sleep(wait)
-                else:
-                    raise
+
+        async def _do_write():
+            cursor = await conn.execute(query, params or ())
+            if not self._in_transaction:
+                await conn.commit()
+            return cursor.rowcount
+
+        return await self._retry_write(_do_write, description="execute_write")
 
     # ===== CRUD Operations =====
 
@@ -327,11 +350,14 @@ class SQLiteBackend(DatabaseBackend):
         params = tuple(_serialize_value(v) for v in data.values())
 
         conn = self._ensure_conn()
-        async with self._write_lock:
+
+        async def _do_insert():
             cursor = await conn.execute(query, params)
             if not self._in_transaction:
                 await conn.commit()
             return cursor.lastrowid or 0
+
+        return await self._retry_write(_do_insert, description=f"insert({safe_table})")
 
     async def update(
         self,
@@ -370,11 +396,15 @@ class SQLiteBackend(DatabaseBackend):
         )
 
         conn = self._ensure_conn()
-        async with self._write_lock:
-            cursor = await conn.execute(query, tuple(params))
+        final_params = tuple(params)
+
+        async def _do_update():
+            cursor = await conn.execute(query, final_params)
             if not self._in_transaction:
                 await conn.commit()
             return cursor.rowcount
+
+        return await self._retry_write(_do_update, description=f"update({safe_table})")
 
     async def delete(
         self,
@@ -400,11 +430,15 @@ class SQLiteBackend(DatabaseBackend):
         query = f'DELETE FROM "{safe_table}" WHERE {" AND ".join(where_clauses)}'
 
         conn = self._ensure_conn()
-        async with self._write_lock:
-            cursor = await conn.execute(query, tuple(params))
+        final_params = tuple(params)
+
+        async def _do_delete():
+            cursor = await conn.execute(query, final_params)
             if not self._in_transaction:
                 await conn.commit()
             return cursor.rowcount
+
+        return await self._retry_write(_do_delete, description=f"delete({safe_table})")
 
     async def upsert(
         self,
@@ -446,11 +480,14 @@ class SQLiteBackend(DatabaseBackend):
         params = tuple(_serialize_value(v) for v in data.values())
 
         conn = self._ensure_conn()
-        async with self._write_lock:
+
+        async def _do_upsert():
             cursor = await conn.execute(query, params)
             if not self._in_transaction:
                 await conn.commit()
             return cursor.rowcount
+
+        return await self._retry_write(_do_upsert, description=f"upsert({safe_table})")
 
     # ===== Transaction Support =====
 

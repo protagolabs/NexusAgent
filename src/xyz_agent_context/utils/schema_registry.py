@@ -499,19 +499,22 @@ _register(
     )
 )
 
-# 15c. module_report_memory (dynamic table for module status reports)
+# 15c. module_report_memory (module status reports to Narrative)
 _register(
     TableDef(
         name="module_report_memory",
         columns=[
             Column("id", "INTEGER", "BIGINT UNSIGNED", nullable=False, auto_increment=True, primary_key=True),
-            Column("instance_id", "TEXT", "VARCHAR(128)", nullable=False, unique=True),
-            Column("memory", "TEXT", "MEDIUMTEXT"),
+            Column("narrative_id", "TEXT", "VARCHAR(128)", nullable=False),
+            Column("module_name", "TEXT", "VARCHAR(128)", nullable=False),
+            Column("report_memory", "TEXT", "TEXT"),
             Column("created_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
             Column("updated_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
         ],
         indexes=[
-            Index("idx_report_memory_instance_id", ["instance_id"], unique=True),
+            Index("idx_narrative_module", ["narrative_id", "module_name"], unique=True),
+            Index("idx_report_narrative", ["narrative_id"]),
+            Index("idx_report_module", ["module_name"]),
         ],
     )
 )
