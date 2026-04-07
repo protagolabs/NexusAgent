@@ -167,7 +167,7 @@ class SQLiteBackend(DatabaseBackend):
         await self._conn.execute("PRAGMA cache_size=-64000")  # 64MB
         await self._conn.execute("PRAGMA mmap_size=268435456")  # 256MB
         await self._conn.execute("PRAGMA temp_store=MEMORY")
-        await self._conn.execute("PRAGMA busy_timeout=5000")
+        await self._conn.execute("PRAGMA busy_timeout=30000")  # 30s, multiple processes share one DB
         await self._conn.execute("PRAGMA foreign_keys=ON")
 
     async def close(self) -> None:
