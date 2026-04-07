@@ -135,6 +135,28 @@ def validate_identifier(identifier: str) -> str:
     return identifier
 
 
+def _get_unique_cols_for_table(table_name: str) -> list[str]:
+    """
+    Look up the unique index columns for a table from schema_registry.
+    Falls back to the first column if no unique index is found.
+    """
+    try:
+        from xyz_agent_context.utils.schema_registry import TABLES
+        table_def = TABLES.get(table_name)
+        if table_def:
+            for idx in table_def.indexes:
+                if idx.unique:
+                    return idx.columns
+            # No unique index found — use primary key columns
+            pk_cols = [c.name for c in table_def.columns if c.primary_key]
+            if pk_cols:
+                return pk_cols
+    except ImportError:
+        pass
+    # Fallback: first column
+    return [table_name]
+
+
 def _mysql_to_sqlite_sql(query: str) -> str:
     """
     Translate MySQL-specific SQL syntax to SQLite-compatible syntax.
@@ -174,31 +196,64 @@ def _mysql_to_sqlite_sql(query: str) -> str:
     q = re.sub(r'\bUNSIGNED\b', '', q, flags=re.IGNORECASE)
     # Remove AUTO_INCREMENT (standalone, after we already handled BIGINT combo)
     q = re.sub(r'\bAUTO_INCREMENT\b', '', q, flags=re.IGNORECASE)
-    # MySQL UPSERT: INSERT ... VALUES (...) AS alias ON DUPLICATE KEY UPDATE alias.col = ...
-    # -> SQLite: INSERT ... VALUES (...) ON CONFLICT(id) DO UPDATE SET col = excluded.col
-    # This handles the MySQL 8.0.20+ upsert pattern used in EventMemoryModule
-    mysql_upsert = re.search(
+    # ── MySQL UPSERT (Pattern A): INSERT ... AS alias ON DUPLICATE KEY UPDATE alias.col ──
+    # MySQL 8.0.20+ syntax → SQLite ON CONFLICT DO UPDATE SET col = excluded.col
+    mysql_upsert_alias = re.search(
         r'INSERT\s+INTO\s+"?(\w+)"?\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)\s*AS\s+(\w+)\s+'
         r'ON\s+DUPLICATE\s+KEY\s+UPDATE\s+(.*)',
         q, flags=re.IGNORECASE | re.DOTALL
     )
-    if mysql_upsert:
-        table = mysql_upsert.group(1)
-        cols = mysql_upsert.group(2)
-        vals = mysql_upsert.group(3)
-        alias = mysql_upsert.group(4)
-        update_clause = mysql_upsert.group(5).strip().rstrip(';')
-        # First column is typically the unique key
-        first_col = cols.split(',')[0].strip().strip('"').strip("'")
-        # Replace alias.col references with excluded."col"
+    if mysql_upsert_alias:
+        table = mysql_upsert_alias.group(1)
+        cols = mysql_upsert_alias.group(2)
+        vals = mysql_upsert_alias.group(3)
+        alias = mysql_upsert_alias.group(4)
+        update_clause = mysql_upsert_alias.group(5).strip().rstrip(';')
         update_clause = re.sub(
             rf'{alias}\."?(\w+)"?',
             r'excluded."\1"',
             update_clause
         )
-        q = f'INSERT INTO "{table}" ({cols}) VALUES ({vals}) ON CONFLICT("{first_col}") DO UPDATE SET {update_clause}'
+        conflict_cols = _get_unique_cols_for_table(table)
+        conflict_target = ", ".join(f'"{c}"' for c in conflict_cols)
+        q = f'INSERT INTO "{table}" ({cols}) VALUES ({vals}) ON CONFLICT({conflict_target}) DO UPDATE SET {update_clause}'
 
-    # Remove FOR UPDATE / FOR UPDATE SKIP LOCKED (MySQL row locking, not supported in SQLite)
+    # ── MySQL UPSERT (Pattern B): INSERT ... ON DUPLICATE KEY UPDATE col = VALUES(col) ──
+    # Legacy MySQL syntax → SQLite ON CONFLICT DO UPDATE SET col = excluded.col
+    elif re.search(r'ON\s+DUPLICATE\s+KEY\s+UPDATE', q, flags=re.IGNORECASE):
+        mysql_upsert_values = re.search(
+            r'(INSERT\s+INTO\s+"?(\w+)"?\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\))\s+'
+            r'ON\s+DUPLICATE\s+KEY\s+UPDATE\s+(.*)',
+            q, flags=re.IGNORECASE | re.DOTALL
+        )
+        if mysql_upsert_values:
+            insert_part = mysql_upsert_values.group(1)
+            table = mysql_upsert_values.group(2)
+            cols = mysql_upsert_values.group(3)
+            update_clause = mysql_upsert_values.group(5).strip().rstrip(';')
+            # VALUES(col) -> excluded."col"
+            update_clause = re.sub(
+                r'VALUES\("?(\w+)"?\)',
+                r'excluded."\1"',
+                update_clause, flags=re.IGNORECASE
+            )
+            # Find the correct unique key from schema_registry
+            conflict_cols = _get_unique_cols_for_table(table)
+            conflict_target = ", ".join(f'"{c}"' for c in conflict_cols)
+            q = f'{insert_part} ON CONFLICT({conflict_target}) DO UPDATE SET {update_clause}'
+
+    # INSERT IGNORE -> INSERT OR IGNORE
+    q = re.sub(r'\bINSERT\s+IGNORE\b', 'INSERT OR IGNORE', q, flags=re.IGNORECASE)
+
+    # JSON_ARRAY_APPEND(col, '$', val) -> json_insert(col, '$[#]', val)
+    # SQLite json_insert with '$[#]' appends to end of array
+    q = re.sub(
+        r"JSON_ARRAY_APPEND\s*\(\s*(\w+)\s*,\s*'\$'\s*,",
+        r"json_insert(\1, '$[#]',",
+        q, flags=re.IGNORECASE
+    )
+
+    # Remove FOR UPDATE / FOR UPDATE SKIP LOCKED (MySQL row locking)
     q = re.sub(r'\bFOR\s+UPDATE(\s+SKIP\s+LOCKED)?\b', '', q, flags=re.IGNORECASE)
 
     # NOW() -> datetime('now')
