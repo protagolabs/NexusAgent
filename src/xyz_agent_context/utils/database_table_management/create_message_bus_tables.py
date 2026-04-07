@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS bus_messages (
     from_agent TEXT NOT NULL,
     content TEXT NOT NULL,
     msg_type TEXT NOT NULL DEFAULT 'text',
+    mentions TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 """

@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from xyz_agent_context.message_bus.message_bus_service import MessageBusService
-from xyz_agent_context.message_bus.schemas import BusAgentInfo, BusMessage
+from xyz_agent_context.message_bus.schemas import BusAgentInfo, BusChannelMember, BusMessage
 from xyz_agent_context.utils.db_backend import DatabaseBackend
 
 
@@ -49,6 +49,23 @@ class LocalMessageBus(MessageBusService):
     def __init__(self, backend: DatabaseBackend) -> None:
         self._db = backend
 
+    # ===== Helpers =====
+
+    @staticmethod
+    def _row_to_message(row: dict) -> BusMessage:
+        """Convert a DB row to a BusMessage, deserializing mentions JSON."""
+        mentions_raw = row.get("mentions")
+        mentions = json.loads(mentions_raw) if mentions_raw else None
+        return BusMessage(
+            message_id=row["message_id"],
+            channel_id=row["channel_id"],
+            from_agent=row["from_agent"],
+            content=row["content"],
+            msg_type=row.get("msg_type", "text"),
+            mentions=mentions,
+            created_at=row.get("created_at"),
+        )
+
     # ===== Messaging =====
 
     async def send_message(
@@ -57,6 +74,7 @@ class LocalMessageBus(MessageBusService):
         to_channel: str,
         content: str,
         msg_type: str = "text",
+        mentions: Optional[List[str]] = None,
     ) -> str:
         """Send a message to a channel and return the generated message_id."""
         msg_id = _generate_id("msg")
@@ -66,6 +84,7 @@ class LocalMessageBus(MessageBusService):
             "from_agent": from_agent,
             "content": content,
             "msg_type": msg_type,
+            "mentions": json.dumps(mentions) if mentions else None,
             "created_at": _now_iso(),
         })
         return msg_id
@@ -90,7 +109,7 @@ class LocalMessageBus(MessageBusService):
                 f'ORDER BY "created_at" ASC LIMIT {int(limit)}',
                 (channel_id,),
             )
-        return [BusMessage(**row) for row in rows]
+        return [self._row_to_message(row) for row in rows]
 
     async def get_unread(self, agent_id: str) -> List[BusMessage]:
         """Get all unread messages for an agent across all channels."""
@@ -103,7 +122,7 @@ class LocalMessageBus(MessageBusService):
             f"ORDER BY m.created_at ASC",
             (agent_id,),
         )
-        return [BusMessage(**row) for row in rows]
+        return [self._row_to_message(row) for row in rows]
 
     async def mark_read(self, agent_id: str, message_ids: List[str]) -> None:
         """Mark messages as read by advancing the read cursor per channel."""
@@ -296,7 +315,7 @@ class LocalMessageBus(MessageBusService):
         for row in rows:
             failure_count = await self.get_failure_count(row["message_id"], agent_id)
             if failure_count < 3:
-                result.append(BusMessage(**row))
+                result.append(self._row_to_message(row))
         return result
 
     async def ack_processed(
@@ -356,3 +375,44 @@ class LocalMessageBus(MessageBusService):
         if row is None:
             return 0
         return row["retry_count"]
+
+    # ===== Channel Membership & Agent Profile =====
+
+    async def get_channel_members(self, channel_id: str) -> List[BusChannelMember]:
+        """Get all members of a channel."""
+        ph = self._db.placeholder
+        rows = await self._db.execute(
+            f'SELECT * FROM "bus_channel_members" WHERE "channel_id" = {ph}',
+            (channel_id,),
+        )
+        return [BusChannelMember(
+            channel_id=row["channel_id"],
+            agent_id=row["agent_id"],
+            joined_at=row.get("joined_at"),
+            last_read_at=row.get("last_read_at"),
+            last_processed_at=row.get("last_processed_at"),
+        ) for row in rows]
+
+    async def kick_member(self, channel_id: str, agent_id: str) -> None:
+        """Remove a member from a channel."""
+        await self._db.delete("bus_channel_members", {
+            "channel_id": channel_id,
+            "agent_id": agent_id,
+        })
+
+    async def get_agent_profile(self, agent_id: str) -> Optional[BusAgentInfo]:
+        """Get a single agent's profile from the registry."""
+        row = await self._db.get_one("bus_agent_registry", {"agent_id": agent_id})
+        if row is None:
+            return None
+        caps_raw = row.get("capabilities", "[]")
+        caps = json.loads(caps_raw) if isinstance(caps_raw, str) else (caps_raw or [])
+        return BusAgentInfo(
+            agent_id=row["agent_id"],
+            owner_user_id=row.get("owner_user_id", ""),
+            capabilities=caps,
+            description=row.get("description", ""),
+            visibility=row.get("visibility", "private"),
+            registered_at=row.get("registered_at"),
+            last_seen_at=row.get("last_seen_at"),
+        )
