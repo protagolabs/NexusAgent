@@ -14,7 +14,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from xyz_agent_context.message_bus.schemas import BusAgentInfo, BusMessage
+from xyz_agent_context.message_bus.schemas import BusAgentInfo, BusChannelMember, BusMessage
 
 
 class MessageBusService(ABC):
@@ -35,6 +35,7 @@ class MessageBusService(ABC):
         to_channel: str,
         content: str,
         msg_type: str = "text",
+        mentions: Optional[List[str]] = None,
     ) -> str:
         """
         Send a message to a channel.
@@ -44,6 +45,7 @@ class MessageBusService(ABC):
             to_channel: The channel ID to send the message to.
             content: The message content.
             msg_type: The message type (default: "text").
+            mentions: List of agent_ids to mention, or ["@everyone"].
 
         Returns:
             The generated message_id.
@@ -278,4 +280,21 @@ class MessageBusService(ABC):
         Returns:
             Number of recorded failures (0 if none).
         """
+        ...
+
+    # ===== Channel Membership & Agent Profile =====
+
+    @abstractmethod
+    async def get_channel_members(self, channel_id: str) -> List[BusChannelMember]:
+        """Get all members of a channel."""
+        ...
+
+    @abstractmethod
+    async def kick_member(self, channel_id: str, agent_id: str) -> None:
+        """Remove a member from a channel."""
+        ...
+
+    @abstractmethod
+    async def get_agent_profile(self, agent_id: str) -> Optional[BusAgentInfo]:
+        """Get a single agent's profile from the registry."""
         ...

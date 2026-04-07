@@ -647,6 +647,7 @@ _register(
             Column("from_agent", "TEXT", "VARCHAR(64)", nullable=False),
             Column("content", "TEXT", "TEXT", nullable=False),
             Column("msg_type", "TEXT", "VARCHAR(32)", nullable=False, default="'text'"),
+            Column("mentions", "TEXT", "TEXT", nullable=True),
             Column("created_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
         ],
         indexes=[

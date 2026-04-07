@@ -32,6 +32,7 @@ class BusMessage(BaseModel):
     from_agent: str
     content: str
     msg_type: str = "text"
+    mentions: Optional[List[str]] = None  # list of agent_ids or ["@everyone"]
     created_at: Any = None
 
 
