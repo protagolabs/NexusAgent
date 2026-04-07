@@ -167,7 +167,7 @@ class SQLiteBackend(DatabaseBackend):
         await self._conn.execute("PRAGMA cache_size=-64000")  # 64MB
         await self._conn.execute("PRAGMA mmap_size=268435456")  # 256MB
         await self._conn.execute("PRAGMA temp_store=MEMORY")
-        await self._conn.execute("PRAGMA busy_timeout=30000")  # 30s, multiple processes share one DB
+        await self._conn.execute("PRAGMA busy_timeout=5000")  # 5s per attempt, retries handle the rest
         await self._conn.execute("PRAGMA foreign_keys=ON")
 
     async def close(self) -> None:
@@ -202,14 +202,32 @@ class SQLiteBackend(DatabaseBackend):
         self,
         query: str,
         params: Optional[tuple] = None,
+        _max_retries: int = 5,
     ) -> int:
-        """Execute a write SQL statement, returning affected row count."""
+        """Execute a write SQL statement, returning affected row count.
+
+        Retries with randomized backoff on 'database is locked' to avoid
+        starvation when multiple processes write concurrently.
+        """
+        import random
         conn = self._ensure_conn()
-        async with self._write_lock:
-            cursor = await conn.execute(query, params or ())
-            if not self._in_transaction:
-                await conn.commit()
-            return cursor.rowcount
+        for attempt in range(_max_retries):
+            try:
+                async with self._write_lock:
+                    cursor = await conn.execute(query, params or ())
+                    if not self._in_transaction:
+                        await conn.commit()
+                    return cursor.rowcount
+            except Exception as e:
+                if "database is locked" in str(e) and attempt < _max_retries - 1:
+                    wait = 0.1 * (2 ** attempt) + random.uniform(0, 0.1)
+                    logger.warning(
+                        f"SQLite write locked (attempt {attempt + 1}/{_max_retries}), "
+                        f"retrying in {wait:.2f}s"
+                    )
+                    await asyncio.sleep(wait)
+                else:
+                    raise
 
     # ===== CRUD Operations =====
 
