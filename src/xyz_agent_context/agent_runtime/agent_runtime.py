@@ -673,14 +673,16 @@ class AgentRuntime:
         """
         Clean up AgentRuntime resources
 
-        Main cleanup:
-        - AsyncDatabaseClient connection pool (if we created it)
+        NOTE: We intentionally do NOT close the database client here.
+        The client is a global singleton from get_db_client(), shared across
+        all requests and background tasks (hooks). Closing it here would
+        break background hook_after_event_execution tasks that are still
+        writing chat history, awareness updates, etc.
+
+        The database connection is managed by the application lifecycle
+        (FastAPI lifespan) via close_db_client().
         """
-        if self._owns_db_client and self._database_client is not None:
-            if isinstance(self._database_client, AsyncDatabaseClient):
-                logger.info("Closing AsyncDatabaseClient connection pool")
-                await self._database_client.close()
-            self._database_client = None
+        self._database_client = None
 
     async def __aenter__(self) -> "AgentRuntime":
         """Support async with syntax"""
