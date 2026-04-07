@@ -198,6 +198,9 @@ def _mysql_to_sqlite_sql(query: str) -> str:
         )
         q = f'INSERT INTO "{table}" ({cols}) VALUES ({vals}) ON CONFLICT("{first_col}") DO UPDATE SET {update_clause}'
 
+    # Remove FOR UPDATE / FOR UPDATE SKIP LOCKED (MySQL row locking, not supported in SQLite)
+    q = re.sub(r'\bFOR\s+UPDATE(\s+SKIP\s+LOCKED)?\b', '', q, flags=re.IGNORECASE)
+
     # NOW() -> datetime('now')
     q = re.sub(r'\bNOW\(\)', "datetime('now')", q, flags=re.IGNORECASE)
     # DATE_SUB(datetime('now'), INTERVAL ? DAY) -> datetime('now', '-' || ? || ' days')
