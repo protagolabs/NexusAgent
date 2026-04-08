@@ -107,6 +107,8 @@ _register(
         columns=[
             Column("id", "INTEGER", "BIGINT UNSIGNED", nullable=False, auto_increment=True, primary_key=True),
             Column("user_id", "TEXT", "VARCHAR(64)", nullable=False, unique=True),
+            Column("password_hash", "TEXT", "VARCHAR(255)"),
+            Column("role", "TEXT", "VARCHAR(32)", nullable=False, default="'user'"),
             Column("user_type", "TEXT", "VARCHAR(32)", nullable=False),
             Column("display_name", "TEXT", "VARCHAR(255)"),
             Column("email", "TEXT", "VARCHAR(255)"),

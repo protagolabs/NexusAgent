@@ -68,6 +68,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# JWT auth middleware (only enforced in cloud/MySQL mode)
+from backend.auth import auth_middleware
+app.middleware("http")(auth_middleware)
+
 
 # Import and include routers
 from backend.routes.websocket import router as websocket_router

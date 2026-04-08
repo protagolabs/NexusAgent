@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 
 const MainLayout = lazy(() => import('@/components/layout/MainLayout'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
 const ModeSelectPage = lazy(() => import('@/pages/ModeSelectPage'));
 const SetupPage = lazy(() => import('@/pages/SetupPage'));
 const SystemPage = lazy(() => import('@/pages/SystemPage'));
@@ -59,7 +60,15 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 /** Redirect root based on runtime state */
 function RootRedirect() {
   const { isLoggedIn } = useConfigStore();
-  const { mode, initialized } = useRuntimeStore();
+  const { mode, initialized, setMode, initialize } = useRuntimeStore();
+
+  // Cloud web deployment: force cloud-web mode, skip mode select
+  const forceCloud = import.meta.env.VITE_FORCE_CLOUD === 'true';
+  if (forceCloud && !mode) {
+    setMode('cloud-web');
+    initialize();
+    return <Navigate to="/login" replace />;
+  }
 
   if (!initialized && !mode) {
     return <Navigate to="/mode-select" replace />;
@@ -90,6 +99,10 @@ function App() {
         <Route
           path="/login"
           element={<PublicRoute><LoginPage /></PublicRoute>}
+        />
+        <Route
+          path="/register"
+          element={<PublicRoute><RegisterPage /></PublicRoute>}
         />
 
         {/* Protected app routes */}

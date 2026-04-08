@@ -240,6 +240,8 @@ export interface AgentInfo {
 // Auth types
 export interface LoginResponse extends ApiResponse {
   user_id?: string;
+  token?: string;  // JWT token (cloud mode)
+  role?: string;   // 'user' | 'staff' (cloud mode)
 }
 
 export interface CreateUserResponse extends ApiResponse {

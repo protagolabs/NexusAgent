@@ -24,6 +24,8 @@ from xyz_agent_context.repository import AgentRepository, UserRepository
 from xyz_agent_context.schema import (
     LoginRequest,
     LoginResponse,
+    RegisterRequest,
+    RegisterResponse,
     AgentInfo,
     AgentListResponse,
     CreateAgentRequest,
@@ -36,6 +38,13 @@ from xyz_agent_context.schema import (
     UpdateTimezoneRequest,
     UpdateTimezoneResponse,
 )
+from backend.auth import (
+    hash_password,
+    verify_password,
+    create_token,
+    _is_cloud_mode,
+    INVITE_CODE,
+)
 from xyz_agent_context.utils import is_valid_timezone
 from xyz_agent_context.settings import settings as app_settings
 
@@ -46,8 +55,10 @@ router = APIRouter()
 @router.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     """
-    Login with user_id
-    Only allows users that exist in the database users table to login
+    Login with user_id (+ password in cloud mode).
+
+    - Local mode: user_id only, no password required
+    - Cloud mode: user_id + password, returns JWT token
     """
     logger.info(f"Login attempt for user: {request.user_id}")
 
@@ -55,31 +66,115 @@ async def login(request: LoginRequest):
         db_client = await get_db_client()
         user_repo = UserRepository(db_client)
 
-        # Verify user exists in the users table
         user = await user_repo.get_user(request.user_id)
 
-        if user:
-            # Update last login time
+        if not user:
+            logger.warning(f"User {request.user_id} not found")
+            return LoginResponse(
+                success=False,
+                error="User not found. Please register first." if _is_cloud_mode()
+                    else "User not found. Please contact administrator to create an account."
+            )
+
+        if _is_cloud_mode():
+            # Cloud mode: verify password and return JWT
+            if not request.password:
+                return LoginResponse(success=False, error="Password is required")
+
+            password_hash = user.password_hash if hasattr(user, 'password_hash') else None
+            if not password_hash:
+                # Legacy user without password — check raw DB row
+                user_row = await db_client.get_one("users", {"user_id": request.user_id})
+                password_hash = user_row.get("password_hash") if user_row else None
+
+            if not password_hash:
+                return LoginResponse(success=False, error="Account not set up for cloud login. Please register.")
+
+            if not verify_password(request.password, password_hash):
+                return LoginResponse(success=False, error="Invalid password")
+
+            # Get role
+            user_row = await db_client.get_one("users", {"user_id": request.user_id})
+            role = (user_row.get("role") if user_row else None) or "user"
+
             await user_repo.update_last_login(request.user_id)
-            logger.info(f"User {request.user_id} logged in successfully")
+            token = create_token(request.user_id, role)
+            logger.info(f"User {request.user_id} logged in (cloud, role={role})")
+            return LoginResponse(
+                success=True,
+                user_id=request.user_id,
+                token=token,
+                role=role,
+            )
+        else:
+            # Local mode: user_id only
+            await user_repo.update_last_login(request.user_id)
+            logger.info(f"User {request.user_id} logged in (local)")
             return LoginResponse(
                 success=True,
                 user_id=request.user_id,
             )
-        else:
-            # User does not exist, deny login
-            logger.warning(f"User {request.user_id} not found in users table")
-            return LoginResponse(
-                success=False,
-                error="User not found. Please contact administrator to create an account."
-            )
 
     except Exception as e:
         logger.error(f"Error during login: {e}")
-        return LoginResponse(
-            success=False,
-            error=str(e)
+        return LoginResponse(success=False, error=str(e))
+
+
+@router.post("/register", response_model=RegisterResponse)
+async def register(request: RegisterRequest):
+    """
+    Register a new user (cloud mode only). Requires invite code.
+    """
+    logger.info(f"Registration attempt for user: {request.user_id}")
+
+    try:
+        if not _is_cloud_mode():
+            return RegisterResponse(success=False, error="Registration is only available in cloud mode")
+
+        # Validate invite code
+        if request.invite_code != INVITE_CODE:
+            return RegisterResponse(success=False, error="Invalid invite code")
+
+        # Validate password length
+        if len(request.password) < 6:
+            return RegisterResponse(success=False, error="Password must be at least 6 characters")
+
+        # Validate user_id
+        if len(request.user_id) < 2 or len(request.user_id) > 32:
+            return RegisterResponse(success=False, error="Username must be 2-32 characters")
+
+        db_client = await get_db_client()
+        user_repo = UserRepository(db_client)
+
+        # Check if user already exists
+        existing = await user_repo.get_user(request.user_id)
+        if existing:
+            return RegisterResponse(success=False, error="Username already taken")
+
+        # Create user with password
+        password_hash = hash_password(request.password)
+        await db_client.insert("users", {
+            "user_id": request.user_id,
+            "password_hash": password_hash,
+            "role": "user",
+            "user_type": "individual",
+            "display_name": request.display_name or request.user_id,
+            "status": "active",
+        })
+
+        # Generate token
+        token = create_token(request.user_id, "user")
+        logger.info(f"User {request.user_id} registered successfully")
+
+        return RegisterResponse(
+            success=True,
+            user_id=request.user_id,
+            token=token,
         )
+
+    except Exception as e:
+        logger.error(f"Error during registration: {e}")
+        return RegisterResponse(success=False, error=str(e))
 
 
 @router.get("/agents", response_model=AgentListResponse)

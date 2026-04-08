@@ -97,12 +97,28 @@ class ApiClient {
     this.baseUrl = getBaseUrl();
   }
 
+  private getAuthHeaders(): Record<string, string> {
+    // Read JWT token from configStore (localStorage)
+    try {
+      const raw = localStorage.getItem('narra-nexus-config');
+      if (raw) {
+        const config = JSON.parse(raw);
+        const token = config?.state?.token;
+        if (token) {
+          return { 'Authorization': `Bearer ${token}` };
+        }
+      }
+    } catch {}
+    return {};
+  }
+
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
         ...options?.headers,
       },
     });
@@ -228,10 +244,22 @@ class ApiClient {
   }
 
   // Auth API
-  async login(userId: string): Promise<LoginResponse> {
+  async login(userId: string, password?: string): Promise<LoginResponse> {
     return this.request<LoginResponse>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId }),
+      body: JSON.stringify({ user_id: userId, password: password || undefined }),
+    });
+  }
+
+  async register(userId: string, password: string, inviteCode: string, displayName?: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: userId,
+        password: password,
+        invite_code: inviteCode,
+        display_name: displayName || undefined,
+      }),
     });
   }
 
