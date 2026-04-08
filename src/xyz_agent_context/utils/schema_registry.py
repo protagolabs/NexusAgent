@@ -519,33 +519,7 @@ _register(
     )
 )
 
-# 16. matrix_credentials
-_register(
-    TableDef(
-        name="matrix_credentials",
-        columns=[
-            Column("id", "INTEGER", "BIGINT UNSIGNED", nullable=False, auto_increment=True, primary_key=True),
-            Column("agent_id", "TEXT", "VARCHAR(64)", nullable=False),
-            Column("nexus_agent_id", "TEXT", "VARCHAR(64)"),
-            Column("api_key", "TEXT", "VARCHAR(255)", nullable=False),
-            Column("matrix_user_id", "TEXT", "VARCHAR(255)", nullable=False),
-            Column("server_url", "TEXT", "VARCHAR(512)", nullable=False),
-            Column("sync_token", "TEXT", "VARCHAR(512)"),
-            Column("next_poll_time", "TEXT", "DATETIME(6)"),
-            Column("is_active", "INTEGER", "TINYINT(1)", nullable=False, default="1"),
-            Column("created_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
-            Column("updated_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
-        ],
-        indexes=[
-            Index("uk_matrix_agent_id", ["agent_id"], unique=True),
-            Index("uk_matrix_user_id", ["matrix_user_id"], unique=True),
-            Index("idx_matrix_is_active", ["is_active"]),
-            Index("idx_matrix_next_poll_time", ["next_poll_time"]),
-        ],
-    )
-)
-
-# 17. cost_records
+# 16. cost_records
 _register(
     TableDef(
         name="cost_records",
@@ -568,23 +542,7 @@ _register(
     )
 )
 
-# 18. matrix_processed_events (composite primary key)
-_register(
-    TableDef(
-        name="matrix_processed_events",
-        columns=[
-            Column("event_id", "TEXT", "VARCHAR(255)", nullable=False),
-            Column("agent_id", "TEXT", "VARCHAR(64)", nullable=False),
-            Column("processed_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
-        ],
-        primary_key=["event_id", "agent_id"],
-        indexes=[
-            Index("idx_mpe_processed_at", ["processed_at"]),
-        ],
-    )
-)
-
-# 19. embeddings_store
+# 17. embeddings_store
 _register(
     TableDef(
         name="embeddings_store",

@@ -5,7 +5,7 @@
 @description: Instance creation factory
 
 Uses different creation strategies based on Module type:
-- Agent level: Automatically created when creating an Agent (AwarenessModule, SocialNetworkModule, BasicInfoModule, GeminiRAGModule, MatrixModule)
+- Agent level: Automatically created when creating an Agent (AwarenessModule, SocialNetworkModule, BasicInfoModule, GeminiRAGModule, MessageBusModule)
 - Narrative level: Created when creating a Narrative (ChatModule)
 - Task level: Created each time a task is created (JobModule)
 
@@ -87,7 +87,7 @@ class InstanceFactory:
         - SocialNetworkModule instance (is_public=True)
         - BasicInfoModule instance (is_public=True)
         - GeminiRAGModule instance (is_public=True)
-        - MatrixModule instance (is_public=True)
+        - MessageBusModule instance (is_public=True)
 
         Args:
             agent_id: Agent ID
@@ -119,7 +119,7 @@ class InstanceFactory:
         if rag_instance:
             instances.append(rag_instance)
 
-        # 5. Create MessageBusModule instance (replaces MatrixModule)
+        # 5. Create MessageBusModule instance (replaces MessageBusModule)
         bus_instance = await self._create_message_bus_instance(agent_id)
         if bus_instance:
             instances.append(bus_instance)
@@ -244,35 +244,6 @@ class InstanceFactory:
 
         await self._instance_repo.create_instance(instance)
         logger.info(f"Created GeminiRAGModule instance: {instance.instance_id}")
-        return instance
-
-    async def _create_matrix_instance(self, agent_id: str) -> Optional[ModuleInstanceRecord]:
-        """Create MatrixModule Instance"""
-        # Check if already exists
-        existing = await self._instance_repo.get_by_agent(
-            agent_id=agent_id,
-            module_class="MatrixModule",
-            is_public=True
-        )
-        if existing:
-            logger.debug(f"MatrixModule instance already exists for agent {agent_id}")
-            return existing[0]
-
-        instance = ModuleInstanceRecord(
-            instance_id=generate_instance_id("matrix"),
-            module_class="MatrixModule",
-            agent_id=agent_id,
-            user_id=None,
-            is_public=True,
-            status=InstanceStatus.ACTIVE,
-            description="Matrix communication channel for inter-Agent messaging",
-            keywords=["matrix", "communication", "messaging", "agent"],
-            topic_hint="Inter-agent messaging via Matrix protocol",
-            created_at=utc_now(),
-        )
-
-        await self._instance_repo.create_instance(instance)
-        logger.info(f"Created MatrixModule instance: {instance.instance_id}")
         return instance
 
     async def _create_message_bus_instance(self, agent_id: str) -> Optional[ModuleInstanceRecord]:
@@ -510,7 +481,7 @@ class InstanceFactory:
         Ensure Agent-level Instances exist
 
         Creates all missing instances. When new module types are added
-        (e.g. MatrixModule), existing agents will get them on next load.
+        (e.g. MessageBusModule), existing agents will get them on next load.
 
         Args:
             agent_id: Agent ID
@@ -529,7 +500,6 @@ class InstanceFactory:
             "SocialNetworkModule": self._create_social_network_instance,
             "BasicInfoModule": self._create_basic_info_instance,
             "GeminiRAGModule": self._create_rag_instance,
-            # "MatrixModule": self._create_matrix_instance,  # Disabled
             "MessageBusModule": self._create_message_bus_instance,
         }
         for module_class, creator_fn in creators.items():

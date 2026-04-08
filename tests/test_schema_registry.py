@@ -116,9 +116,9 @@ class TestDDLGeneration:
 
     def test_composite_primary_key_sqlite(self):
         """Tables with composite PK should include PRIMARY KEY clause."""
-        stmts = generate_sqlite_ddl(TABLES["matrix_processed_events"])
+        stmts = generate_sqlite_ddl(TABLES["bus_channel_members"])
         ddl = stmts[0]
-        assert "PRIMARY KEY (event_id, agent_id)" in ddl
+        assert "PRIMARY KEY (channel_id, agent_id)" in ddl
 
     def test_composite_primary_key_mysql(self):
         """Tables with composite PK should include PRIMARY KEY clause in MySQL."""
@@ -304,7 +304,7 @@ class TestRegistryCompleteness:
         "instance_narrative_links", "instance_awareness",
         "instance_module_report_memory", "instance_json_format_memory",
         "instance_json_format_memory_chat", "module_report_memory",
-        "matrix_credentials", "cost_records", "matrix_processed_events",
+        "cost_records",
         "embeddings_store",
         "bus_channels", "bus_channel_members", "bus_messages",
         "bus_agent_registry", "bus_message_failures",

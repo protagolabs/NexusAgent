@@ -61,7 +61,6 @@ class ModuleLoader:
         "SocialNetworkModule",
         "JobModule",
         "GeminiRAGModule",
-        # "MatrixModule",  # Disabled — replaced by MessageBusModule
         "MessageBusModule",
     ]
 
@@ -425,7 +424,7 @@ class ModuleLoader:
             return []
 
         try:
-            # Ensure agent-level instances exist (auto-creates missing ones like MatrixModule)
+            # Ensure agent-level instances exist (auto-creates missing ones like MessageBusModule)
             await self.instance_factory.ensure_agent_instances_exist(self.agent_id)
 
             # Attempt to load from database
