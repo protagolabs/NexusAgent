@@ -431,20 +431,14 @@ class AsyncDatabaseClient:
             if self._db_config is None:
                 self._db_config = load_db_config()
 
-            self._pool = await aiomysql.create_pool(
-                host=self._db_config['host'],
-                port=self._db_config.get('port', 3306),
-                user=self._db_config['user'],
-                password=self._db_config['password'],
-                db=self._db_config['database'],
-                minsize=1,
-                maxsize=self._pool_size,
-                pool_recycle=self._pool_recycle,
-                autocommit=True,
-                charset='utf8mb4',
-            )
+            # Use MySQLBackend (unified backend interface)
+            from xyz_agent_context.utils.db_backend_mysql import MySQLBackend
+            backend = MySQLBackend(self._db_config, pool_size=self._pool_size, pool_recycle=self._pool_recycle)
+            await backend.initialize()
+            self._backend = backend
+            self._owns_backend = True
             self._initialized = True
-            logger.debug(f"AsyncDatabaseClient pool lazily initialized (pool_size={self._pool_size})")
+            logger.debug(f"AsyncDatabaseClient lazily initialized with MySQL backend (pool_size={self._pool_size})")
 
         return self._pool
 
@@ -494,22 +488,12 @@ class AsyncDatabaseClient:
                     return cls(_backend=backend)
             db_config = load_db_config()
 
-        # Create aiomysql connection pool
-        pool = await aiomysql.create_pool(
-            host=db_config['host'],
-            port=db_config.get('port', 3306),
-            user=db_config['user'],
-            password=db_config['password'],
-            db=db_config['database'],
-            minsize=1,
-            maxsize=pool_size,
-            pool_recycle=pool_recycle,
-            autocommit=True,
-            charset='utf8mb4',
-        )
-
-        logger.info(f"AsyncDatabaseClient created with pool_size={pool_size}")
-        return cls(db_config=db_config, pool_size=pool_size, pool_recycle=pool_recycle, _pool=pool)
+        # Use MySQLBackend (unified backend interface)
+        from xyz_agent_context.utils.db_backend_mysql import MySQLBackend
+        backend = MySQLBackend(db_config, pool_size=pool_size, pool_recycle=pool_recycle)
+        await backend.initialize()
+        logger.info(f"AsyncDatabaseClient created with MySQL backend (pool_size={pool_size})")
+        return cls(_backend=backend)
 
     @classmethod
     async def create_with_backend(cls, backend: "DatabaseBackend") -> 'AsyncDatabaseClient':

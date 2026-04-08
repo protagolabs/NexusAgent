@@ -183,8 +183,14 @@ async def get_db_client() -> "AsyncDatabaseClient":
                         await backend.initialize()
                         _shared_async_client = await AsyncDatabaseClient.create_with_backend(backend)
                 else:
-                    logger.info("Creating shared AsyncDatabaseClient instance")
-                    _shared_async_client = await AsyncDatabaseClient.create()
+                    from xyz_agent_context.utils.db_backend_mysql import MySQLBackend
+                    from xyz_agent_context.utils.database import load_db_config
+
+                    db_config = load_db_config()
+                    logger.info(f"Creating shared AsyncDatabaseClient with MySQL backend (host={db_config.get('host')})")
+                    backend = MySQLBackend(db_config)
+                    await backend.initialize()
+                    _shared_async_client = await AsyncDatabaseClient.create_with_backend(backend)
 
                 _client_event_loop = current_loop
                 logger.success("Shared AsyncDatabaseClient created successfully")
