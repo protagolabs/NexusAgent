@@ -865,10 +865,16 @@ async def auto_migrate(backend: "DatabaseBackend") -> None:
                     # SQLite cannot add NOT NULL without default
                     if dialect == "sqlite" and not col.nullable and col.default is None:
                         default = " DEFAULT ''"
-                    await backend.execute_write(
-                        f"ALTER TABLE {table_name} ADD COLUMN {col.name} "
-                        f"{col_type}{null_clause}{default}"
-                    )
+                    if dialect == "mysql":
+                        await backend.execute_write(
+                            f"ALTER TABLE `{table_name}` ADD COLUMN `{col.name}` "
+                            f"{col_type}{null_clause}{default}"
+                        )
+                    else:
+                        await backend.execute_write(
+                            f"ALTER TABLE {table_name} ADD COLUMN {col.name} "
+                            f"{col_type}{null_clause}{default}"
+                        )
                     columns_added += 1
 
             # Check for missing indexes
@@ -889,13 +895,14 @@ async def auto_migrate(backend: "DatabaseBackend") -> None:
             for idx in table_def.indexes:
                 if idx.name not in existing_indexes:
                     unique = "UNIQUE " if idx.unique else ""
-                    cols = ", ".join(idx.columns)
                     if dialect == "sqlite":
+                        cols = ", ".join(idx.columns)
                         await backend.execute_write(
                             f"CREATE {unique}INDEX IF NOT EXISTS "
                             f"{idx.name} ON {table_name}({cols})"
                         )
                     else:
+                        cols = ", ".join(f"`{c}`" for c in idx.columns)
                         await backend.execute_write(
                             f"CREATE {unique}INDEX `{idx.name}` "
                             f"ON `{table_name}`({cols})"
