@@ -151,6 +151,9 @@ class UserProviderService:
         elif card_type in ("anthropic", "openai"):
             pid = _generate_provider_id()
             display_name = name or f"Custom {card_type.title()}"
+            if not models:
+                from xyz_agent_context.agent_framework.model_catalog import get_default_models
+                models = get_default_models("user", card_type)
             await self._insert_provider(user_id, {
                 "provider_id": pid,
                 "name": display_name,
@@ -320,9 +323,11 @@ _DUAL_PROVIDER_CONFIGS = {
 
 
 def _build_dual_providers(card_type: str, api_key: str, group_id: str, models: Optional[list] = None) -> list[dict]:
+    from xyz_agent_context.agent_framework.model_catalog import get_default_models
     cfg = _DUAL_PROVIDER_CONFIGS[card_type]
     result = []
     for protocol, info in cfg.items():
+        proto_models = models or get_default_models(card_type, protocol)
         result.append({
             "provider_id": _generate_provider_id(),
             "name": info["name"],
@@ -331,7 +336,7 @@ def _build_dual_providers(card_type: str, api_key: str, group_id: str, models: O
             "auth_type": info["auth_type"],
             "api_key": api_key,
             "base_url": info["base_url"],
-            "models": json.dumps(models or []),
+            "models": json.dumps(proto_models),
             "linked_group": group_id,
         })
     return result
