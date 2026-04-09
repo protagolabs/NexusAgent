@@ -19,7 +19,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { Button, ThemeToggle } from '@/components/ui';
-import { useConfigStore, useChatStore, useRuntimeStore } from '@/stores';
+import { useConfigStore, useChatStore, useRuntimeStore, usePreloadStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { AgentList } from './AgentList';
@@ -31,13 +31,25 @@ export function Sidebar() {
   const location = useLocation();
 
   const { userId, agentId, logout } = useConfigStore();
-  const { clearAll } = useChatStore();
-  const { mode, features, setMode } = useRuntimeStore();
+  const { clearAll: clearChat } = useChatStore();
+  const { mode, features, setMode, setCloudApiUrl } = useRuntimeStore();
+  const clearPreload = usePreloadStore((s) => s.clearAll);
+
+  /**
+   * Wipe all session + cached data before leaving the current mode.
+   * This must be thorough — any store that caches per-user or per-agent
+   * data needs to be reset, otherwise cloud data leaks into a
+   * subsequent local session (or vice versa).
+   */
+  const wipeAllSessionData = () => {
+    logout();           // configStore: userId, token, role, agents
+    clearChat();        // chatStore: per-agent chat history
+    clearPreload();     // preloadStore: cached jobs, awareness, costs, etc.
+  };
 
   const handleSwitchMode = () => {
-    // Clear all session data when switching modes
-    logout();
-    clearAll();
+    wipeAllSessionData();
+    setCloudApiUrl('');   // forget the cloud server URL
     setMode(null);
     setShowModePopup(false);
     navigate('/mode-select');
@@ -45,8 +57,7 @@ export function Sidebar() {
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to logout?')) {
-      logout();
-      clearAll();
+      wipeAllSessionData();
       navigate('/login');
     }
   };
@@ -65,7 +76,7 @@ export function Sidebar() {
       }
     }
 
-    clearAll();
+    clearChat();
   };
 
   return (

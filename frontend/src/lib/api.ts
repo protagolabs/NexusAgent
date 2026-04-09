@@ -47,56 +47,13 @@ import type {
   EmbeddingRebuildResponse,
 } from '@/types';
 
-// Determine API base URL based on runtime environment:
-// 1. Explicit env var always wins (cloud deployment)
-// 2. Tauri app: backend runs on localhost:8000, no proxy available
-// 3. Dev mode: empty string, Vite proxy handles /api/* routes
-export const getBaseUrl = (): string => {
-  // Explicit env var always wins (deployment override)
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-
-  // Check runtime mode from persisted store
-  try {
-    const stored = localStorage.getItem('narranexus-runtime');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const state = parsed?.state || parsed;
-      // Cloud mode: use configured cloud API URL
-      if (state.mode === 'cloud-app' || state.mode === 'cloud-web') {
-        return state.cloudApiUrl || '';
-      }
-    }
-  } catch {
-    // Ignore parse errors
-  }
-
-  // Detect Tauri / non-dev environment:
-  // - window.__TAURI__ exists (Tauri injects this)
-  // - OR window.__TAURI_INTERNALS__ exists (Tauri 2 alternative)
-  // - OR protocol is tauri:// or http://tauri.localhost
-  // - OR we're NOT on localhost:5173 (meaning not Vite dev server)
-  if (typeof window !== 'undefined') {
-    const w = window as any;
-    const isTauri = '__TAURI__' in w || '__TAURI_INTERNALS__' in w;
-    const isTauriProtocol = window.location.protocol === 'tauri:' ||
-      window.location.hostname === 'tauri.localhost';
-    if (isTauri || isTauriProtocol) {
-      return 'http://localhost:8000';
-    }
-  }
-
-  return '';
-};
+// Base URL resolution is delegated to runtimeStore.getApiBaseUrl() so
+// every request picks up the CURRENT mode/cloudApiUrl. See runtimeStore.ts
+// for resolution order. This export is kept for backwards compatibility.
+export { getApiBaseUrl as getBaseUrl } from '@/stores/runtimeStore';
+import { getApiBaseUrl } from '@/stores/runtimeStore';
 
 class ApiClient {
-  private baseUrl: string;
-
-  constructor() {
-    this.baseUrl = getBaseUrl();
-  }
-
   private getAuthHeaders(): Record<string, string> {
     // Read JWT token from configStore (localStorage)
     try {
@@ -113,7 +70,10 @@ class ApiClient {
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    // Resolve baseUrl fresh on every call — no caching, so mode switches
+    // take effect immediately without requiring a page reload.
+    const baseUrl = getApiBaseUrl();
+    const url = `${baseUrl}${endpoint}`;
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -334,10 +294,11 @@ class ApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
-    const url = `${this.baseUrl}/api/agents/${encodeURIComponent(agentId)}/files?user_id=${encodeURIComponent(userId)}`;
+    const url = `${getApiBaseUrl()}/api/agents/${encodeURIComponent(agentId)}/files?user_id=${encodeURIComponent(userId)}`;
     const response = await fetch(url, {
       method: 'POST',
       body: formData,
+      headers: this.getAuthHeaders(),
       // Don't set Content-Type header - browser will set it with boundary for FormData
     });
 
@@ -414,10 +375,11 @@ class ApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
-    const url = `${this.baseUrl}/api/agents/${encodeURIComponent(agentId)}/rag-files?user_id=${encodeURIComponent(userId)}`;
+    const url = `${getApiBaseUrl()}/api/agents/${encodeURIComponent(agentId)}/rag-files?user_id=${encodeURIComponent(userId)}`;
     const response = await fetch(url, {
       method: 'POST',
       body: formData,
+      headers: this.getAuthHeaders(),
       // Don't set Content-Type header - browser will set it with boundary for FormData
     });
 
@@ -468,9 +430,10 @@ class ApiClient {
     formData.append('url', url);
     formData.append('branch', branch);
 
-    const response = await fetch(`${this.baseUrl}/api/skills/install`, {
+    const response = await fetch(`${getApiBaseUrl()}/api/skills/install`, {
       method: 'POST',
       body: formData,
+      headers: this.getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -492,9 +455,10 @@ class ApiClient {
     formData.append('source', 'zip');
     formData.append('file', file);
 
-    const response = await fetch(`${this.baseUrl}/api/skills/install`, {
+    const response = await fetch(`${getApiBaseUrl()}/api/skills/install`, {
       method: 'POST',
       body: formData,
+      headers: this.getAuthHeaders(),
     });
 
     if (!response.ok) {

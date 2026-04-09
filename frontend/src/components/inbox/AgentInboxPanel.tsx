@@ -211,7 +211,7 @@ export function AgentInboxPanel() {
             </div>
           </div>
         ) : (
-          rooms.map((room) => {
+          sortedRooms.map((room) => {
             const isRoomExpanded = expandedRoomId === room.room_id;
 
             return (

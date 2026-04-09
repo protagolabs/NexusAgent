@@ -6,6 +6,7 @@
  */
 
 import { useChatStore } from '@/stores/chatStore';
+import { getWsBaseUrl } from '@/stores/runtimeStore';
 import type { RuntimeMessage } from '@/types';
 
 interface ConnectionEntry {
@@ -37,14 +38,11 @@ class WebSocketManager {
     }
 
     const agentName = options?.agentName;
-    // In Tauri mode, connect directly to the backend on localhost:8000.
-    // In browser mode, derive from the current page host.
-    const w = window as any;
-    const isTauri = typeof window !== 'undefined' &&
-      ('__TAURI__' in w || '__TAURI_INTERNALS__' in w || window.location.protocol === 'tauri:' || window.location.hostname === 'tauri.localhost');
-    const wsHost = isTauri ? 'localhost:8000' : window.location.host;
-    const wsProtocol = isTauri ? 'ws:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
-    const wsUrl = `${wsProtocol}//${wsHost}/ws/agent/run`;
+    // Resolve WebSocket URL from the single source of truth (runtimeStore).
+    // Local mode: ws://localhost:8000/ws/...  Cloud mode: ws://<cloud-host>/ws/...
+    // Both derive from the same base URL as REST API calls, so if the
+    // mode switches between turns the next connection picks up the new host.
+    const wsUrl = `${getWsBaseUrl()}/ws/agent/run`;
     const ws = new WebSocket(wsUrl);
 
     const entry: ConnectionEntry = { ws, completed: false };
