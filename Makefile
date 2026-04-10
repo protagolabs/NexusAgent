@@ -12,7 +12,7 @@
 .PHONY: help lint lint-backend lint-frontend typecheck typecheck-backend typecheck-frontend \
         test test-backend build build-frontend \
         dev-db-proxy dev-backend dev-frontend dev-mcp dev-poller \
-        scaffold-nac-doc check-nac-doc audit-nac-doc install-hooks \
+        scaffold-nac-doc check-nac-doc audit-nac-doc doc-audit install-hooks \
         clean
 
 # Default target
@@ -50,6 +50,7 @@ help:
 	@echo "    make scaffold-nac-doc   Generate/refresh mirror md stubs"
 	@echo "    make check-nac-doc      Layer 1 structural invariants"
 	@echo "    make audit-nac-doc      Layer 3 soft staleness detection"
+	@echo "    make doc-audit          Alias for audit-nac-doc (spec §8.3)"
 	@echo "    make install-hooks      Install git pre-commit hook"
 	@echo ""
 	@echo "  Cleanup:"
@@ -119,6 +120,9 @@ check-nac-doc:
 
 audit-nac-doc:
 	uv run python -m scripts.audit_nac_doc
+
+# Alias matching spec §8.3 — both names work.
+doc-audit: audit-nac-doc
 
 install-hooks:
 	bash scripts/install_git_hooks.sh

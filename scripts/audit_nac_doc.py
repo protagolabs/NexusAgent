@@ -71,7 +71,18 @@ def audit() -> list[StaleEntry]:
 
 
 def _commits_since(root: Path, since: str, path: Path) -> int:
-    """Return the number of commits touching `path` strictly after `since`."""
+    """
+    Return the number of commits touching ``path`` after ``since``.
+
+    Interpretation: any commit strictly later than ``<since>T23:59:59`` in the
+    LOCAL timezone. This means **commits on the same calendar date as
+    ``last_verified`` are treated as "still verified"** — you confirmed intent
+    on that day, so edits that same day are assumed to match your understanding.
+    Stale detection starts from the next calendar day. Timezone is local git
+    config; if your verification was done in UTC-8 and the commit was at UTC+8,
+    edge cases near midnight may miscount by ±1 day. This is acceptable for a
+    non-blocking soft audit (Layer 3).
+    """
     try:
         result = subprocess.run(
             [

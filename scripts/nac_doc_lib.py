@@ -298,6 +298,9 @@ def parse_frontmatter(md_text: str) -> tuple[dict[str, str], str]:
     Returns (frontmatter_dict, body). If no frontmatter, returns ({}, md_text).
 
     Supports only flat string values — no nested lists/dicts. Enough for NAC Doc.
+    Surrounding single or double quotes on values are stripped so that hand-edited
+    or yaml-round-tripped values like ``stub: "true"`` compare correctly against
+    bare-string predicates downstream.
     """
     lines = md_text.splitlines()
     if not lines or lines[0].strip() != FRONTMATTER_DELIM:
@@ -314,7 +317,11 @@ def parse_frontmatter(md_text: str) -> tuple[dict[str, str], str]:
         if ":" not in line:
             continue
         key, _, value = line.partition(":")
-        fm[key.strip()] = value.strip()
+        value = value.strip()
+        # Strip matched surrounding quotes (single or double).
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+            value = value[1:-1]
+        fm[key.strip()] = value
     body = "\n".join(lines[end_idx + 1 :])
     return fm, body
 
