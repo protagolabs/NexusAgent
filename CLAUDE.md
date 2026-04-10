@@ -11,6 +11,80 @@
 7. **双运行方式对齐**——`bash run.sh` 和桌面端 dmg 的运行逻辑必须一致，改一个就要检查另一个
 8. **不要让代码变成屎山**——每做一个功能，全面检查有没有相关代码也需要调整
 9. **不强依赖某一个 Agent 框架或 LLM**: 我们不能完全的依赖某一个 Agent 框架，或者 LLM，所以设计的时候要考虑好，不能有某一个环节完全必须用某一个 Agent 框架，后续不能换。
+10. **Tier-2 文档同步**——对 `.py/.tsx/.ts/.rs` 做行为性修改时，必须重读对应 `.nac_doc/mirror/…/X.md`，若修改让 intent 失效，同一 commit 内更新 md 并刷新 frontmatter 的 `last_verified`。新增代码文件 → 同一 commit 新增对应 mirror md；删除代码文件 → 同一 commit 删除对应 mirror md。**新增/修改前必须先读对应 mirror md**。
+
+---
+
+## 三级文档体系
+
+本项目使用 NAC Doc 三级文档体系：
+
+1. **Tier-1 · 代码内**：行间注释、docstring、文件头
+2. **Tier-2 · `.nac_doc/mirror/`**：镜像源代码结构。每个代码文件对应一个 md，写 intent（为什么存在、上下游、设计决策、gotcha）。**不**写签名/做了什么。
+3. **Tier-3 · `.nac_doc/project/`**：`references/`（深度权威）+ `playbooks/`（任务 SOP）
+
+详细方法论见 `.nac_doc/README.md`。NexusAgent 专属入口见 `.nac_doc/_overview.md`。
+
+## 工作流启动
+
+接到用户任务后，在 brainstorm / 写代码之前**必做**：
+
+1. **扫深度文档索引**：看任务是否匹配下方「深度文档索引」中某个 playbook 或 reference 的「何时读」触发器
+2. **命中则先读**：匹配的 playbook/reference 必须在动手前 Read 一遍，把 SOP 纳入计划
+3. **编辑代码前**：对要改的 `.py/.tsx/.ts/.rs` 文件，Read 对应 `.nac_doc/mirror/…/X.md` 理解 intent，再动手
+4. **完工时**：遵守铁律 #10，同步对应 mirror md
+
+## 深度文档索引
+
+> 本节是 tier-3 文档的门面。每条都带「何时读」触发器 —— 匹配即 Read，不是参考而是**必读**。
+
+### References（权威深度文档 · 按需读取）
+
+- `.nac_doc/project/references/architecture.md` — 架构分层全貌
+  **何时读**：跨层重构、需要理解依赖方向时
+- `.nac_doc/project/references/agent_runtime_pipeline.md` — 7 步流水线详解
+  **何时读**：修改 `agent_runtime/` 下任何 step，或 debug 流水线问题
+- `.nac_doc/project/references/module_system.md` — Module 基类、Hook、MCP
+  **何时读**：修改 Module 基类、Hook 行为、Instance 生命周期
+- `.nac_doc/project/references/narrative_system.md` — Narrative 编排
+  **何时读**：修改 Narrative 选择/去重/向量匹配逻辑
+- `.nac_doc/project/references/context_engineering.md` — Context 构建引擎
+  **何时读**：修改 ContextData、Prompt 装配
+- `.nac_doc/project/references/database_schema.md` — 所有表结构
+  **何时读**：改表、加表、或遇到字段语义不清
+- `.nac_doc/project/references/coding_standards.md` — 完整编码规范
+  **何时读**：做 code review、或不确定命名/结构约定时
+- `.nac_doc/project/references/frontend_architecture.md` — 前端结构
+  **何时读**：改前端状态管理、路由、API 调用层
+- `.nac_doc/project/references/desktop_tauri_integration.md` — Tauri sidecar
+  **何时读**：改 `run.sh` 或 Tauri sidecar，触发铁律 #7
+- `.nac_doc/project/references/llm_and_framework_abstraction.md` — 框架抽象层
+  **何时读**：新增 LLM provider、Agent 框架适配
+
+### Playbooks（任务 SOP · 匹配即读）
+
+- `.nac_doc/project/playbooks/onboarding.md` — Day-1 新人入职
+  **何时读**：首次接触本项目
+- `.nac_doc/project/playbooks/add_new_module.md` — 新建 Module 端到端
+  **何时读**：用户说「加一个 Module」、「新建模块」—— **必须先读再动手**
+- `.nac_doc/project/playbooks/add_new_database_table.md` — 新建数据表
+  **何时读**：加新表、改表结构 —— **必须先读再动手**
+- `.nac_doc/project/playbooks/add_new_api_endpoint.md` — 后端 + 前端联动加 API
+  **何时读**：加新 API endpoint
+- `.nac_doc/project/playbooks/add_new_frontend_page.md` — 加前端页面
+  **何时读**：加新前端页面
+- `.nac_doc/project/playbooks/debug_runtime.md` — 流水线 debug 套路
+  **何时读**：runtime 报错或行为异常
+- `.nac_doc/project/playbooks/run_tests.md` — TDD 工作流
+  **何时读**：写测试前
+- `.nac_doc/project/playbooks/handle_migration.md` — 数据库迁移
+  **何时读**：需要改已有表结构（触发铁律 #6）
+- `.nac_doc/project/playbooks/write_nac_doc.md` — 写 tier-2 md
+  **何时读**：首次给某个文件写 mirror md、或 stub 转成稿时
+- `.nac_doc/project/playbooks/work_with_worktree.md` — worktree 流程
+  **何时读**：开始多人并行任务、或按 superpowers 流程启动 plan
+
+> 注：以上 references / playbooks 的实际内容可能还未写就（Phase 2 内容创作工作）。未写时 Read 会返回 file-not-found，这种情况下按 `.nac_doc/README.md` 的方法论现场推断。
 
 ---
 
@@ -86,43 +160,13 @@ AsyncDatabaseClient + Schema      ← 数据层
 
 ## 新建 Module 步骤
 
-每个新 Module 必须完成以下全部步骤：
+→ 详细端到端流程见 `.nac_doc/project/playbooks/add_new_module.md`
 
-1. **创建模块目录**：`src/xyz_agent_context/module/{module_name}_module/`
-
-2. **实现基类**：
-```python
-class NewModule(XYZBaseModule):
-    @staticmethod
-    def get_config() -> ModuleConfig:
-        return ModuleConfig(
-            module_name="new_module",
-            module_prefix="new",  # Instance ID 前缀
-            description="模块描述",
-            version="1.0.0"
-        )
-
-    async def hook_data_gathering(self, ctx_data: ContextData) -> ContextData:
-        # 数据收集逻辑
-        return ctx_data
-
-    async def hook_after_event_execution(self, params: HookAfterExecutionParams) -> None:
-        # 执行后处理
-        pass
-
-    async def get_mcp_config(self) -> Optional[MCPServerConfig]:
-        return MCPServerConfig(port=78XX, ...)
-```
-
-3. **注册模块**：在 `module/__init__.py` 的 `MODULE_MAP` 中添加
-
-4. **数据库表**：
-   - 创建脚本：`utils/database_table_management/create_{module}_table.py`
-   - 同步脚本：`utils/database_table_management/modify_{module}_table.py`（独立脚本，不被外部引用）
-
-5. **Repository**：在 `repository/` 创建对应的数据访问类
-
-6. **Schema**：在 `schema/` 创建对应的 Pydantic 模型
+必须对齐的铁律：
+- 模块必须继承 `XYZBaseModule` 并定义 `get_config()`
+- 必须在 `module/__init__.py` 的 `MODULE_MAP` 中注册
+- 必须提供 `create_{module}_table.py` 和 `modify_{module}_table.py`
+- Repository 放 `repository/`；Schema 放 `schema/`；私有实现放 `_{module}_impl/`
 
 ---
 
@@ -236,6 +280,19 @@ class EventRepository(BaseRepository[Event]):
 
 ```
 NexusAgent/
+├── .nac_doc/                      # NAC Doc 三级文档系统
+│   ├── README.md                  #   方法论全本（Skill 种子）
+│   ├── _overview.md               #   NexusAgent 顶层入口
+│   ├── mirror/                    #   Tier-2：代码镜像 intent
+│   └── project/                   #   Tier-3：references + playbooks
+│
+├── scripts/
+│   ├── nac_doc_lib.py             #   NAC Doc 共享库
+│   ├── scaffold_nac_doc.py        #   Phase 1 stub 生成
+│   ├── check_nac_doc.py           #   Layer 1 结构不变量检查
+│   ├── audit_nac_doc.py           #   Layer 3 软腐烂审计
+│   └── install_git_hooks.sh       #   pre-commit hook 安装
+│
 ├── backend/                       # FastAPI 后端
 │   ├── main.py                    # 应用入口
 │   └── routes/                    # 路由定义
