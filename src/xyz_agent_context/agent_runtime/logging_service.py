@@ -51,7 +51,7 @@ class LoggingService:
         enabled: bool = True,
         log_level: str = "DEBUG",
         retention: str = "30 days",
-        compression: str = "zip",
+        compression: str = None,
     ):
         """
         Initialize logging service
@@ -61,7 +61,7 @@ class LoggingService:
             enabled: Whether to enable file logging
             log_level: Log level
             retention: Log retention period (expired files are cleaned up when the sink is closed)
-            compression: Compression format (closed old files are automatically compressed)
+            compression: Compression format (None = no compression, "zip"/"gz" = compress rotated files)
 
         Note: No rotation is set. Each session already creates an independent file via the {time}
         placeholder, so rotation splitting is not needed. Also, loguru's retention only executes
