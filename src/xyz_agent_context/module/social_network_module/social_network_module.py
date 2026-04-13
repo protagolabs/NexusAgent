@@ -448,15 +448,17 @@ Tables are auto-created on startup via schema_registry.auto_migrate()."""
                         f"→ {existing.entity_name} ({existing.entity_id})"
                     )
                 elif len(matches) > 1:
-                    # Multiple matches — LLM decides (Stage 3)
-                    for candidate in matches:
-                        decision = await decide_merge_or_create(
-                            mentioned_entity.name, mentioned_entity.summary,
-                            candidate_aliases, candidate,
-                        )
-                        if decision == "MERGE":
-                            existing = candidate
-                            break
+                    # Multiple matches — single LLM call with all candidates
+                    logger.info(
+                        f"            Stage 1 found {len(matches)} name/alias matches, "
+                        f"asking LLM to pick"
+                    )
+                    decision, matched = await decide_merge_or_create(
+                        mentioned_entity.name, mentioned_entity.summary,
+                        candidate_aliases, matches,
+                    )
+                    if decision == "MERGE" and matched:
+                        existing = matched
 
                 # ── STAGE 2: Vector similarity search ──
                 if not existing:
@@ -471,19 +473,19 @@ Tables are auto-created on startup via schema_registry.auto_migrate()."""
                                 min_similarity=DEDUP_SIMILARITY_THRESHOLD,
                             )
                             if sim_results:
-                                # ── STAGE 3: LLM merge decision ──
-                                for candidate_entity, score in sim_results:
+                                # ── STAGE 3: Single LLM call with all candidates ──
+                                sim_entities = [e for e, _ in sim_results]
+                                for e, score in sim_results:
                                     logger.info(
-                                        f"            Stage 2 candidate: '{candidate_entity.entity_name}' "
+                                        f"            Stage 2 candidate: '{e.entity_name}' "
                                         f"(similarity={score:.3f})"
                                     )
-                                    decision = await decide_merge_or_create(
-                                        mentioned_entity.name, mentioned_entity.summary,
-                                        candidate_aliases, candidate_entity,
-                                    )
-                                    if decision == "MERGE":
-                                        existing = candidate_entity
-                                        break
+                                decision, matched = await decide_merge_or_create(
+                                    mentioned_entity.name, mentioned_entity.summary,
+                                    candidate_aliases, sim_entities,
+                                )
+                                if decision == "MERGE" and matched:
+                                    existing = matched
                     except Exception as e:
                         logger.warning(f"            Stage 2 vector search failed: {e}")
 

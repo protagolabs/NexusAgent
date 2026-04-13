@@ -154,26 +154,27 @@ One simple role: `engineer`, `researcher`, `student`, `manager`, `designer`, `ar
 # Dedup merge decision LLM instructions
 # Used by decide_merge_or_create() to determine if two entities are the same
 # ============================================================================
-DEDUP_MERGE_DECISION_INSTRUCTIONS = """You are deciding whether two entity records refer to the same real-world person, agent, or group.
+DEDUP_MERGE_DECISION_INSTRUCTIONS = """You are deciding whether a newly extracted entity matches any of the existing entities in the database.
 
 Given:
 - **Candidate**: a newly extracted entity from a conversation
-- **Existing**: an entity already stored in the database
+- **Existing entities**: numbered list [0], [1], [2]... of entities already stored
 
-Decide: **MERGE** or **CREATE_NEW**
+Decide: **MERGE** (with the index of the matching entity) or **CREATE_NEW**
 
 Rules:
-- MERGE if they clearly refer to the same person/agent/group:
+- MERGE if the candidate clearly refers to the same person/agent/group as one of the existing entities:
   - Same name or overlapping aliases
   - Descriptions clearly describe the same individual
   - System IDs match (e.g., Matrix IDs, platform agent IDs)
-- CREATE_NEW if they are different entities who happen to share partial similarity:
+  - Different surface names but context makes it obvious (e.g., "hongyitest" and "Hongyi" with overlapping descriptions)
+- CREATE_NEW if the candidate is a genuinely different entity:
   - Different roles, organizations, or contexts
   - Name similarity is coincidental
 - When in doubt, **CREATE_NEW** — false negatives are cheaper than false merges
-- A short/common name (e.g., "David", "agent_01") with no overlapping context should be CREATE_NEW
+- If multiple existing entities could match, pick the one with the strongest evidence (most overlapping context)
 
-Output your decision and a one-line reason."""
+Set merge_target_index to the [index] number of the matching entity. Output your decision and a one-line reason."""
 
 
 ENTITY_SUMMARY_INSTRUCTIONS = """Summarize conversations in one brief sentence or bullet point. Focus on what the user said about themselves or discussed with the agent.
