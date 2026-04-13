@@ -12,6 +12,7 @@ import asyncio
 import uuid
 import pytest
 import pytest_asyncio
+from datetime import datetime, timedelta, timezone
 
 
 @pytest_asyncio.fixture
@@ -164,3 +165,179 @@ def local_client_seeded(tmp_seeded_db, monkeypatch):
         "client": TestClient(app),
         "ctx": tmp_seeded_db,
     }
+
+
+# ---------------------------------------------------------------------------
+# G3 fixtures: seed_instance (async) + local_client_stale + seed_instance_sync
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture
+async def seed_instance(tmp_empty_db):
+    """Async fixture that inserts module_instances rows and cleans up after the test."""
+    created: list[str] = []
+
+    async def _seed(agent_id: str, module_class: str, status: str,
+                    updated_at: datetime, instance_id: str | None = None) -> str:
+        db = tmp_empty_db
+        iid = instance_id or f"inst_test_{len(created)}_{uuid.uuid4().hex[:6]}"
+        created.append(iid)
+        # Normalize datetime to ISO string for cross-backend compat
+        upd_str = updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at)
+        now_str = datetime.now(timezone.utc).isoformat()
+        await db.execute(
+            "INSERT INTO module_instances (instance_id, agent_id, module_class, status, "
+            "description, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (iid, agent_id, module_class, status, "test", now_str, upd_str),
+            fetch=False,
+        )
+        return iid
+
+    yield _seed
+
+    # Cleanup
+    db = tmp_empty_db
+    for iid in created:
+        try:
+            await db.execute(
+                "DELETE FROM module_instances WHERE instance_id=%s",
+                (iid,),
+                fetch=False,
+            )
+        except Exception:
+            pass
+
+
+@pytest_asyncio.fixture
+async def local_client_stale(tmp_empty_db, monkeypatch):
+    """
+    Fixture for G3 route-level tests. Seeds 3 agents + instances:
+      agent_a: has a running instance_job → kind != idle
+      agent_b: has a stale AwarenessModule (updated 1h ago) → kind == idle
+      agent_c: has a stale SkillModule (updated 1h ago, whitelisted) → kind != idle
+    Returns {client, agent_a, agent_b, agent_c, viewer}.
+    """
+    from fastapi.testclient import TestClient
+    from backend.main import app
+
+    db = tmp_empty_db
+    suffix = uuid.uuid4().hex[:8]
+    viewer = f"viewer_{suffix}"
+    agent_a = f"agent_a_{suffix}"
+    agent_b = f"agent_b_{suffix}"
+    agent_c = f"agent_c_{suffix}"
+
+    # Seed viewer user
+    try:
+        await db.insert("users", {
+            "user_id": viewer, "user_type": "local",
+            "role": "user", "display_name": "TestViewer",
+        })
+    except Exception:
+        pass
+
+    # Seed agents (owned by viewer, private)
+    for aid in (agent_a, agent_b, agent_c):
+        try:
+            await db.insert("agents", {
+                "agent_id": aid, "agent_name": aid,
+                "agent_description": None,
+                "created_by": viewer, "is_public": 0,
+            })
+        except Exception:
+            pass
+
+    # agent_a: seed a running job so kind == JOB
+    ts_now = datetime.now(timezone.utc).isoformat()
+    try:
+        await db.insert("instance_jobs", {
+            "instance_id": f"jinst_{suffix}",
+            "job_id": f"job_{suffix}",
+            "agent_id": agent_a,
+            "user_id": viewer,
+            "title": "running-job",
+            "description": "test",
+            "job_type": "report",
+            "status": "running",
+            "created_at": ts_now,
+            "updated_at": ts_now,
+        })
+    except Exception:
+        pass
+
+    # agent_b: stale AwarenessModule instance (1h ago)
+    old_ts = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    inst_b = f"inst_b_{suffix}"
+    try:
+        await db.execute(
+            "INSERT INTO module_instances (instance_id, agent_id, module_class, status, "
+            "description, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (inst_b, agent_b, "AwarenessModule", "in_progress", "stale test", ts_now, old_ts),
+            fetch=False,
+        )
+    except Exception:
+        pass
+
+    # agent_c: stale SkillModule instance (1h ago, whitelisted)
+    inst_c = f"inst_c_{suffix}"
+    try:
+        await db.execute(
+            "INSERT INTO module_instances (instance_id, agent_id, module_class, status, "
+            "description, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (inst_c, agent_c, "SkillModule", "in_progress", "whitelisted test", ts_now, old_ts),
+            fetch=False,
+        )
+    except Exception:
+        pass
+
+    async def _fake_local_user():
+        return viewer
+
+    monkeypatch.setattr("backend.auth.get_local_user_id", _fake_local_user)
+    try:
+        monkeypatch.setattr("backend.routes.dashboard.get_local_user_id", _fake_local_user)
+    except (AttributeError, ImportError):
+        pass
+
+    yield {
+        "client": TestClient(app),
+        "viewer": viewer,
+        "agent_a": agent_a,
+        "agent_b": agent_b,
+        "agent_c": agent_c,
+    }
+
+    # Cleanup
+    for iid in (inst_b, inst_c):
+        try:
+            await db.execute(
+                "DELETE FROM module_instances WHERE instance_id=%s",
+                (iid,), fetch=False,
+            )
+        except Exception:
+            pass
+    try:
+        await db.execute(
+            "DELETE FROM instance_jobs WHERE agent_id=%s",
+            (agent_a,), fetch=False,
+        )
+    except Exception:
+        pass
+    for aid in (agent_a, agent_b, agent_c):
+        try:
+            await db.execute(
+                "DELETE FROM agents WHERE agent_id=%s", (aid,), fetch=False,
+            )
+        except Exception:
+            pass
+    try:
+        await db.execute(
+            "DELETE FROM users WHERE user_id=%s", (viewer,), fetch=False,
+        )
+    except Exception:
+        pass
+
+
+@pytest.fixture
+def seed_instance_sync():
+    """Synchronous no-op fixture for route tests (seeding done in local_client_stale)."""
+    return None

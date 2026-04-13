@@ -18,11 +18,17 @@ Notes:
     content instead. See design TDR-4 + R11.
   - All DB fetch helpers go through AsyncDatabaseClient.fetch_all() which
     parametrizes to prevent SQLi.
+  - fetch_instances v2.2 G3: returns {agent_id: {"active": [...], "stale": [...]}}
+    where "stale" = in_progress instances past STALE_THRESHOLD_SECONDS that are NOT
+    in LONGRUN_MODULE_WHITELIST. Stale instances do NOT count as running toward kind
+    derivation; they surface in OwnedAgentStatus.stale_instances for UI zombie badge.
 """
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 from backend.routes._dashboard_schema import (
@@ -32,6 +38,21 @@ from backend.routes._dashboard_schema import (
     StatusCommon,
     StatusWithDetails,
 )
+
+# ---------------------------------------------------------------------------
+# G3: stale-instance detection config
+# ---------------------------------------------------------------------------
+
+# Seconds since module_instances.updated_at before an in_progress instance is
+# considered "stale" (zombie). Env-configurable for testing / ops overrides.
+STALE_THRESHOLD_SECONDS: int = int(os.environ.get("STALE_INSTANCE_THRESHOLD_SECONDS", "600"))
+
+# Modules whose in_progress instances are expected to be long-running.
+# They are excluded from the stale bucket regardless of updated_at age.
+LONGRUN_MODULE_WHITELIST: frozenset[str] = frozenset({
+    "SkillModule",
+    "GeminiRagModule",
+})
 
 
 # -------- action_line helpers ----------------------------------------------
@@ -199,6 +220,8 @@ def to_response(raw: dict, viewer_id: str):
             metrics_today=raw.get("metrics_today") or {},
             attention_banners=raw.get("attention_banners") or [],
             health=raw.get("health", "healthy_idle"),
+            # v2.2 G3: zombie badge data; raw["stale_instances"] is pre-built by route
+            stale_instances=raw.get("stale_instances") or [],
         )
     # Public non-owned: strip details + owner-only fields
     safe_status = StatusCommon(
@@ -606,29 +629,82 @@ def build_recent_events_resp(rows: list[dict]) -> list[dict]:
     return out
 
 
-async def fetch_instances(agent_ids: list[str]) -> dict[str, list[dict]]:
-    """module_instances currently in_progress per agent."""
+async def fetch_instances(agent_ids: list[str]) -> dict[str, dict[str, list[dict]]]:
+    """module_instances currently in_progress per agent, bucketed into active/stale.
+
+    v2.2 G3: returns {agent_id: {"active": [...], "stale": [...]}}.
+
+    Stale detection:
+      - An in_progress instance is stale if updated_at is older than
+        STALE_THRESHOLD_SECONDS AND the module_class is NOT in LONGRUN_MODULE_WHITELIST.
+      - Whitelisted long-running modules (SkillModule, GeminiRagModule) are always
+        placed in "active" regardless of updated_at age.
+      - "active" instances count toward running_count / kind derivation.
+      - "stale" instances do NOT count toward running_count; they surface in
+        OwnedAgentStatus.stale_instances for the UI zombie badge.
+
+    DB: updated_at may be a datetime object (MySQL) or ISO string (SQLite);
+    both are handled via _parse_dt().
+    """
     if not agent_ids:
         return {}
     from xyz_agent_context.utils.db_factory import get_db_client
     db = await get_db_client()
     placeholders = ",".join("%s" for _ in agent_ids)
     sql = (
-        f"SELECT instance_id, agent_id, module_class, description "
+        f"SELECT instance_id, agent_id, module_class, description, updated_at "
         f"FROM module_instances WHERE agent_id IN ({placeholders}) "
         f"AND status='in_progress'"
     )
     rows = await db.execute(sql, tuple(agent_ids))
-    out: dict[str, list[dict]] = {aid: [] for aid in agent_ids}
+
+    now_utc = datetime.now(timezone.utc)
+    out: dict[str, dict[str, list[dict]]] = {
+        aid: {"active": [], "stale": []} for aid in agent_ids
+    }
     for r in rows:
-        out[r["agent_id"]].append(
-            {
-                "instance_id": r["instance_id"],
-                "module_class": r["module_class"],
-                "description": r.get("description"),
-            }
-        )
+        aid = r["agent_id"]
+        if aid not in out:
+            continue
+        entry = {
+            "instance_id": r["instance_id"],
+            "module_class": r["module_class"],
+            "description": r.get("description"),
+        }
+        module_class = r["module_class"] or ""
+        if module_class in LONGRUN_MODULE_WHITELIST:
+            out[aid]["active"].append(entry)
+            continue
+        # Check updated_at age against threshold
+        updated_at_raw = r.get("updated_at")
+        is_stale = _is_instance_stale(updated_at_raw, now_utc)
+        if is_stale:
+            out[aid]["stale"].append(entry)
+        else:
+            out[aid]["active"].append(entry)
     return out
+
+
+def _is_instance_stale(updated_at_raw, now_utc: datetime) -> bool:
+    """Return True if updated_at is older than STALE_THRESHOLD_SECONDS."""
+    if updated_at_raw is None:
+        return False
+    try:
+        if hasattr(updated_at_raw, "replace"):
+            # datetime object (MySQL)
+            dt = updated_at_raw
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            # ISO string (SQLite)
+            from dateutil import parser as _parser  # type: ignore
+            dt = _parser.parse(str(updated_at_raw))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+        age_s = (now_utc - dt).total_seconds()
+        return age_s > STALE_THRESHOLD_SECONDS
+    except Exception:
+        return False
 
 
 async def fetch_enhanced_signals(agent_ids: list[str]) -> dict[str, dict]:
