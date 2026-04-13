@@ -29,6 +29,9 @@ stub: false
 5. **`fetch_enhanced_signals.token_rate_1h` 硬返 None**：events 表当前没有 per-event token 列。要真出数字需要先扩 schema。前端遇到 null 渲染 "N/A" 而不是 0（避免误导）。
 6. **`derive_health` 优先级**：error > warning > paused > healthy_running > idle_long > healthy_idle。这个顺序直接决定 rail 颜色；改顺序前看清楚 TDR-4 + 前端 HEALTH_COLORS。
 7. **`bucket_count` 的范围**（0 / 1-2 / 3-5 / 6-10 / 10+）：和 `_dashboard_schema.CountBucket` Literal **必须同步**。
+8. **v2.2 G3: `fetch_instances` 返回 bucketed dict**：签名从 `dict[str, list[dict]]` 改为 `dict[str, dict[str, list[dict]]]`（两层：agent_id → {active, stale}）。`active` 里的 instances 参与 `running_count` 和 `kind` 推导；`stale` 里的 instances 只传给 `stale_instances` 字段。不会再因为 zombie instance 把 agent 标成 Running。
+9. **`STALE_THRESHOLD_SECONDS` 通过 env var `STALE_INSTANCE_THRESHOLD_SECONDS` 覆盖**（默认 600s）：方便测试和 ops 调整，不硬编码。
+10. **`LONGRUN_MODULE_WHITELIST` 豁免 SkillModule + GeminiRagModule**：这两个 module 的 `in_progress` 实例正常情况下就会跑很久（技能训练、RAG 索引），不应该被 stale 检测误报。whitelist 是 frozenset，新增 module 需手动维护。
 
 ## Gotcha
 - 所有 SQL 查询用 `%s` 占位符（MySQL 风格），`AsyncDatabaseClient.execute` 会自动翻译成 sqlite `?`。混用会崩。
@@ -37,3 +40,5 @@ stub: false
 - `build_run_state_for_agent` 对 sessions 做"取第一个"——真实生产中若 session 排序需求变化（比如按最新优先），要改。
 - `_LIVE_JOB_STATES` 元组顺序**不是**展示顺序，是 SQL `WHERE status IN (...)` 的参数顺序；前端展示顺序在各自的组件里。
 - `humanize_verb` 对未知 `kind` 返回 `Running ({kind})` 作为最后 fallback——这意味着后端若加了新 `WorkingSource` 但忘了更新这个函数，前端会看到字面 `Running (NEW_KIND)`，不崩但难看。加 kind checklist：改这里 + StatusBadge ICON_MAP + types/api.ts `AgentKind` union。
+- **`_is_instance_stale` 对 `updated_at=None` 返回 `False`（不当 stale 处理）**：DB 里 updated_at 可能为 null（旧数据）。宁可漏报 stale 也不误报，避免把正常运行的 module 标成 zombie。
+- **`fetch_instances` 签名变更**（v2.2 G3 breaking change）：从 `dict[str, list[dict]]` 变为 `dict[str, dict[str, list[dict]]]`。任何直接调用这个函数的代码（包括测试）都必须更新取值方式为 `inst_map[aid]["active"]`。

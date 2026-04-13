@@ -4,6 +4,13 @@ last_verified: 2026-04-13
 stub: false
 ---
 
+## v2.2 改动（2026-04-13）
+
+- 新 `AgentHealth` 成员 `acknowledged`：slate gradient rail，**仅 frontend 派生**（服务端永不发此值）
+- 全部 rail 升级为 `bg-gradient-to-b from-X-400 to-X-600` + `shadow-[inset_-1px_0_2px_...]`（G4 视觉精致化）
+- 新增 `acknowledgedHealthOf(health, allDismissed, kind)` helper：banner 全 dismiss 时 error→acknowledged（永不 healthy，Security-M1）/ warning/paused→healthy
+- **不变量**：任何后续修改不允许让 error 在 allDismissed=true 时返回 healthy_*。这是视觉社工防线
+
 # healthColors.ts — Intent
 
 ## 为什么存在

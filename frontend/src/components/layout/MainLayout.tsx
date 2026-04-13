@@ -17,9 +17,10 @@
  * Top-right bell: User Inbox Popover
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { ContextPanelHeader, type ContextTab } from './ContextPanelHeader';
 import { ContextPanelContent } from './ContextPanelContent';
 import { ChatPanel } from '@/components/chat';
@@ -82,7 +83,12 @@ export function MainLayout() {
       {/* Render sub-page via Outlet, or the default chat view */}
       {isSubPage ? (
         <main className="flex-1 min-w-0 overflow-hidden relative z-10">
-          <Outlet />
+          {/* v2.2 G1: inner Suspense so lazy sub-pages (DashboardPage etc.)
+              don't trigger the App-level full-screen spinner that hides the
+              Sidebar. The skeleton mirrors the dashboard grid shape. */}
+          <Suspense fallback={<DashboardSkeleton />}>
+            <Outlet />
+          </Suspense>
         </main>
       ) : (
         <ChatView />
