@@ -23,6 +23,13 @@ import { Button, ThemeToggle } from '@/components/ui';
 import { useConfigStore, useChatStore, useRuntimeStore, usePreloadStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+// v2.2 G1: prefetch the lazy DashboardPage chunk on hover/focus so click
+// arrives to a warm cache. Static literal -> Vite resolves at build time,
+// no injection risk.
+const prefetchDashboard = () => {
+  void import('@/pages/DashboardPage');
+};
 import { AgentList } from './AgentList';
 
 export function Sidebar() {
@@ -236,6 +243,8 @@ export function Sidebar() {
               variant="ghost"
               size="sm"
               onClick={() => navigate('/app/dashboard')}
+              onMouseEnter={prefetchDashboard}
+              onFocus={prefetchDashboard}
               className={cn(
                 'w-full justify-start gap-2 text-[var(--text-secondary)]',
                 location.pathname === '/app/dashboard' &&
@@ -292,6 +301,8 @@ export function Sidebar() {
               variant="ghost"
               size="icon"
               onClick={() => navigate('/app/dashboard')}
+              onMouseEnter={prefetchDashboard}
+              onFocus={prefetchDashboard}
               title="Dashboard"
               className={cn(
                 location.pathname === '/app/dashboard' &&

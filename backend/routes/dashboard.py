@@ -112,7 +112,12 @@ async def agents_status(request: Request, response: Response):
         sessions = sessions_map.get(aid, [])
         per_state = jobs_map.get(aid, {})
         running_jobs_raw = list(per_state.get("running", []))
-        instances = inst_map.get(aid, [])
+        # v2.2 G3: fetch_instances now returns {active, stale} buckets.
+        # Only "active" instances count toward running_count and kind derivation.
+        # "stale" instances surface in stale_instances for the UI zombie badge.
+        inst_buckets = inst_map.get(aid, {"active": [], "stale": []})
+        instances = inst_buckets.get("active", [])
+        stale_instances_raw = inst_buckets.get("stale", [])
 
         running_count = len(sessions) + len(running_jobs_raw) + len(instances)
         kind = _derive_kind(sessions, running_jobs_raw, instances)
@@ -223,6 +228,8 @@ async def agents_status(request: Request, response: Response):
             "metrics_today": metrics_today,
             "attention_banners": banners,
             "health": health,
+            # v2.2 G3: zombie-badge data; built from stale bucket of fetch_instances
+            "stale_instances": stale_instances_raw,
         }
         resp = to_response(raw, viewer_id=viewer_id)
         if resp is not None:

@@ -132,6 +132,17 @@ class EnhancedSignals(BaseModel):
     unread_bus_messages: int = 0
 
 
+class StaleInstance(BaseModel):
+    """v2.2 G3: an in_progress module instance past the stale threshold.
+
+    Surfaced to UI so users can spot zombie state; does NOT raise health=error.
+    """
+
+    instance_id: str
+    module_class: str
+    description: str | None = None
+
+
 class PublicAgentStatus(BaseModel):
     """Shape returned for public agents where viewer != owner.
 
@@ -177,6 +188,12 @@ class OwnedAgentStatus(BaseModel):
     attention_banners: list[AttentionBanner] = Field(default_factory=list)
     # Status rail color: derived server-side for consistent client rendering.
     health: Literal['healthy_running', 'healthy_idle', 'idle_long', 'warning', 'error', 'paused'] = 'healthy_idle'
+    # v2.2 G3: module instances stuck in_progress past threshold; UI surfaces zombie badge.
+    # Does NOT affect health — stale modules are surfaced for visibility, not alerted on.
+    stale_instances: list[StaleInstance] = Field(
+        default_factory=list,
+        description="Module instances stuck in_progress past threshold; UI shows zombie badge but no alert.",
+    )
 
 
 # FastAPI response_model + pydantic v2 discriminated union

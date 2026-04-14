@@ -1,8 +1,12 @@
 ---
 code_file: frontend/src/components/layout/Sidebar.tsx
-last_verified: 2026-04-10
+last_verified: 2026-04-13
 stub: false
 ---
+
+## v2.2 改动（2026-04-13）
+
+- **G1 prefetch**：Dashboard nav button 加 `onMouseEnter` / `onFocus` 触发 `import('@/pages/DashboardPage')`，预热 Vite chunk。静态字面量 → Vite 编译期解析，无 injection 风险。配合 MainLayout 的内层 Suspense + DashboardSkeleton，hover 过的导航点击近乎瞬时。
 
 # Sidebar.tsx — Collapsible left rail: branding, user, agents, nav, mode-switch
 

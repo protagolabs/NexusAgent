@@ -22,9 +22,11 @@ Pydantic 响应类型的**唯一真相源**（SSOT）for `GET /api/dashboard/age
 3. **`running_count_bucket` 替代精确数字** on public 变体（TDR-13）：侧信道防御，防止通过流量分析识别大客户 agent。
 4. **v2.1 新增的 owner-only 字段**都在 `OwnedAgentStatus` 内：`verb_line / queue / recent_events / metrics_today / attention_banners / health`。Public 变体**刻意不含**这些。
 5. **`action_line: str | None`** 而不是空串——`null` 让前端能明确渲染 `—`。
+6. **v2.2 G3 新增 `StaleInstance` + `stale_instances`**：`StaleInstance` 是一个轻量 Pydantic 模型（instance_id / module_class / description）。`OwnedAgentStatus.stale_instances: list[StaleInstance]` 专供 UI 渲染 zombie badge。这个字段**不**触发 `health=error`——stale 是提示性的，不是告警性的。`PublicAgentStatus` **故意不含**此字段。
 
 ## Gotcha
 - **TS 类型手工复刻**：后端加字段若忘了同步 `frontend/src/types/api.ts`，`tsc` 不报错（TS 对多余字段宽容）。没有自动化契约测试。加字段 checklist：改这里 → 改 types/api.ts → 跑 tsc。
 - `running_count_bucket` 的字面值列表（`'0' | '1-2' | '3-5' | '6-10' | '10+'`）和 `_dashboard_helpers.py::bucket_count` 的输出是**隐式耦合**——改其中一个必须改另一个。
 - `JobQueueStatus` 的 5 个值和 `_dashboard_helpers._LIVE_JOB_STATES`（去掉 `running`）**必须对齐**——改枚举两处都要动。
 - 字段添加到 `OwnedAgentStatus` 时若是 owner-only：务必用 `ConfigDict(extra='forbid')` 保护 `PublicAgentStatus`（已做），并在 `tests/backend/test_dashboard_v21.py::test_v21_public_variant_still_locked_down` 的 `forbidden` 集合里加上新字段名，否则白名单漏检。
+- `stale_instances` 是 owner-only 字段——`PublicAgentStatus` 不含它（已受 `extra='forbid'` 保护）。如果前端需要展示 zombie badge，必须从 `owned_by_viewer=true` 的响应分支读取。

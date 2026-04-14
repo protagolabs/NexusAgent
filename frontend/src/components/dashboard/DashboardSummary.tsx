@@ -24,6 +24,7 @@ const CHIP_ORDER: ChipDef[] = [
   { health: 'warning',         label: 'blocked',  dotCls: 'bg-amber-500',   textCls: 'text-amber-600 dark:text-amber-400' },
   { health: 'paused',          label: 'paused',   dotCls: 'bg-yellow-500',  textCls: 'text-yellow-600 dark:text-yellow-400' },
   { health: 'error',           label: 'error',    dotCls: 'bg-red-500',     textCls: 'text-red-600 dark:text-red-400' },
+  { health: 'acknowledged',    label: 'ack',      dotCls: 'bg-slate-500',   textCls: 'text-slate-600 dark:text-slate-400' },
   { health: 'idle_long',       label: 'quiet',    dotCls: 'bg-gray-400',    textCls: 'text-gray-500' },
 ];
 
@@ -34,6 +35,7 @@ const TOOLTIPS: Record<AgentHealth, string> = {
   warning:         'Agent has at least one job blocked by dependencies',
   paused:          'Agent has at least one job paused by user',
   error:           'Agent has a failed job or recent error event',
+  acknowledged:    'Error acknowledged by user — underlying issue still present',
 };
 
 export function DashboardSummary({ agents }: { agents: AgentStatus[] }) {
@@ -45,6 +47,7 @@ export function DashboardSummary({ agents }: { agents: AgentStatus[] }) {
     warning: 0,
     paused: 0,
     error: 0,
+    acknowledged: 0,
   };
   for (const a of agents) {
     const h: AgentHealth = a.owned_by_viewer ? a.health : 'healthy_idle';

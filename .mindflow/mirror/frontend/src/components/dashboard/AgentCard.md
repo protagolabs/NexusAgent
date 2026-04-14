@@ -4,6 +4,18 @@ last_verified: 2026-04-13
 stub: false
 ---
 
+## v2.2 改动（2026-04-13）
+
+- **G2 effectiveHealth**：rail / cardTint 不再 dim 原色。引入 `acknowledgedHealthOf(health, allDismissed, kind)`（healthColors.ts），全 dismiss 时：
+  - error → `acknowledged`（中性 slate rail + 右上角 `data-testid="ack-dot"` 红点 ring）。**Security-M1: error 永不降级到绿色**——用户 dismiss 是 "ack" 不是 "fixed"
+  - warning / paused → healthy_running 或 healthy_idle（视 kind）
+  - 其他 → 不变
+- **G3 stale badge**：`agent.stale_instances` 非空时 header 加 `data-testid="stale-badge"` 灰色 pill（"N stale" + module_class tooltip）；不触发 banner、不算 error
+- **G4 视觉 polish**：`rounded-2xl` + shadow-sm/hover:shadow-lg + backdrop-blur；name `text-[15px] font-semibold tracking-tight`；StatusBadge 包成 pill；expand/collapse 用 `grid-rows-[0fr → 1fr]` 200ms 过渡（无 framer-motion）；`▾ more` hover 偏移 1px + 变色
+- **新 data-attr**：`data-server-health=<原始 health>`（debug 用，区别于 `data-health=<effective>`）
+- 旧 `railDimClass`/`opacity-40` 全部移除（v2.1.2 的妥协方案被 G2 effectiveHealth 取代）
+
+
 # AgentCard.tsx — Intent
 
 ## 为什么存在

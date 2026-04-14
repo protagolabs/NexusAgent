@@ -1,8 +1,13 @@
 ---
 code_file: frontend/src/components/layout/MainLayout.tsx
-last_verified: 2026-04-10
+last_verified: 2026-04-13
 stub: false
 ---
+
+## v2.2 改动（2026-04-13）
+
+- **G1 内层 Suspense**：`<Outlet />` 包了 `<Suspense fallback={<DashboardSkeleton />}>`。理由：App.tsx 外层 Suspense 一旦触发会全屏覆盖（包括 Sidebar），用户感受是"点击后整页消失"。内层 Suspense 把 fallback 限在主内容区，Sidebar 始终可见 → 慢导航问题修复。
+- DashboardSkeleton 的形状刻意 mimic 真实 dashboard grid，避免 swap 时跳行。
 
 # MainLayout.tsx — Three-column app shell and React Router layout
 

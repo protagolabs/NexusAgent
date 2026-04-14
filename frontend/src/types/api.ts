@@ -590,7 +590,15 @@ export type AgentHealth =
   | 'idle_long'
   | 'warning'
   | 'error'
-  | 'paused';
+  | 'paused'
+  | 'acknowledged'; // v2.2 G2: error fully-dismissed visual (slate rail + red ack dot)
+
+/** v2.2 G3: a module instance stuck in_progress past the stale threshold. */
+export interface StaleInstance {
+  instance_id: string;
+  module_class: string;
+  description: string | null;
+}
 
 export interface OwnedAgentStatus {
   agent_id: string;
@@ -614,6 +622,8 @@ export interface OwnedAgentStatus {
   metrics_today: MetricsToday;
   attention_banners: AttentionBanner[];
   health: AgentHealth;
+  // v2.2 G3: zombie module instances (in_progress past stale threshold)
+  stale_instances: StaleInstance[];
 }
 
 export interface PublicAgentStatus {

@@ -40,6 +40,12 @@ v1 已推倒重写（归档在 `.mindflow/state/archive/2026-04-13-dashboard-v1/
 ## v2.1.1 bug 修复点
 `_derive_kind` 和 `_earliest_started_at` 保留但 `pending_jobs_items` 构造改了——原来遍历 `per_state["pending"]` 时它是 union（pending+active+blocked+paused），导致后续遍历 "active"/"blocked"/"paused" 双重计算。v2.1.1 `fetch_jobs` 返 RAW per-state 后，本文件加 `seen_job_ids: set` 二保险去重。
 
+## v2.2 G3 stale instance bucketing
+`fetch_instances` 现在返回 `{agent_id: {"active": [...], "stale": [...]}}`。路由层：
+- `instances = inst_buckets["active"]` 传给 `running_count` 和 `_derive_kind`——zombie instances 不再撑住 running 状态。
+- `stale_instances_raw = inst_buckets["stale"]` 放入 `raw` dict，最终由 `to_response` 写进 `OwnedAgentStatus.stale_instances`。
+- Public 变体不含 `stale_instances`（owner-only 字段）。
+
 ## Gotcha
 - **query param 白名单**：目前只 check `user_id`，其他 unknown params 不拒绝。如果未来有敏感 query 要加，显式 reject。
 - **`_iso()` 对 datetime 转 ISO**——但不加时区标识。MySQL 返回 naive datetime，ISO 字符串里没 `+00:00`。前端 `new Date(iso)` 会按**浏览器本地时区**解读，和后端本地时区可能不一致。长期：改后端存 timezone-aware 并输出 `+00:00`。
