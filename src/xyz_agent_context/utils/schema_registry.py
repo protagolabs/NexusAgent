@@ -711,6 +711,7 @@ _register(
             Column("agent_id", "TEXT", "VARCHAR(64)", nullable=False, unique=True),
             Column("app_id", "TEXT", "VARCHAR(64)", nullable=False),
             Column("app_secret_ref", "TEXT", "VARCHAR(128)", nullable=False),
+            Column("app_secret_encrypted", "TEXT", "VARCHAR(512)"),
             Column("brand", "TEXT", "VARCHAR(16)", nullable=False),
             Column("profile_name", "TEXT", "VARCHAR(128)", nullable=False),
             Column("bot_name", "TEXT", "VARCHAR(255)"),

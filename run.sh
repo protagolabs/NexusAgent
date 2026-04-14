@@ -33,7 +33,7 @@ status() {
   echo ""
   echo -e "${C}Service Status${R}"
   echo ""
-  local services=("8100:DB Proxy" "8000:Backend API" "5173:Frontend" "7801:MCP Server")
+  local services=("8100:DB Proxy" "8000:Backend API" "5173:Frontend" "7801:MCP Server" "7830:Lark Trigger")
   for entry in "${services[@]}"; do
     local port="${entry%%:*}"
     local name="${entry#*:}"
@@ -52,7 +52,7 @@ stop_all() {
   # Kill tmux session if running
   tmux kill-session -t nexus-dev 2>/dev/null || true
   # Kill processes on known ports
-  for port in 8100 8000 5173 5174 7801 7802 7803 7804 7805; do
+  for port in 8100 8000 5173 5174 7801 7802 7803 7804 7805 7830; do
     lsof -ti:"$port" 2>/dev/null | xargs kill -9 2>/dev/null || true
   done
   # Kill known process patterns
@@ -62,6 +62,7 @@ stop_all() {
   pkill -f "module_poller" 2>/dev/null || true
   pkill -f "job_trigger" 2>/dev/null || true
   pkill -f "message_bus_trigger" 2>/dev/null || true
+  pkill -f "run_lark_trigger" 2>/dev/null || true
   echo -e "${G}All services stopped.${R}"
 }
 
@@ -70,12 +71,33 @@ check_deps() {
   command -v uv  &>/dev/null || missing+=("uv")
   command -v node &>/dev/null || missing+=("node")
   if [ ${#missing[@]} -gt 0 ]; then
-    echo -e "${RED}Missing dependencies: ${missing[*]}${R}"
+    echo -e "${RED}Missing required dependencies: ${missing[*]}${R}"
     echo ""
     echo "  Install uv:   curl -LsSf https://astral.sh/uv/install.sh | sh"
     echo "  Install node:  https://nodejs.org/"
     echo ""
     exit 1
+  fi
+
+  # Check Python version (>=3.13 required)
+  local py_version
+  py_version=$(uv python find 2>/dev/null | xargs -I{} {} -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "")
+  if [ -n "$py_version" ]; then
+    local major minor
+    major="${py_version%%.*}"
+    minor="${py_version#*.}"
+    if [ "$major" -lt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -lt 13 ]; }; then
+      echo -e "${RED}Python >= 3.13 is required (found $py_version).${R}"
+      echo "  Install: uv python install 3.13"
+      exit 1
+    fi
+  fi
+
+  # Optional: lark-cli (only needed for Lark/Feishu integration)
+  if ! command -v lark-cli &>/dev/null; then
+    echo -e "${Y}Note: lark-cli not found. Lark/Feishu features will not work.${R}"
+    echo -e "  Install: ${C}npm install -g @larksuite/cli${R}"
+    echo ""
   fi
 }
 
@@ -97,7 +119,7 @@ case "${1:-}" in
     # Install frontend deps if needed
     if [ ! -d "$SCRIPT_DIR/frontend/node_modules" ]; then
       echo -e "${Y}Installing frontend dependencies...${R}"
-      (cd "$SCRIPT_DIR/frontend" && npm install)
+      (cd "$SCRIPT_DIR/frontend" && npm ci)
     fi
 
     # Sync Python deps — clear ALL external Python env vars that interfere with uv

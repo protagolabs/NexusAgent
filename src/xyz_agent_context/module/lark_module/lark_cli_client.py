@@ -11,9 +11,30 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Optional
+from urllib.parse import urlparse
 
 from loguru import logger
+
+# Allowed Lark document hostnames for SSRF protection
+_ALLOWED_LARK_HOSTS = {
+    "open.feishu.cn",
+    "open.larksuite.com",
+    "feishu.cn",
+    "larksuite.com",
+    "bytedance.feishu.cn",
+}
+
+
+def _validate_lark_url(url: str) -> bool:
+    """Validate that a URL points to a legitimate Lark domain."""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("https", "http"):
+            return False
+        hostname = parsed.hostname or ""
+        return any(hostname == h or hostname.endswith(f".{h}") for h in _ALLOWED_LARK_HOSTS)
+    except Exception:
+        return False
 
 
 class LarkCLIClient:
@@ -53,6 +74,12 @@ class LarkCLIClient:
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
+            # Kill the subprocess to prevent zombie processes
+            try:
+                proc.kill()
+                await proc.wait()
+            except (ProcessLookupError, OSError):
+                pass
             return {"success": False, "error": f"CLI command timed out after {timeout}s"}
         except FileNotFoundError:
             return {"success": False, "error": "lark-cli not found. Install: npm install -g @larksuite/cli"}
@@ -124,7 +151,28 @@ class LarkCLIClient:
     # =========================================================================
 
     async def search_user(self, profile: str, query: str) -> dict:
-        """Search users by name, email, or phone."""
+        """Search users by name, email, or phone.
+
+        Uses the API layer (batch_get_id) for email/phone lookups (works with bot identity).
+        Falls back to the Shortcut command for name searches (requires user identity).
+        """
+        # If query looks like an email, use batch_get_id (bot-compatible)
+        if "@" in query:
+            result = await self._run(
+                ["api", "POST", "/open-apis/contact/v3/users/batch_get_id",
+                 "--data", json.dumps({"emails": [query]})],
+                profile,
+            )
+            return result
+        # If query looks like a phone number, use batch_get_id
+        if query.startswith("+") or query.replace("-", "").isdigit():
+            result = await self._run(
+                ["api", "POST", "/open-apis/contact/v3/users/batch_get_id",
+                 "--data", json.dumps({"mobiles": [query]})],
+                profile,
+            )
+            return result
+        # Name search — requires user identity (Shortcut command)
         return await self._run(
             ["contact", "+search-user", "--query", query],
             profile,
@@ -223,6 +271,8 @@ class LarkCLIClient:
 
     async def fetch_document(self, profile: str, doc_url: str) -> dict:
         """Read a Lark document's content by URL."""
+        if not _validate_lark_url(doc_url):
+            return {"success": False, "error": "Invalid document URL. Must be a Lark/Feishu domain."}
         return await self._run(
             ["docs", "+fetch", "--url", doc_url],
             profile,
@@ -230,6 +280,8 @@ class LarkCLIClient:
 
     async def update_document(self, profile: str, doc_url: str, markdown: str) -> dict:
         """Update an existing Lark document."""
+        if not _validate_lark_url(doc_url):
+            return {"success": False, "error": "Invalid document URL. Must be a Lark/Feishu domain."}
         return await self._run(
             ["docs", "+update", "--url", doc_url, "--markdown", markdown],
             profile,

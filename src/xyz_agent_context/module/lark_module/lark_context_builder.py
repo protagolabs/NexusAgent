@@ -9,6 +9,7 @@ Inherits ChannelContextBuilderBase and implements Lark-specific data fetching
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional
 
 from xyz_agent_context.channel.channel_context_builder_base import (
@@ -65,13 +66,39 @@ class LarkContextBuilder(ChannelContextBuilderBase):
             chat_id=chat_id,
             limit=limit,
         )
-        if result.get("success"):
-            data = result.get("data", {})
-            # CLI returns items in various structures; normalize
-            if isinstance(data, list):
-                return data
-            return data.get("items", data.get("messages", []))
-        return []
+        if not result.get("success"):
+            return []
+
+        data = result.get("data", {})
+        # CLI wraps in {"ok": true, "data": {...}} — unwrap
+        if isinstance(data, dict) and "data" in data:
+            data = data["data"]
+        if isinstance(data, dict):
+            raw_msgs = data.get("items", data.get("messages", []))
+        elif isinstance(data, list):
+            raw_msgs = data
+        else:
+            return []
+
+        # Map Lark CLI fields to ChannelContextBuilderBase expected format:
+        # { "timestamp": str, "sender": str, "body": str }
+        normalized = []
+        for msg in raw_msgs:
+            if isinstance(msg, dict):
+                # Lark CLI may use: create_time, sender_id, content, body, text
+                body = msg.get("content", msg.get("body", msg.get("text", "")))
+                # content may be JSON-encoded (e.g. {"text": "hi"})
+                if isinstance(body, str) and body.startswith("{"):
+                    try:
+                        body = json.loads(body).get("text", body)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                normalized.append({
+                    "timestamp": msg.get("create_time", msg.get("timestamp", "")),
+                    "sender": msg.get("sender_id", msg.get("sender", msg.get("from_id", "unknown"))),
+                    "body": body,
+                })
+        return normalized
 
     async def get_room_members(self) -> List[Dict]:
         # Lark CLI doesn't have a direct +chat-members shortcut.

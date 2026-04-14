@@ -72,7 +72,8 @@ class LarkModule(XYZBaseModule):
     # Configuration
     # =========================================================================
 
-    def get_config(self) -> ModuleConfig:
+    @staticmethod
+    def get_config() -> ModuleConfig:
         return ModuleConfig(
             name="LarkModule",
             priority=6,
@@ -162,7 +163,9 @@ class LarkModule(XYZBaseModule):
             f"- When replying to a Lark message, call `lark_send_message` **exactly ONCE**.\n"
             f"- Do NOT send multiple messages for the same reply. Combine everything into one message.\n"
             f"- Do NOT reply to simple acknowledgments like 'ok', 'thanks', 'got it'.\n"
-            f"- Keep replies concise and direct.\n\n"
+            f"- Keep replies concise and direct.\n"
+            f"- Use `text` parameter (plain text), NOT `markdown`. Lark does not render Markdown tables or complex formatting in bot messages.\n"
+            f"- For lists, use simple bullet points with emoji, not tables.\n\n"
             f"Use the lark_* tools to interact with {brand_display}."
         )
 
@@ -197,7 +200,8 @@ class LarkModule(XYZBaseModule):
         """Post-execution cleanup for Lark-triggered executions."""
         # Only process Lark-triggered executions
         ws = params.execution_ctx.working_source
-        if ws != WorkingSource.LARK.value and ws != WorkingSource.LARK:
+        # working_source can be either the enum or its string value
+        if str(ws) != WorkingSource.LARK.value:
             return
         # Future: mark messages as read, update sync state, etc.
         logger.debug(f"LarkModule after_execution for agent {params.execution_ctx.agent_id}")

@@ -15,22 +15,30 @@ Endpoints:
 
 from __future__ import annotations
 
-import json
+from typing import Any
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
 
 from loguru import logger
 
-from xyz_agent_context.module.lark_module.lark_cli_client import LarkCLIClient
 from xyz_agent_context.module.lark_module._lark_credential_manager import (
-    LarkCredential,
     LarkCredentialManager,
 )
+from xyz_agent_context.module.lark_module._lark_service import (
+    do_bind,
+    resolve_owner,
+    determine_auth_status,
+)
+from xyz_agent_context.module.lark_module.lark_cli_client import LarkCLIClient
 
 router = APIRouter()
 _cli = LarkCLIClient()
+
+# Pattern for safe agent_id / app_id values (alphanumeric + underscore + hyphen)
+_SAFE_ID_PATTERN = r"^[a-zA-Z0-9_\-]+$"
+# Device code pattern (alphanumeric + common separators)
+_DEVICE_CODE_PATTERN = r"^[a-zA-Z0-9_\-]{1,256}$"
 
 
 # =========================================================================
@@ -38,20 +46,20 @@ _cli = LarkCLIClient()
 # =========================================================================
 
 class BindRequest(BaseModel):
-    agent_id: str
-    app_id: str
-    app_secret: str
+    agent_id: str = Field(min_length=1, max_length=64, pattern=_SAFE_ID_PATTERN)
+    app_id: str = Field(min_length=1, max_length=64, pattern=_SAFE_ID_PATTERN)
+    app_secret: str = Field(min_length=1, max_length=256)
     brand: str = "feishu"  # "feishu" or "lark"
-    owner_email: str = ""  # Owner's email to auto-resolve Lark open_id
+    owner_email: str = Field(default="", max_length=254)
 
 
 class AgentRequest(BaseModel):
-    agent_id: str
+    agent_id: str = Field(min_length=1, max_length=64, pattern=_SAFE_ID_PATTERN)
 
 
 class AuthCompleteRequest(BaseModel):
-    agent_id: str
-    device_code: str
+    agent_id: str = Field(min_length=1, max_length=64, pattern=_SAFE_ID_PATTERN)
+    device_code: str = Field(min_length=1, max_length=256, pattern=_DEVICE_CODE_PATTERN)
 
 
 # =========================================================================
@@ -64,85 +72,56 @@ async def _get_db():
     return await get_db_client()
 
 
+async def _verify_agent_ownership(request: Request, agent_id: str) -> str | None:
+    """Verify that the caller owns the agent. Returns error message or None.
+
+    In local mode (no JWT), ownership is not enforced.
+    In cloud mode, the agent's created_by must match the JWT user_id.
+    """
+    if not hasattr(request.state, "user_id") or not request.state.user_id:
+        return None  # Local mode — no auth enforcement
+    user_id = request.state.user_id
+    db = await _get_db()
+    agent = await db.get_one("agents", {"agent_id": agent_id})
+    if not agent:
+        return f"Agent {agent_id} not found."
+    if agent.get("created_by") != user_id:
+        return "Permission denied: you do not own this agent."
+    return None
+
+
 # =========================================================================
 # Endpoints
 # =========================================================================
 
 @router.post("/bind")
-async def bind_lark_bot(body: BindRequest):
+async def bind_lark_bot(request: Request, body: BindRequest) -> dict[str, Any]:
     """Bind a Lark/Feishu bot to an agent."""
+    auth_err = await _verify_agent_ownership(request, body.agent_id)
+    if auth_err:
+        return {"success": False, "error": auth_err}
+
     if body.brand not in ("feishu", "lark"):
         return {"success": False, "error": "brand must be 'feishu' or 'lark'."}
 
+    # Validate owner_email format if provided
+    if body.owner_email and "@" not in body.owner_email:
+        return {"success": False, "error": "Invalid email format for owner_email."}
+
     db = await _get_db()
     mgr = LarkCredentialManager(db)
-    profile_name = f"agent_{body.agent_id}"
 
-    # Check if this agent already has a bot
-    existing = await mgr.get_credential(body.agent_id)
-    if existing:
-        return {"success": False, "error": "Agent already has a Lark bot bound. Unbind first."}
+    # Core bind logic (shared with MCP tool via _lark_service)
+    bind_result = await do_bind(mgr, body.agent_id, body.app_id, body.app_secret, body.brand)
+    if not bind_result["success"]:
+        return bind_result
 
-    # Each Lark app can only be bound to one agent — shared bots cause
-    # ambiguity (same bot name for all agents) and event routing conflicts.
-    same_app = await mgr.get_by_app_id(body.app_id)
-    if same_app:
-        other_agents = [c.agent_id for c in same_app]
-        return {
-            "success": False,
-            "error": (
-                f"App ID {body.app_id} is already bound to agent(s): {', '.join(other_agents)}. "
-                f"Each agent needs its own Lark app. Create a new app on the Lark Open Platform, "
-                f"or unbind the other agent first."
-            ),
-        }
+    profile_name = bind_result["data"]["profile_name"]
 
-    # Register CLI profile
-    result = await _cli.config_init(profile_name, body.app_id, body.app_secret, body.brand)
-    if not result.get("success"):
-        return result
-
-    # Save credential — bot identity works immediately, no OAuth needed
-    cred = LarkCredential(
-        agent_id=body.agent_id,
-        app_id=body.app_id,
-        app_secret_ref=f"appsecret:{body.app_id}",
-        brand=body.brand,
-        profile_name=profile_name,
-        auth_status="logged_in",
+    # Resolve owner Lark identity from email (route-only extra step)
+    owner_open_id, owner_name = await resolve_owner(
+        profile_name, body.owner_email
     )
-    await mgr.save_credential(cred)
-
-    # Try to get bot name
-    bot_info = await _cli.get_user(profile_name)
-    if bot_info.get("success"):
-        data = bot_info.get("data", {})
-        name = data.get("name", data.get("en_name", ""))
-        if name:
-            await mgr.update_bot_name(body.agent_id, name)
-
-    # Resolve owner Lark identity from email
-    owner_open_id = ""
-    owner_name = ""
-    if body.owner_email:
-        lookup = await _cli._run(
-            ["api", "POST", "/open-apis/contact/v3/users/batch_get_id",
-             "--data", json.dumps({"emails": [body.owner_email]})],
-            profile=profile_name,
-        )
-        if lookup.get("success"):
-            user_list = lookup.get("data", {}).get("data", {}).get("user_list", [])
-            if user_list:
-                owner_open_id = user_list[0].get("user_id", "")
-        if owner_open_id:
-            user_info = await _cli.get_user(profile_name, user_id=owner_open_id)
-            if user_info.get("success"):
-                udata = user_info.get("data", {})
-                user_obj = udata.get("user", udata)
-                owner_name = user_obj.get("name", user_obj.get("en_name", ""))
-            if not owner_name and body.owner_email:
-                owner_name = body.owner_email.split("@")[0].replace(".", " ").title()
-
     if owner_open_id:
         await mgr.update_owner(body.agent_id, owner_open_id, owner_name)
         logger.info(f"Lark owner resolved: {owner_name} ({owner_open_id})")
@@ -151,10 +130,7 @@ async def bind_lark_bot(body: BindRequest):
     return {
         "success": True,
         "data": {
-            "profile_name": profile_name,
-            "brand": body.brand,
-            "app_id": body.app_id,
-            "auth_status": "logged_in",
+            **bind_result["data"],
             "owner_open_id": owner_open_id,
             "owner_name": owner_name,
         },
@@ -162,8 +138,12 @@ async def bind_lark_bot(body: BindRequest):
 
 
 @router.post("/auth/login")
-async def lark_auth_login(body: AgentRequest):
+async def lark_auth_login(request: Request, body: AgentRequest) -> dict[str, Any]:
     """Initiate OAuth login. Returns auth URL for browser authorization."""
+    auth_err = await _verify_agent_ownership(request, body.agent_id)
+    if auth_err:
+        return {"success": False, "error": auth_err}
+
     db = await _get_db()
     mgr = LarkCredentialManager(db)
     cred = await mgr.get_credential(body.agent_id)
@@ -176,8 +156,12 @@ async def lark_auth_login(body: AgentRequest):
 
 
 @router.post("/auth/complete")
-async def lark_auth_complete(body: AuthCompleteRequest):
+async def lark_auth_complete(request: Request, body: AuthCompleteRequest) -> dict[str, Any]:
     """Complete OAuth login with device code from a previous --no-wait call."""
+    auth_err = await _verify_agent_ownership(request, body.agent_id)
+    if auth_err:
+        return {"success": False, "error": auth_err}
+
     db = await _get_db()
     mgr = LarkCredentialManager(db)
     cred = await mgr.get_credential(body.agent_id)
@@ -203,8 +187,12 @@ async def lark_auth_complete(body: AuthCompleteRequest):
 
 
 @router.get("/auth/status")
-async def lark_auth_status(agent_id: str):
+async def lark_auth_status(request: Request, agent_id: str) -> dict[str, Any]:
     """Check the authentication status of the bound bot."""
+    auth_err = await _verify_agent_ownership(request, agent_id)
+    if auth_err:
+        return {"success": False, "error": auth_err}
+
     db = await _get_db()
     mgr = LarkCredentialManager(db)
     cred = await mgr.get_credential(agent_id)
@@ -217,18 +205,21 @@ async def lark_auth_status(agent_id: str):
     # Sync auth status to DB
     if result.get("success"):
         data = result.get("data", {})
-        users = data.get("users", "(no logged-in users)")
-        new_status = "logged_in" if users != "(no logged-in users)" else "not_logged_in"
+        new_status = determine_auth_status(data)
         if new_status != cred.auth_status:
             await mgr.update_auth_status(agent_id, new_status)
-        result["data"]["db_auth_status"] = new_status
+        data["db_auth_status"] = new_status
 
     return result
 
 
 @router.post("/test")
-async def test_lark_connection(body: AgentRequest):
+async def test_lark_connection(request: Request, body: AgentRequest) -> dict[str, Any]:
     """Test connection by getting bot's own info."""
+    auth_err = await _verify_agent_ownership(request, body.agent_id)
+    if auth_err:
+        return {"success": False, "error": auth_err}
+
     db = await _get_db()
     mgr = LarkCredentialManager(db)
     cred = await mgr.get_credential(body.agent_id)
@@ -240,8 +231,12 @@ async def test_lark_connection(body: AgentRequest):
 
 
 @router.delete("/unbind")
-async def unbind_lark_bot(body: AgentRequest):
+async def unbind_lark_bot(request: Request, body: AgentRequest) -> dict[str, Any]:
     """Unbind Lark bot from agent. Removes CLI profile and DB record."""
+    auth_err = await _verify_agent_ownership(request, body.agent_id)
+    if auth_err:
+        return {"success": False, "error": auth_err}
+
     db = await _get_db()
     mgr = LarkCredentialManager(db)
     cred = await mgr.get_credential(body.agent_id)
@@ -255,13 +250,35 @@ async def unbind_lark_bot(body: AgentRequest):
     # Remove DB record
     await mgr.delete_credential(body.agent_id)
 
+    # Clean up Inbox data: remove this agent from all lark_ channels
+    try:
+        all_members = await db.get("bus_channel_members", {"agent_id": body.agent_id})
+        lark_channel_ids = [
+            m["channel_id"] for m in all_members
+            if m.get("channel_id", "").startswith("lark_")
+        ]
+        for cid in lark_channel_ids:
+            await db.delete("bus_channel_members", {
+                "channel_id": cid, "agent_id": body.agent_id
+            })
+            remaining = await db.get("bus_channel_members", {"channel_id": cid})
+            if not remaining:
+                await db.delete("bus_messages", {"channel_id": cid})
+                await db.delete("bus_channels", {"channel_id": cid})
+    except Exception as e:
+        logger.warning(f"Failed to clean up Lark inbox data: {e}")
+
     logger.info(f"Lark bot unbound: agent={body.agent_id}")
     return {"success": True}
 
 
 @router.get("/credential")
-async def get_lark_credential(agent_id: str):
+async def get_lark_credential(request: Request, agent_id: str) -> dict[str, Any]:
     """Get Lark credential info for an agent (no secrets exposed)."""
+    auth_err = await _verify_agent_ownership(request, agent_id)
+    if auth_err:
+        return {"success": False, "error": auth_err}
+
     db = await _get_db()
     mgr = LarkCredentialManager(db)
     cred = await mgr.get_credential(agent_id)

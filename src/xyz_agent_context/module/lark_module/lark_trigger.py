@@ -2,12 +2,12 @@
 @file_name: lark_trigger.py
 @date: 2026-04-10
 @description: Lark event trigger — listens for incoming messages via
-lark-cli event +subscribe (WebSocket long connection, NDJSON output).
+lark-oapi SDK WebSocket long connection.
 
-Architecture: 1 subscribe process per bound bot + N shared workers.
+Architecture: 1 WebSocket thread per bound bot + N shared async workers.
 When a colleague sends a message to the bot, the trigger:
-1. Parses the event
-2. Builds context via LarkContextBuilder
+1. SDK callback puts event into async task_queue
+2. Worker picks up event, builds context via LarkContextBuilder
 3. Runs AgentRuntime
 4. Writes result to Inbox
 """
@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Dict, List, Optional
+import threading
+import time
+import uuid
 
 from loguru import logger
 
@@ -28,53 +30,105 @@ from xyz_agent_context.module.lark_module._lark_credential_manager import (
 )
 from xyz_agent_context.module.lark_module.lark_cli_client import LarkCLIClient
 from xyz_agent_context.module.lark_module.lark_context_builder import LarkContextBuilder
+from xyz_agent_context.agent_runtime.agent_runtime import AgentRuntime
+from xyz_agent_context.agent_runtime.logging_service import LoggingService
+from xyz_agent_context.channel.channel_context_builder_base import ChannelHistoryConfig
+from xyz_agent_context.schema.runtime_message import MessageType
+from xyz_agent_context.utils.db_factory import get_db_client
+from xyz_agent_context.utils.timezone import utc_now
 
 
 class LarkTrigger:
     """
-    Poll-free trigger using lark-cli event +subscribe per bot.
+    Event trigger using lark-oapi SDK WebSocket per bot.
 
-    Each active + logged_in credential gets its own subscribe process.
-    Events are dispatched to a shared task queue processed by N workers.
+    Each active + logged_in credential gets its own WebSocket thread.
+    Events are dispatched to a shared async task queue processed by N workers.
     """
 
+    # At least this many workers always run
+    MIN_WORKERS = 3
+    # Each active subscriber adds this many workers
+    WORKERS_PER_SUBSCRIBER = 2
+    # Never exceed this cap
+    MAX_WORKERS = 50
+
+    # Dedup window: ignore message_ids seen within this many seconds
+    DEDUP_TTL_SECONDS = 60
+
     def __init__(self, max_workers: int = 3):
-        self.max_workers = max_workers
-        self._subscribers: Dict[str, asyncio.subprocess.Process] = {}
+        self._base_workers = max(max_workers, self.MIN_WORKERS)
+        self._subscriber_tasks: dict[str, asyncio.Task] = {}  # app_id -> subscribe_loop task
+        self._subscriber_creds: dict[str, LarkCredential] = {}  # app_id -> credential
         self._task_queue: asyncio.Queue = asyncio.Queue()
-        self._workers: List[asyncio.Task] = []
-        self._monitor_tasks: List[asyncio.Task] = []
+        self._workers: list[asyncio.Task] = []
+        self._monitor_tasks: list[asyncio.Task] = []
         self.running = False
-        self._cli = LarkCLIClient()
-        self._bot_open_ids: set[str] = set()  # Cache of bot open_ids to filter echo
+        self._cli = LarkCLIClient()  # Still used for get_user, bot info lookups
+        self._loop: asyncio.AbstractEventLoop | None = None  # Set in start()
+        # profile_name -> bot open_id, ensures each bot's echo is filtered
+        self._bot_open_ids: dict[str, str] = {}
+        # Thread-safe dedup: message_id -> timestamp
+        self._seen_messages: dict[str, float] = {}
+        self._seen_lock = threading.Lock()  # Protects _seen_messages
 
     async def start(self, db) -> None:
         """Start workers and credential watcher."""
         self.running = True
         self._db = db
+        self._loop = asyncio.get_running_loop()
 
-        # Start workers
-        for i in range(self.max_workers):
-            worker = asyncio.create_task(self._worker(i))
-            self._workers.append(worker)
+        # Start baseline workers
+        self._adjust_workers(self._base_workers)
 
         # Start credential watcher (checks for new/changed credentials periodically)
         watcher = asyncio.create_task(self._credential_watcher())
         self._monitor_tasks.append(watcher)
 
-        logger.info(f"LarkTrigger started: {self.max_workers} workers, watching for credentials")
+        logger.info(f"LarkTrigger started: {len(self._workers)} workers, watching for credentials")
+
+    def _desired_worker_count(self) -> int:
+        """Calculate how many workers we need based on active subscribers."""
+        sub_count = len(self._subscriber_tasks)
+        desired = self._base_workers + sub_count * self.WORKERS_PER_SUBSCRIBER
+        return min(desired, self.MAX_WORKERS)
+
+    def _adjust_workers(self, target: int) -> None:
+        """Scale workers up or down to match target count."""
+        current = len(self._workers)
+        if target > current:
+            for i in range(current, target):
+                worker = asyncio.ensure_future(self._worker(i))
+                self._workers.append(worker)
+            logger.info(f"LarkTrigger: scaled workers {current} -> {target}")
+        elif target < current:
+            # Cancel excess workers (they will finish current task first)
+            excess = self._workers[target:]
+            for task in excess:
+                task.cancel()
+            self._workers = self._workers[:target]
+            logger.info(f"LarkTrigger: scaled workers {current} -> {target}")
 
     async def _credential_watcher(self, poll_interval: int = 10) -> None:
         """
         Periodically check for new credentials and start/stop subscribers.
         This allows users to bind a bot without restarting the service.
+        Also stops subscribers whose credentials are no longer active.
         """
-        active_apps: set[str] = set()  # app_ids with running subscribers
-
+        idle_logged = False
         while self.running:
             try:
                 mgr = LarkCredentialManager(self._db)
                 creds = await mgr.get_active_credentials()
+
+                # When no bots are bound, reduce log noise and poll less often
+                if not creds and not self._subscriber_tasks:
+                    if not idle_logged:
+                        logger.info("LarkTrigger: no Lark bots bound, watching for new bindings...")
+                        idle_logged = True
+                    await asyncio.sleep(30)
+                    continue
+                idle_logged = False
 
                 # Deduplicate by app_id
                 seen_apps: dict[str, LarkCredential] = {}
@@ -82,61 +136,157 @@ class LarkTrigger:
                     if cred.app_id not in seen_apps:
                         seen_apps[cred.app_id] = cred
 
-                # Start subscribers for new app_ids
+                current_app_ids = set(seen_apps.keys())
+                running_app_ids = set(self._subscriber_tasks.keys())
+
+                # Stop subscribers for deactivated credentials
+                for app_id in running_app_ids - current_app_ids:
+                    await self._stop_subscriber(app_id)
+
+                # Clean up dead subscriber tasks (crashed and not restarting)
+                dead_apps = [
+                    app_id for app_id, task in self._subscriber_tasks.items()
+                    if task.done()
+                ]
+                for app_id in dead_apps:
+                    logger.warning(f"LarkTrigger: subscriber for {app_id} died, removing")
+                    self._subscriber_tasks.pop(app_id, None)
+                    self._subscriber_creds.pop(app_id, None)
+
+                # Start subscribers for new app_ids (including ones that just died)
                 for app_id, cred in seen_apps.items():
-                    if app_id not in active_apps:
-                        # Validate before starting
-                        result = await self._cli.auth_status(cred.profile_name)
-                        if result.get("success"):
+                    if app_id not in self._subscriber_tasks:
+                        # Validate: must have decryptable secret for SDK
+                        app_secret = cred.get_app_secret()
+                        if app_secret:
                             task = asyncio.create_task(self._subscribe_loop(cred))
-                            self._monitor_tasks.append(task)
-                            active_apps.add(app_id)
-                            logger.info(f"LarkTrigger: started subscriber for {cred.profile_name}")
+                            self._subscriber_tasks[app_id] = task
+                            self._subscriber_creds[app_id] = cred
+                            logger.info(f"LarkTrigger: started SDK subscriber for {cred.profile_name}")
                         else:
                             logger.warning(
                                 f"LarkTrigger: skipping {cred.profile_name} — "
-                                f"credential invalid: {result.get('error', 'unknown')}"
+                                f"no app_secret_encrypted in DB (re-bind to fix)"
                             )
-                            await mgr.update_auth_status(cred.agent_id, "expired")
+
+                # Adjust worker pool based on active subscriber count
+                self._adjust_workers(self._desired_worker_count())
 
             except Exception as e:
                 logger.warning(f"LarkTrigger credential watcher error: {e}")
 
             await asyncio.sleep(poll_interval)
 
+    async def _stop_subscriber(self, app_id: str) -> None:
+        """Stop a running subscriber by app_id."""
+        cred = self._subscriber_creds.pop(app_id, None)
+        profile = cred.profile_name if cred else app_id
+
+        # Cancel the subscribe_loop task (interrupts asyncio.to_thread)
+        task = self._subscriber_tasks.pop(app_id, None)
+        if task and not task.done():
+            task.cancel()
+
+        logger.info(f"LarkTrigger: stopped subscriber for {profile} (app_id={app_id})")
+
     async def _subscribe_loop(self, cred: LarkCredential) -> None:
         """
-        Run event +subscribe for one bot. Restart on failure with backoff.
+        Run SDK WebSocket subscription for one bot. Restart on failure with backoff.
+
+        The SDK's ws.Client.start() internally runs its own asyncio event loop,
+        so it must run in a separate thread with NO existing event loop.
+        We use threading.Thread (not asyncio.to_thread) to ensure a clean thread
+        without an inherited event loop.
         """
+        import lark_oapi as lark
+
         backoff = 5
         max_backoff = 120
+        app_secret = cred.get_app_secret()
 
         while self.running:
             try:
-                proc = await self._cli.subscribe_events(cred.profile_name)
-                self._subscribers[cred.agent_id] = proc
-
-                async for line in proc.stdout:
-                    if not self.running:
-                        break
-                    line_str = line.decode().strip()
-                    if not line_str:
-                        continue
+                # SDK callback: runs in SDK's thread, puts event into main async queue
+                def on_message(data):
                     try:
-                        event = json.loads(line_str)
-                        if self._is_message_event(event):
-                            await self._task_queue.put((cred, event))
-                    except json.JSONDecodeError:
-                        logger.warning(f"LarkTrigger: invalid JSON line: {line_str[:200]}")
+                        event_dict = self._sdk_event_to_dict(data)
+                        if not event_dict:
+                            return
+                        # Dedup: skip if we've seen this message_id recently
+                        msg_id = event_dict.get("message_id", "")
+                        if msg_id:
+                            now = time.time()
+                            with self._seen_lock:
+                                if msg_id in self._seen_messages:
+                                    logger.debug(f"LarkTrigger: dedup skipping {msg_id}")
+                                    return
+                                self._seen_messages[msg_id] = now
+                                # Clean old entries periodically
+                                cutoff = now - self.DEDUP_TTL_SECONDS
+                                self._seen_messages = {
+                                    k: v for k, v in self._seen_messages.items()
+                                    if v > cutoff
+                                }
+                        asyncio.run_coroutine_threadsafe(
+                            self._task_queue.put((cred, event_dict)),
+                            self._loop,
+                        )
+                    except Exception as e:
+                        logger.warning(f"LarkTrigger SDK callback error: {e}")
 
-                # Process ended
-                returncode = await proc.wait()
-                logger.warning(
-                    f"LarkTrigger subscribe ended for {cred.profile_name} "
-                    f"(code={returncode}), restarting in {backoff}s"
+                handler = lark.EventDispatcherHandler.builder("", "") \
+                    .register_p2_im_message_receive_v1(on_message) \
+                    .build()
+
+                domain = lark.LARK_DOMAIN if cred.brand == "lark" else lark.FEISHU_DOMAIN
+                ws_client = lark.ws.Client(
+                    app_id=cred.app_id,
+                    app_secret=app_secret,
+                    event_handler=handler,
+                    domain=domain,
                 )
+
+                logger.info(f"LarkTrigger: connecting SDK WebSocket for {cred.profile_name}")
+
+                # Run start() in a daemon thread with its own event loop
+                thread_error = []
+
+                def run_ws():
+                    try:
+                        # SDK's ws/client.py uses a module-level `loop` variable
+                        # captured at import time. Replace it with a fresh loop
+                        # so start() can call loop.run_until_complete() without conflict.
+                        import lark_oapi.ws.client as ws_mod
+                        fresh_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(fresh_loop)
+                        ws_mod.loop = fresh_loop
+                        ws_client._lock = asyncio.Lock()  # Lock must belong to the new loop
+                        ws_client.start()
+                    except Exception as e:
+                        thread_error.append(e)
+
+                t = threading.Thread(target=run_ws, daemon=True)
+                t.start()
+
+                # Wait for thread to finish (poll so we can check self.running)
+                while t.is_alive() and self.running:
+                    await asyncio.sleep(1)
+
+                if thread_error:
+                    raise thread_error[0]
+
+                if not t.is_alive():
+                    logger.warning(
+                        f"LarkTrigger SDK WebSocket disconnected for {cred.profile_name}, "
+                        f"restarting in {backoff}s"
+                    )
+                    # Reset backoff on successful long connection (ran > 60s)
+                    backoff = 5
+            except asyncio.CancelledError:
+                logger.info(f"LarkTrigger: subscriber cancelled for {cred.profile_name}")
+                return
             except Exception as e:
-                logger.error(f"LarkTrigger subscribe error for {cred.profile_name}: {e}")
+                logger.error(f"LarkTrigger SDK error for {cred.profile_name}: {e}")
 
             if not self.running:
                 break
@@ -144,13 +294,31 @@ class LarkTrigger:
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, max_backoff)
 
-    def _is_message_event(self, event: dict) -> bool:
-        """Check if event is an incoming message."""
-        event_type = event.get("type", event.get("header", {}).get("event_type", ""))
-        return event_type in (
-            "im.message.receive_v1",
-            "im.message.receive",
-        )
+    @staticmethod
+    def _sdk_event_to_dict(data) -> dict:
+        """
+        Convert lark-oapi P2ImMessageReceiveV1 event to the flat dict format
+        that _process_message expects.
+        """
+        try:
+            event = data.event
+            sender = event.sender
+            message = event.message
+
+            return {
+                "type": "im.message.receive_v1",
+                "chat_id": message.chat_id or "",
+                "chat_type": message.chat_type or "p2p",
+                "message_id": message.message_id or "",
+                "sender_id": sender.sender_id.open_id if sender and sender.sender_id else "",
+                "sender_type": sender.sender_type or "" if sender else "",
+                "content": message.content or "",
+                "message_type": message.message_type or "text",
+                "create_time": message.create_time or "",
+            }
+        except Exception as e:
+            logger.warning(f"LarkTrigger: failed to convert SDK event: {e}")
+            return {}
 
     async def _worker(self, worker_id: int) -> None:
         """Process events from the shared queue."""
@@ -170,47 +338,38 @@ class LarkTrigger:
                     exc_info=True,
                 )
 
-    async def _process_message(
-        self, cred: LarkCredential, event: dict, worker_id: int
-    ) -> None:
-        """
-        Process a single incoming message event:
-        1. Extract message fields
-        2. Build context prompt
-        3. Run AgentRuntime
-        4. Write to Inbox
-        """
-        # --compact format: flat JSON with top-level fields
-        # e.g. {"chat_id":"oc_xxx","content":"hi","sender_id":"ou_xxx","type":"im.message.receive_v1"}
-        #
-        # Non-compact (raw) format: nested under event.message / event.sender
-        # We support both.
+    # ------------------------------------------------------------------
+    # Message processing — split into focused helpers
+    # ------------------------------------------------------------------
 
+    @staticmethod
+    def _parse_event_fields(event: dict) -> dict:
+        """Extract normalized fields from either compact or raw event format."""
         if "message" in event and isinstance(event["message"], dict):
-            # Raw/nested format
             message = event.get("event", event).get("message", {})
             sender = event.get("event", event).get("sender", {})
-            chat_id = message.get("chat_id", "")
-            sender_id = sender.get("sender_id", {}).get("open_id", sender.get("open_id", ""))
-            sender_name = sender.get("sender_id", {}).get("name", sender.get("name", "Unknown"))
-            content_str = message.get("content", "{}")
-            message_id = message.get("message_id", "")
-        else:
-            # Compact/flat format
-            chat_id = event.get("chat_id", "")
-            sender_id = event.get("sender_id", "")
-            sender_name = event.get("sender_name", "Unknown")
-            content_str = event.get("content", "")
-            message_id = event.get("message_id", event.get("id", ""))
+            return {
+                "chat_id": message.get("chat_id", ""),
+                "sender_id": sender.get("sender_id", {}).get("open_id", sender.get("open_id", "")),
+                "sender_name": sender.get("sender_id", {}).get("name", sender.get("name", "Unknown")),
+                "content_str": message.get("content", "{}"),
+                "message_id": message.get("message_id", ""),
+            }
+        return {
+            "chat_id": event.get("chat_id", ""),
+            "sender_id": event.get("sender_id", ""),
+            "sender_name": event.get("sender_name", "Unknown"),
+            "content_str": event.get("content", ""),
+            "message_id": event.get("message_id", event.get("id", "")),
+        }
 
-        # Skip messages sent by the bot itself (prevents echo loops)
-        # Check sender_type if available (raw format)
+    async def _is_echo(self, cred: LarkCredential, event: dict, sender_id: str) -> bool:
+        """Check if message was sent by the bot itself (prevents echo loops)."""
         sender_type = event.get("sender_type", "")
         if sender_type in ("bot", "app"):
-            return
-        # Also check by bot open_id (compact format may not have sender_type)
-        if not self._bot_open_ids:
-            # Lazy-load bot open_id on first message
+            return True
+        # Lazy-load bot open_id per credential
+        if cred.profile_name not in self._bot_open_ids:
             try:
                 bot_info = await self._cli._run(
                     ["api", "GET", "/open-apis/bot/v3/info"],
@@ -219,47 +378,103 @@ class LarkTrigger:
                 if bot_info.get("success"):
                     bot_oid = bot_info.get("data", {}).get("bot", {}).get("open_id", "")
                     if bot_oid:
-                        self._bot_open_ids.add(bot_oid)
+                        self._bot_open_ids[cred.profile_name] = bot_oid
             except Exception:
-                pass
-        if sender_id in self._bot_open_ids:
-            return
+                logger.debug(f"Failed to fetch bot open_id for {cred.profile_name}")
+        bot_oid = self._bot_open_ids.get(cred.profile_name, "")
+        return bool(bot_oid and sender_id == bot_oid)
 
-        # Parse message content (may be JSON-encoded or plain text)
+    async def _resolve_sender_name(self, profile_name: str, sender_id: str) -> str:
+        """Resolve a Lark user's display name from their open_id."""
+        try:
+            user_info = await self._cli.get_user(profile_name, user_id=sender_id)
+            if user_info.get("success"):
+                outer = user_info.get("data", {})
+                inner = outer.get("data", outer)
+                user_obj = inner.get("user", inner)
+                return (
+                    user_obj.get("name")
+                    or user_obj.get("en_name")
+                    or user_obj.get("email", "").split("@")[0].replace(".", " ").title()
+                    or "Unknown"
+                )
+        except Exception:
+            logger.debug(f"Failed to resolve sender name for {sender_id}")
+        return "Unknown"
+
+    @staticmethod
+    def _parse_content(content_str: str) -> str:
+        """Parse message content (may be JSON-encoded or plain text)."""
         text = content_str
         if text.startswith("{"):
             try:
-                content_obj = json.loads(text)
-                text = content_obj.get("text", text)
+                text = json.loads(text).get("text", text)
             except (json.JSONDecodeError, TypeError):
                 pass
+        return text.strip()
 
-        if not text or not text.strip():
+    @staticmethod
+    def _sanitize_display_name(name: str) -> str:
+        """Truncate and sanitize a display name for safe DB storage."""
+        return (name or "Unknown")[:128]
+
+    async def _process_message(
+        self, cred: LarkCredential, event: dict, worker_id: int
+    ) -> None:
+        """Process a single incoming message event."""
+        fields = self._parse_event_fields(event)
+        chat_id = fields["chat_id"]
+        sender_id = fields["sender_id"]
+        sender_name = fields["sender_name"]
+        message_id = fields["message_id"]
+
+        # Filter bot echoes
+        if await self._is_echo(cred, event, sender_id):
             return
 
-        # Resolve sender name if unknown (compact format only has sender_id)
+        # Parse content
+        text = self._parse_content(fields["content_str"])
+        if not text:
+            return
+
+        # Resolve sender name if unknown
         if sender_name == "Unknown" and sender_id:
-            try:
-                user_info = await self._cli.get_user(cred.profile_name, user_id=sender_id)
-                if user_info.get("success"):
-                    outer = user_info.get("data", {})
-                    inner = outer.get("data", outer)
-                    user_obj = inner.get("user", inner)
-                    sender_name = (
-                        user_obj.get("name")
-                        or user_obj.get("en_name")
-                        or user_obj.get("email", "").split("@")[0].replace(".", " ").title()
-                        or "Unknown"
-                    )
-            except Exception:
-                pass  # Keep "Unknown" if lookup fails
+            sender_name = await self._resolve_sender_name(cred.profile_name, sender_id)
+
+        # Sanitize for safe storage
+        sender_name = self._sanitize_display_name(sender_name)
 
         logger.info(
             f"LarkTrigger [{cred.profile_name}] message from {sender_name} ({sender_id}): "
             f"{text[:100]}"
         )
 
-        # Build normalized event dict for context builder
+        # Build context and run agent
+        output_text = await self._build_and_run_agent(
+            cred, event, chat_id, sender_id, sender_name, text, message_id
+        )
+
+        # Write to Inbox
+        await self._write_to_inbox(
+            cred=cred,
+            sender_name=sender_name,
+            sender_id=sender_id,
+            original_message=text,
+            agent_response=output_text,
+            chat_id=chat_id,
+        )
+
+    async def _build_and_run_agent(
+        self,
+        cred: LarkCredential,
+        event: dict,
+        chat_id: str,
+        sender_id: str,
+        sender_name: str,
+        text: str,
+        message_id: str,
+    ) -> str:
+        """Build context, run AgentRuntime, and return the output text."""
         normalized_event = {
             "chat_id": chat_id,
             "chat_type": event.get("chat_type", "p2p"),
@@ -271,39 +486,24 @@ class LarkTrigger:
             "create_time": event.get("create_time", ""),
         }
 
-        # Build context
         builder = LarkContextBuilder(
-            event=normalized_event,
-            credential=cred,
-            cli=self._cli,
-            agent_id=cred.agent_id,
+            event=normalized_event, credential=cred,
+            cli=self._cli, agent_id=cred.agent_id,
         )
-
-        from xyz_agent_context.channel.channel_context_builder_base import ChannelHistoryConfig
         history_config = ChannelHistoryConfig(
-            load_conversation_history=True,
-            history_limit=20,
-            history_max_chars=3000,
+            load_conversation_history=True, history_limit=20, history_max_chars=3000,
         )
         prompt = await builder.build_prompt(history_config)
 
-        # Create ChannelTag
         channel_tag = ChannelTag.lark(
-            sender_name=sender_name,
-            sender_id=sender_id,
-            chat_id=chat_id,
-            chat_name=normalized_event.get("chat_name", ""),
+            sender_name=sender_name, sender_id=sender_id,
+            chat_id=chat_id, chat_name=normalized_event.get("chat_name", ""),
         )
-
         tagged_prompt = f"{channel_tag.format()}\n{prompt}"
 
-        # Run AgentRuntime
-        from xyz_agent_context.agent_runtime.agent_runtime import AgentRuntime
-        from xyz_agent_context.agent_runtime.logging_service import LoggingService
-
         runtime = AgentRuntime(logging_service=LoggingService(enabled=False))
-        final_output = []
-        lark_replies = []  # Track what Agent actually sent via lark_send_message
+        final_output: list[str] = []
+        lark_replies: list[str] = []
 
         async for response in runtime.run(
             agent_id=cred.agent_id,
@@ -312,20 +512,14 @@ class LarkTrigger:
             working_source=WorkingSource.LARK,
             trigger_extra_data={"channel_tag": channel_tag.to_dict()},
         ):
-            from xyz_agent_context.schema.runtime_message import MessageType
             if response.message_type == MessageType.AGENT_RESPONSE:
                 final_output.append(response.delta)
-            # Capture tool output from lark_send_message to confirm it was called
-            # Log response attributes once for debugging
-            if not final_output and not lark_replies:
-                logger.debug(f"LarkTrigger response attrs: {[a for a in dir(response) if not a.startswith('_')]}")
-            # The raw response stream includes tool_call items with arguments
             if hasattr(response, "raw") and response.raw:
                 raw = response.raw
                 if isinstance(raw, dict):
                     item = raw.get("item", {})
-                    # tool_call_item contains the arguments
-                    if item.get("type") == "tool_call_item" and "lark_send_message" in item.get("tool_name", ""):
+                    if (item.get("type") == "tool_call_item"
+                            and "lark_send_message" in item.get("tool_name", "")):
                         args = item.get("arguments", {})
                         if isinstance(args, str):
                             try:
@@ -342,20 +536,15 @@ class LarkTrigger:
             output_text = "(Replied on Lark)"
         else:
             output_text = ""
-        logger.info(
-            f"LarkTrigger [{cred.profile_name}] agent responded: "
-            f"{output_text[:200]}"
-        )
 
-        # Write to Inbox so the agent owner sees the notification
-        await self._write_to_inbox(
-            cred=cred,
-            sender_name=sender_name,
-            sender_id=sender_id,
-            original_message=text,
-            agent_response=output_text,
-            chat_id=chat_id,
+        logger.info(
+            f"LarkTrigger [{cred.profile_name}] agent responded: {output_text[:200]}"
         )
+        return output_text
+
+    # ------------------------------------------------------------------
+    # Inbox writing
+    # ------------------------------------------------------------------
 
     async def _write_to_inbox(
         self,
@@ -366,101 +555,39 @@ class LarkTrigger:
         agent_response: str,
         chat_id: str,
     ) -> None:
-        """
-        Write Lark messages to MessageBus tables so they appear in the
-        frontend Inbox (which reads from bus_channels / bus_messages).
-        """
+        """Write Lark messages to MessageBus tables for Inbox display."""
         try:
-            from xyz_agent_context.utils.db_factory import get_db_client
-            from xyz_agent_context.utils.timezone import utc_now
-            import uuid
-
             db = await get_db_client()
             now = utc_now()
             brand_display = "Lark" if cred.brand == "lark" else "Feishu"
 
-            # Resolve name if still Unknown
-            if sender_name == "Unknown" and sender_id:
-                try:
-                    user_info = await self._cli.get_user(cred.profile_name, user_id=sender_id)
-                    if user_info.get("success"):
-                        # CLI returns {"success":true,"data":{"ok":true,"data":{"user":{...}}}}
-                        outer = user_info.get("data", {})
-                        inner = outer.get("data", outer)
-                        user_obj = inner.get("user", inner)
-                        sender_name = (
-                            user_obj.get("name")
-                            or user_obj.get("en_name")
-                            or user_obj.get("email", "").split("@")[0].replace(".", " ").title()
-                            or "Unknown"
-                        )
-                except Exception:
-                    pass
-
-            # Use chat_id as channel_id (one Lark chat = one inbox channel)
+            # sender_name already resolved by caller — no duplicate lookup needed
             channel_id = f"lark_{chat_id}"
             display_name = sender_name if sender_name != "Unknown" else sender_id
             channel_name = f"{brand_display}: {display_name}"
 
-            # Register Lark user as a pseudo-agent so Inbox can resolve the name
-            lark_agent_id = f"lark_user_{sender_id}"
-            existing_agent = await db.get_one("bus_agent_registry", {"agent_id": lark_agent_id})
-            if not existing_agent:
-                await db.insert("bus_agent_registry", {
-                    "agent_id": lark_agent_id,
-                    "owner_user_id": "",
-                    "capabilities": f"{brand_display} user",
-                    "description": display_name,
-                    "visibility": "public",
-                    "registered_at": now,
-                })
-            elif sender_name != "Unknown" and existing_agent.get("description") != sender_name:
-                await db.update("bus_agent_registry",
-                    {"agent_id": lark_agent_id},
-                    {"description": sender_name})
+            await self._ensure_inbox_entities(
+                db, cred, sender_id, sender_name, display_name,
+                brand_display, channel_id, channel_name, now,
+            )
 
-            # Ensure channel exists
-            existing_channel = await db.get_one("bus_channels", {"channel_id": channel_id})
-            if not existing_channel:
-                await db.insert("bus_channels", {
-                    "channel_id": channel_id,
-                    "name": channel_name,
-                    "channel_type": "direct",
-                    "created_by": cred.agent_id,
-                    "created_at": now,
-                })
-
-            # Ensure agent is a member of this channel
-            existing_member = await db.get_one("bus_channel_members", {
-                "channel_id": channel_id,
-                "agent_id": cred.agent_id,
-            })
-            if not existing_member:
-                await db.insert("bus_channel_members", {
-                    "channel_id": channel_id,
-                    "agent_id": cred.agent_id,
-                    "joined_at": now,
-                })
-
-            # Write the incoming message
+            # Write incoming message
             await db.insert("bus_messages", {
                 "message_id": f"lark_in_{uuid.uuid4().hex[:12]}",
                 "channel_id": channel_id,
-                "from_agent": lark_agent_id,
+                "from_agent": f"lark_user_{sender_id}",
                 "content": original_message,
                 "msg_type": "text",
                 "created_at": now,
             })
 
-            # Write the agent's response summary (skip thinking, just note it replied)
+            # Write agent response summary
             if agent_response and agent_response.strip():
-                # agent_response may contain thinking process; use a clean summary
-                summary = "(Replied on Lark)"
                 await db.insert("bus_messages", {
                     "message_id": f"lark_out_{uuid.uuid4().hex[:12]}",
                     "channel_id": channel_id,
                     "from_agent": cred.agent_id,
-                    "content": summary,
+                    "content": "(Replied on Lark)",
                     "msg_type": "text",
                     "created_at": now,
                 })
@@ -469,25 +596,65 @@ class LarkTrigger:
         except Exception as e:
             logger.warning(f"Failed to write to inbox: {e}")
 
+    @staticmethod
+    async def _ensure_inbox_entities(
+        db, cred: LarkCredential, sender_id: str, sender_name: str,
+        display_name: str, brand_display: str, channel_id: str,
+        channel_name: str, now: str,
+    ) -> None:
+        """Ensure pseudo-agent, channel, and membership exist in inbox tables."""
+        lark_agent_id = f"lark_user_{sender_id}"
+        existing_agent = await db.get_one("bus_agent_registry", {"agent_id": lark_agent_id})
+        if not existing_agent:
+            await db.insert("bus_agent_registry", {
+                "agent_id": lark_agent_id,
+                "owner_user_id": "",
+                "capabilities": f"{brand_display} user",
+                "description": display_name,
+                "visibility": "public",
+                "registered_at": now,
+            })
+        elif sender_name != "Unknown" and existing_agent.get("description") != sender_name:
+            await db.update("bus_agent_registry",
+                {"agent_id": lark_agent_id},
+                {"description": sender_name})
+
+        existing_channel = await db.get_one("bus_channels", {"channel_id": channel_id})
+        if not existing_channel:
+            await db.insert("bus_channels", {
+                "channel_id": channel_id,
+                "name": channel_name,
+                "channel_type": "direct",
+                "created_by": cred.agent_id,
+                "created_at": now,
+            })
+
+        existing_member = await db.get_one("bus_channel_members", {
+            "channel_id": channel_id, "agent_id": cred.agent_id,
+        })
+        if not existing_member:
+            await db.insert("bus_channel_members", {
+                "channel_id": channel_id,
+                "agent_id": cred.agent_id,
+                "joined_at": now,
+            })
+
     async def stop(self) -> None:
         """Gracefully stop all subscribers and workers."""
         self.running = False
 
-        # Terminate subscribe processes
-        for agent_id, proc in self._subscribers.items():
-            try:
-                proc.terminate()
-                await asyncio.wait_for(proc.wait(), timeout=5.0)
-            except (ProcessLookupError, asyncio.TimeoutError):
-                proc.kill()
-            logger.info(f"LarkTrigger stopped subscriber for {agent_id}")
+        self._subscriber_creds.clear()
 
-        self._subscribers.clear()
-
-        # Cancel workers and monitors
-        for task in self._workers + self._monitor_tasks:
+        # Cancel all tasks (subscriber loops, workers, monitors)
+        all_tasks = (
+            list(self._subscriber_tasks.values())
+            + self._workers
+            + self._monitor_tasks
+        )
+        for task in all_tasks:
             task.cancel()
 
+        self._subscriber_tasks.clear()
         self._workers.clear()
         self._monitor_tasks.clear()
         logger.info("LarkTrigger stopped")

@@ -45,6 +45,11 @@ import type {
   SkillEnvConfigResponse,
   EmbeddingStatusResponse,
   EmbeddingRebuildResponse,
+  ApiResponse,
+  LarkCredentialResponse,
+  LarkBindResponse,
+  LarkAuthLoginResponse,
+  LarkAuthCompleteResponse,
 } from '@/types';
 
 // Base URL resolution is delegated to runtimeStore.getApiBaseUrl() so
@@ -598,44 +603,44 @@ class ApiClient {
   }
 
   // Lark / Feishu Integration API
-  async getLarkCredential(agentId: string): Promise<any> {
-    return this.request<any>(`/api/lark/credential?agent_id=${encodeURIComponent(agentId)}`);
+  async getLarkCredential(agentId: string): Promise<LarkCredentialResponse> {
+    return this.request<LarkCredentialResponse>(`/api/lark/credential?agent_id=${encodeURIComponent(agentId)}`);
   }
 
-  async bindLarkBot(agentId: string, appId: string, appSecret: string, brand: string, ownerEmail: string = ''): Promise<any> {
-    return this.request<any>('/api/lark/bind', {
+  async bindLarkBot(agentId: string, appId: string, appSecret: string, brand: string, ownerEmail: string = ''): Promise<LarkBindResponse> {
+    return this.request<LarkBindResponse>('/api/lark/bind', {
       method: 'POST',
       body: JSON.stringify({ agent_id: agentId, app_id: appId, app_secret: appSecret, brand, owner_email: ownerEmail }),
     });
   }
 
-  async larkAuthLogin(agentId: string): Promise<any> {
-    return this.request<any>('/api/lark/auth/login', {
+  async larkAuthLogin(agentId: string): Promise<LarkAuthLoginResponse> {
+    return this.request<LarkAuthLoginResponse>('/api/lark/auth/login', {
       method: 'POST',
       body: JSON.stringify({ agent_id: agentId }),
     });
   }
 
-  async larkAuthComplete(agentId: string, deviceCode: string): Promise<any> {
-    return this.request<any>('/api/lark/auth/complete', {
+  async larkAuthComplete(agentId: string, deviceCode: string): Promise<LarkAuthCompleteResponse> {
+    return this.request<LarkAuthCompleteResponse>('/api/lark/auth/complete', {
       method: 'POST',
       body: JSON.stringify({ agent_id: agentId, device_code: deviceCode }),
     });
   }
 
-  async getLarkAuthStatus(agentId: string): Promise<any> {
-    return this.request<any>(`/api/lark/auth/status?agent_id=${encodeURIComponent(agentId)}`);
+  async getLarkAuthStatus(agentId: string): Promise<ApiResponse> {
+    return this.request<ApiResponse>(`/api/lark/auth/status?agent_id=${encodeURIComponent(agentId)}`);
   }
 
-  async testLarkConnection(agentId: string): Promise<any> {
-    return this.request<any>('/api/lark/test', {
+  async testLarkConnection(agentId: string): Promise<ApiResponse> {
+    return this.request<ApiResponse>('/api/lark/test', {
       method: 'POST',
       body: JSON.stringify({ agent_id: agentId }),
     });
   }
 
-  async unbindLarkBot(agentId: string): Promise<any> {
-    return this.request<any>('/api/lark/unbind', {
+  async unbindLarkBot(agentId: string): Promise<ApiResponse> {
+    return this.request<ApiResponse>('/api/lark/unbind', {
       method: 'DELETE',
       body: JSON.stringify({ agent_id: agentId }),
     });

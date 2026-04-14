@@ -3,17 +3,45 @@
 @date: 2026-04-10
 @description: CRUD operations for lark_credentials table.
 
-Stores per-agent Lark/Feishu bot binding information. The actual App Secret
-is managed by lark-cli in the system Keychain — we only store a reference ID.
+Stores per-agent Lark/Feishu bot binding information. App Secret is stored
+both in lark-cli Keychain (for CLI tools) and encrypted in DB (for SDK trigger).
 """
 
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
 
 from loguru import logger
+
+
+def _encode_secret(secret: str) -> str:
+    """Encode secret for DB storage. Uses base64 for local/dev mode.
+
+    WARNING: base64 is NOT encryption — it is trivially reversible.
+    For production/cloud deployments, replace with cryptography.fernet
+    using a key from LARK_SECRET_ENCRYPTION_KEY env var.
+    """
+    if not secret:
+        return ""
+    return base64.b64encode(secret.encode()).decode()
+
+
+# Keep old name as alias for backward compat during transition
+_encrypt_secret = _encode_secret
+
+
+def _decode_secret(encoded: str) -> str:
+    """Decode secret from DB storage."""
+    if not encoded:
+        return ""
+    return base64.b64decode(encoded.encode()).decode()
+
+
+# Keep old name as alias for backward compat during transition
+_decrypt_secret = _decode_secret
 
 
 @dataclass
@@ -26,12 +54,17 @@ class LarkCredential:
     brand: str  # "feishu" or "lark"
     profile_name: str  # CLI profile name, e.g. "agent_{agent_id}"
     bot_name: str = ""
+    app_secret_encoded: str = ""  # Base64-encoded secret for SDK use (NOT encrypted)
     owner_open_id: str = ""  # Lark open_id of the agent's owner
     owner_name: str = ""  # Display name of the owner
     auth_status: str = "not_logged_in"  # not_logged_in / logged_in / expired
     is_active: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    def get_app_secret(self) -> str:
+        """Decode and return the app secret."""
+        return _decode_secret(self.app_secret_encoded)
 
 
 class LarkCredentialManager:
@@ -50,6 +83,7 @@ class LarkCredentialManager:
             brand=row.get("brand", "feishu"),
             profile_name=row.get("profile_name", ""),
             bot_name=row.get("bot_name", ""),
+            app_secret_encoded=row.get("app_secret_encrypted", ""),
             owner_open_id=row.get("owner_open_id", ""),
             owner_name=row.get("owner_name", ""),
             auth_status=row.get("auth_status", "not_logged_in"),
@@ -84,6 +118,7 @@ class LarkCredentialManager:
             "agent_id": cred.agent_id,
             "app_id": cred.app_id,
             "app_secret_ref": cred.app_secret_ref,
+            "app_secret_encrypted": cred.app_secret_encoded,
             "brand": cred.brand,
             "profile_name": cred.profile_name,
             "bot_name": cred.bot_name,

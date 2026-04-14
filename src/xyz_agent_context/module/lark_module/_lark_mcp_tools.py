@@ -372,32 +372,20 @@ def register_lark_mcp_tools(mcp: Any) -> None:
             app_secret: App Secret from Feishu Open Platform.
             brand: "feishu" (China, default) or "lark" (International).
         """
-        from ._lark_credential_manager import LarkCredential
-
         if brand not in ("feishu", "lark"):
             return {"success": False, "error": "brand must be 'feishu' or 'lark'."}
 
-        profile_name = f"agent_{agent_id}"
-
-        # Register CLI profile
-        result = await _cli.config_init(profile_name, app_id, app_secret, brand)
-        if not result.get("success"):
-            return result
-
-        # Save credential to DB
         db = await XYZBaseModule.get_mcp_db_client()
         mgr = LarkCredentialManager(db)
-        cred = LarkCredential(
-            agent_id=agent_id,
-            app_id=app_id,
-            app_secret_ref=f"appsecret:{app_id}",
-            brand=brand,
-            profile_name=profile_name,
-        )
-        await mgr.save_credential(cred)
 
-        logger.info(f"Lark bot bound: agent={agent_id}, app_id={app_id}, brand={brand}")
-        return {"success": True, "data": {"profile_name": profile_name, "message": "Bot bound. Now call lark_auth_login to complete OAuth."}}
+        # Reuse shared bind logic from service layer
+        from ._lark_service import do_bind
+        result = await do_bind(mgr, agent_id, app_id, app_secret, brand)
+
+        if result.get("success"):
+            logger.info(f"Lark bot bound via MCP: agent={agent_id}, app_id={app_id}, brand={brand}")
+
+        return result
 
     @mcp.tool()
     async def lark_auth_login(agent_id: str) -> dict:
@@ -426,16 +414,11 @@ def register_lark_mcp_tools(mcp: Any) -> None:
             return {"success": False, "error": "No Lark bot bound to this agent."}
         result = await _cli.auth_status(cred.profile_name)
 
-        # Update DB auth status if we can determine it
-        # Bot identity ("identity": "bot") is always valid — don't require user login
+        # Sync auth status to DB using shared logic
         if result.get("success"):
+            from ._lark_service import determine_auth_status
             data = result.get("data", {})
-            identity = data.get("identity", "")
-            users = data.get("users", "(no logged-in users)")
-            if identity == "bot" or users != "(no logged-in users)":
-                new_status = "logged_in"
-            else:
-                new_status = "not_logged_in"
+            new_status = determine_auth_status(data)
             if new_status != cred.auth_status:
                 db = await XYZBaseModule.get_mcp_db_client()
                 mgr = LarkCredentialManager(db)

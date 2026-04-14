@@ -7,28 +7,21 @@
  *   3. Bot bound, logged in → show connected status + unbind
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageSquare, Link, Unlink, ExternalLink, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button, Input } from '@/components/ui';
 import { useConfigStore } from '@/stores';
 import { api } from '@/lib/api';
+import type { LarkCredentialData } from '@/types';
 
-interface LarkCredential {
-  agent_id: string;
-  app_id: string;
-  brand: string;
-  bot_name: string;
-  owner_open_id: string;
-  owner_name: string;
-  auth_status: string;
-  is_active: boolean;
-}
+const POLLING_INTERVAL_MS = 3000;
+const POLLING_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function LarkConfig() {
   const { agentId } = useConfigStore();
 
-  const [credential, setCredential] = useState<LarkCredential | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [credential, setCredential] = useState<LarkCredentialData | null>(null);
+  const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -40,27 +33,52 @@ export function LarkConfig() {
 
   // OAuth state
   const [authUrl, setAuthUrl] = useState('');
-  const [deviceCode, setDeviceCode] = useState('');
   const [polling, setPolling] = useState(false);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
   const fetchCredential = useCallback(async () => {
     if (!agentId) return;
     try {
       setLoading(true);
       const res = await api.getLarkCredential(agentId);
+      if (!mountedRef.current) return;
       if (res.success) {
         setCredential(res.data || null);
+      } else {
+        setError(res.error || 'Failed to load credential');
       }
-    } catch (e: any) {
-      console.error('Failed to fetch Lark credential:', e);
+    } catch (e: unknown) {
+      if (!mountedRef.current) return;
+      setError(e instanceof Error ? e.message : 'Failed to fetch Lark credential');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [agentId]);
 
+  // Reset all state on agent change
   useEffect(() => {
+    setError('');
+    setCredential(null);
+    setAppId('');
+    setAppSecret('');
+    setOwnerEmail('');
+    setBrand('feishu');
+    setAuthUrl('');
+    setPolling(false);
     fetchCredential();
   }, [fetchCredential]);
+
+  // Track mount state for async safety
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+      if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+    };
+  }, []);
 
   // Bind bot
   const handleBind = async () => {
@@ -69,17 +87,19 @@ export function LarkConfig() {
     setError('');
     try {
       const res = await api.bindLarkBot(agentId, appId, appSecret, brand, ownerEmail);
+      if (!mountedRef.current) return;
       if (res.success) {
         setAppId('');
         setAppSecret('');
+        setOwnerEmail('');
         await fetchCredential();
       } else {
         setError(res.error || 'Failed to bind bot');
       }
-    } catch (e: any) {
-      setError(e.message || 'Failed to bind bot');
+    } catch (e: unknown) {
+      if (mountedRef.current) setError(e instanceof Error ? e.message : 'Failed to bind bot');
     } finally {
-      setActionLoading(false);
+      if (mountedRef.current) setActionLoading(false);
     }
   };
 
@@ -90,70 +110,77 @@ export function LarkConfig() {
     setError('');
     try {
       const res = await api.larkAuthLogin(agentId);
-      if (res.success) {
-        const data = res.data || {};
-        const url = data.verification_url || data.verification_uri || '';
-        const code = data.device_code || data.user_code || '';
+      if (!mountedRef.current) return;
+      if (res.success && res.data) {
+        const url = res.data.verification_url || res.data.verification_uri || '';
+        const code = res.data.device_code || res.data.user_code || '';
         if (url) {
           setAuthUrl(url);
-          setDeviceCode(code);
-          window.open(url, '_blank');
-          // Start polling for completion
+          window.open(url, '_blank', 'noopener,noreferrer');
           if (code) {
-            startPolling(code);
+            startPolling(agentId, code);
           }
         }
       } else {
         setError(res.error || 'Failed to initiate login');
       }
-    } catch (e: any) {
-      setError(e.message || 'Failed to initiate login');
+    } catch (e: unknown) {
+      if (mountedRef.current) setError(e instanceof Error ? e.message : 'Failed to initiate login');
     } finally {
-      setActionLoading(false);
+      if (mountedRef.current) setActionLoading(false);
     }
   };
 
-  // Poll for OAuth completion
-  const startPolling = (code: string) => {
+  // Poll for OAuth completion — agentId passed explicitly to avoid stale closure
+  const startPolling = (targetAgentId: string, code: string) => {
+    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+    if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+
     setPolling(true);
-    const interval = setInterval(async () => {
+    pollingIntervalRef.current = setInterval(async () => {
       try {
-        const res = await api.larkAuthComplete(agentId!, code);
+        const res = await api.larkAuthComplete(targetAgentId, code);
+        if (!mountedRef.current) return;
         if (res.success) {
-          clearInterval(interval);
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+          if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+          pollingIntervalRef.current = null;
+          pollingTimeoutRef.current = null;
           setPolling(false);
           setAuthUrl('');
-          setDeviceCode('');
           await fetchCredential();
         }
       } catch {
         // Keep polling — auth not complete yet
       }
-    }, 3000);
+    }, POLLING_INTERVAL_MS);
 
-    // Stop after 5 minutes
-    setTimeout(() => {
-      clearInterval(interval);
-      setPolling(false);
-    }, 300000);
+    pollingTimeoutRef.current = setTimeout(() => {
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+      pollingTimeoutRef.current = null;
+      if (mountedRef.current) setPolling(false);
+    }, POLLING_TIMEOUT_MS);
   };
 
   // Unbind bot
   const handleUnbind = async () => {
     if (!agentId) return;
+    if (!window.confirm('Unbind this Lark bot? This will remove all Lark inbox data for this agent.')) return;
     setActionLoading(true);
     setError('');
     try {
       const res = await api.unbindLarkBot(agentId);
+      if (!mountedRef.current) return;
       if (res.success) {
         setCredential(null);
       } else {
         setError(res.error || 'Failed to unbind');
       }
-    } catch (e: any) {
-      setError(e.message || 'Failed to unbind');
+    } catch (e: unknown) {
+      if (mountedRef.current) setError(e instanceof Error ? e.message : 'Failed to unbind');
     } finally {
-      setActionLoading(false);
+      if (mountedRef.current) setActionLoading(false);
     }
   };
 
@@ -176,8 +203,8 @@ export function LarkConfig() {
       </CardHeader>
       <CardContent className="space-y-3">
         {error && (
-          <div className="flex items-center gap-2 text-sm text-red-400 bg-red-400/10 p-2 rounded">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <div role="alert" className="flex items-center gap-2 text-sm text-red-400 bg-red-400/10 p-2 rounded">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
             {error}
           </div>
         )}
@@ -189,28 +216,41 @@ export function LarkConfig() {
               Bind a Feishu/Lark bot to enable messaging, contacts, docs, calendar, and tasks.
             </p>
             <div className="space-y-2">
-              <Input
-                placeholder="App ID (e.g. cli_xxx)"
-                value={appId}
-                onChange={(e) => setAppId(e.target.value)}
-                className="text-sm"
-              />
-              <Input
-                type="password"
-                placeholder="App Secret"
-                value={appSecret}
-                onChange={(e) => setAppSecret(e.target.value)}
-                className="text-sm"
-              />
-              <Input
-                placeholder="Your Lark account email"
-                value={ownerEmail}
-                onChange={(e) => setOwnerEmail(e.target.value)}
-                className="text-sm"
-              />
-              <div className="flex gap-2">
+              <label className="block">
+                <span className="sr-only">App ID</span>
+                <Input
+                  placeholder="App ID (e.g. cli_xxx)"
+                  value={appId}
+                  onChange={(e) => setAppId(e.target.value)}
+                  className="text-sm"
+                  aria-label="App ID"
+                />
+              </label>
+              <label className="block">
+                <span className="sr-only">App Secret</span>
+                <Input
+                  type="password"
+                  placeholder="App Secret"
+                  value={appSecret}
+                  onChange={(e) => setAppSecret(e.target.value)}
+                  className="text-sm"
+                  aria-label="App Secret"
+                />
+              </label>
+              <label className="block">
+                <span className="sr-only">Owner email</span>
+                <Input
+                  placeholder="Your Lark account email"
+                  value={ownerEmail}
+                  onChange={(e) => setOwnerEmail(e.target.value)}
+                  className="text-sm"
+                  aria-label="Owner email"
+                />
+              </label>
+              <div className="flex gap-2" role="group" aria-label="Select platform">
                 <button
                   onClick={() => setBrand('feishu')}
+                  aria-pressed={brand === 'feishu'}
                   className={`flex-1 py-1.5 px-3 text-xs rounded border transition-colors ${
                     brand === 'feishu'
                       ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]'
@@ -221,6 +261,7 @@ export function LarkConfig() {
                 </button>
                 <button
                   onClick={() => setBrand('lark')}
+                  aria-pressed={brand === 'lark'}
                   className={`flex-1 py-1.5 px-3 text-xs rounded border transition-colors ${
                     brand === 'lark'
                       ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]'
@@ -252,7 +293,7 @@ export function LarkConfig() {
                 <span className="text-[var(--text-secondary)] ml-2">({credential.brand})</span>
               </div>
               <span className="flex items-center gap-1 text-xs text-yellow-400">
-                <AlertCircle className="w-3 h-3" /> Not logged in
+                <AlertCircle className="w-3 h-3" aria-hidden="true" /> Not logged in
               </span>
             </div>
 
@@ -262,7 +303,7 @@ export function LarkConfig() {
                 Waiting for authorization...
                 {authUrl && (
                   <a href={authUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--accent-primary)] hover:underline">
-                    <ExternalLink className="w-3 h-3 inline" /> Open
+                    <ExternalLink className="w-3 h-3 inline" aria-hidden="true" /> Open
                   </a>
                 )}
               </div>
@@ -292,13 +333,13 @@ export function LarkConfig() {
                 </span>
               </div>
               <span className="flex items-center gap-1 text-xs text-green-400">
-                <CheckCircle className="w-3 h-3" /> Connected
+                <CheckCircle className="w-3 h-3" aria-hidden="true" /> Connected
               </span>
             </div>
 
             {credential.owner_name && (
               <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] bg-[var(--bg-tertiary)] p-2 rounded">
-                <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" aria-hidden="true" />
                 Linked as: <span className="text-[var(--text-primary)] font-medium">{credential.owner_name}</span>
               </div>
             )}
