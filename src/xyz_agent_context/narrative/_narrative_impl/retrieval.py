@@ -9,10 +9,8 @@ Narrative retrieval implementation
 
 from __future__ import annotations
 
-from enum import Enum
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
-from pydantic import BaseModel
 from loguru import logger
 
 from ..config import config
@@ -32,50 +30,24 @@ from .default_narratives import (
 from xyz_agent_context.utils.evermemos import get_evermemos_client
 
 # Use common utilities from utils
-from xyz_agent_context.utils.embedding import (
+from xyz_agent_context.agent_framework.llm_api.embedding import (
     get_embedding,
     cosine_similarity,
     compute_average_embedding,
 )
 from xyz_agent_context.utils.text import extract_keywords, truncate_text
 from xyz_agent_context.utils.db_factory import get_db_client
-from xyz_agent_context.agent_framework.openai_agents_sdk import OpenAIAgentsSDK
-from .prompts import (
-    NARRATIVE_SINGLE_MATCH_INSTRUCTIONS,
-    NARRATIVE_UNIFIED_MATCH_WITH_PARTICIPANT_INSTRUCTIONS,
-    NARRATIVE_UNIFIED_MATCH_INSTRUCTIONS,
+from ._retrieval_llm import (
+    RelationType,
+    NarrativeMatchOutput,
+    UnifiedMatchOutput,
+    llm_confirm,
+    llm_judge_unified,
 )
 
 if TYPE_CHECKING:
     from xyz_agent_context.utils.database import AsyncDatabaseClient
     from xyz_agent_context.repository import NarrativeRepository
-
-
-# ===== LLM output schema definitions =====
-
-class RelationType(Enum):
-    """Narrative relation type"""
-    CONTINUATION = "continuation"
-    REFERENCE = "reference"
-    OTHER = "other"
-
-
-class NarrativeMatchOutput(BaseModel):
-    """LLM Narrative match output structure"""
-    reason: str
-    matched_index: int
-    relation_type: RelationType
-
-
-class UnifiedMatchOutput(BaseModel):
-    """
-    LLM unified match output structure
-
-    Used for the output of the _llm_judge_unified method.
-    """
-    reason: str  # Detailed reasoning process
-    matched_category: str  # "default", "search", or "none"
-    matched_index: int  # Matched index (0-based), -1 if matched_category="none"
 
 
 class NarrativeRetrieval:
@@ -301,6 +273,9 @@ class NarrativeRetrieval:
 
         # Step 4: Two-tier threshold judgment
         best_score = search_results[0].similarity_score if search_results else None
+        # Build per-narrative scores dict (carried through NarrativeSelectionResult
+        # so step_1 doesn't need to re-load embeddings and re-compute)
+        all_scores = {r.narrative_id: r.similarity_score for r in search_results}
 
         # Phase 2 & 4: Build evermemos_memories cache (for MemoryModule use)
         # Phase 4: Added episode_contents for short-term memory dedup
@@ -335,6 +310,7 @@ class NarrativeRetrieval:
                 selection_method="high_confidence",
                 is_new=False,
                 best_score=best_score,
+                scores=all_scores,
                 retrieval_method=retrieval_method,
                 evermemos_memories=evermemos_memories  # Phase 2: Pass cache
             )
@@ -379,6 +355,7 @@ class NarrativeRetrieval:
                 selection_method="new_created",
                 is_new=True,
                 best_score=best_score,
+                scores=all_scores,
                 retrieval_method=retrieval_method,
                 evermemos_memories=evermemos_memories  # Phase 2: Pass cache
             )
@@ -705,6 +682,9 @@ class NarrativeRetrieval:
         """
         # 1. Prepare search result candidates
         # Phase 1: Added matched_content field (from EverMemOS episode_summaries)
+        # Per-narrative scores from search (passed through to NarrativeSelectionResult)
+        all_scores = {r.narrative_id: r.similarity_score for r in search_results}
+
         # Phase 2 & 4: Build evermemos_memories cache for MemoryModule use
         search_candidates = []
         evermemos_memories = {}  # Phase 2: Cache EverMemOS retrieval results
@@ -735,11 +715,24 @@ class NarrativeRetrieval:
                         "topic_hint": narrative.topic_hint or "Unknown topic"
                     }
 
+                # Use narrative_info (LLM-generated) for richer candidate info.
+                # Falls back to topic_hint only when narrative_info is empty.
+                candidate_name = (
+                    narrative.narrative_info.name
+                    if narrative.narrative_info and narrative.narrative_info.name
+                    else (narrative.topic_hint[:50] if narrative.topic_hint else "Untitled")
+                )
+                candidate_desc = (
+                    narrative.narrative_info.current_summary[:300]
+                    if narrative.narrative_info and narrative.narrative_info.current_summary
+                    else (narrative.topic_hint[:100] if narrative.topic_hint else "")
+                )
+
                 search_candidates.append({
                     "id": narrative.id,
                     "type": "search",
-                    "name": narrative.topic_hint[:50] if narrative.topic_hint else "Untitled",
-                    "description": narrative.topic_hint[:100] if narrative.topic_hint else "",
+                    "name": candidate_name,
+                    "description": candidate_desc,
                     "score": result.similarity_score,
                     "matched_content": matched_content  # Phase 1: New field
                 })
@@ -806,6 +799,7 @@ class NarrativeRetrieval:
                     selection_method="default_narrative_matched",
                     is_new=False,
                     best_score=best_score,
+                    scores=all_scores,
                     retrieval_method=retrieval_method,
                     evermemos_memories=evermemos_memories  # Phase 2: Pass cache
                 )
@@ -822,6 +816,7 @@ class NarrativeRetrieval:
                     selection_method="participant_narrative_matched",
                     is_new=False,
                     best_score=best_score,
+                    scores=all_scores,
                     retrieval_method=retrieval_method,
                     evermemos_memories=evermemos_memories  # Phase 2: Pass cache
                 )
@@ -848,12 +843,13 @@ class NarrativeRetrieval:
                     selection_method="llm_confirmed",
                     is_new=False,
                     best_score=best_score,
+                    scores=all_scores,
                     retrieval_method=retrieval_method,
                     evermemos_memories=evermemos_memories  # Phase 2: Pass cache
                 )
 
         # 5. No match, create new Narrative
-        logger.info(f"LLM determined no match with any Narrative, creating new topic")
+        logger.info("LLM determined no match with any Narrative, creating new topic")
         new_narrative = await self._create_with_embedding(
             query=query,
             query_embedding=query_embedding,
@@ -869,6 +865,7 @@ class NarrativeRetrieval:
             selection_method="new_created",
             is_new=True,
             best_score=best_score,
+            scores=all_scores,
             retrieval_method=retrieval_method,
             evermemos_memories=evermemos_memories  # Phase 2: Pass cache
         )
@@ -890,176 +887,23 @@ class NarrativeRetrieval:
         return candidates
 
     async def _llm_confirm(self, query: str, candidates: List[dict]) -> dict:
-        """LLM match confirmation"""
-        if not candidates:
-            return {"matched_id": None, "reason": "No candidates"}
-
-        try:
-            instructions = NARRATIVE_SINGLE_MATCH_INSTRUCTIONS
-
-            # Build candidate topic list
-            user_input = ""
-            for index, candidate in enumerate(candidates):
-                user_input += f"Topic {index}: {candidate.get('name', 'Untitled')}\nDescription: {candidate.get('query', '')}\n\n"
-            user_input += f"User's new query: {query}"
-
-            sdk = OpenAIAgentsSDK()
-            result = await sdk.llm_function(
-                instructions=instructions,
-                user_input=user_input,
-                output_type=NarrativeMatchOutput,
-            )
-            output: NarrativeMatchOutput = result.final_output
-
-            # Both continuation and reference are considered a match; also check index bounds
-            if output.relation_type in (RelationType.CONTINUATION, RelationType.REFERENCE):
-                if 0 <= output.matched_index < len(candidates):
-                    return {"matched_id": candidates[output.matched_index]["id"], "reason": output.reason}
-                logger.warning(f"LLM returned matched_index={output.matched_index} out of range [0, {len(candidates)})")
-            return {"matched_id": None, "reason": output.reason or "New topic"}
-
-        except Exception as e:
-            logger.warning(f"LLM confirmation failed: {e}")
-            return {"matched_id": None, "reason": f"LLM call failed: {str(e)}"}
+        """LLM match confirmation — delegates to _retrieval_llm module"""
+        return await llm_confirm(query, candidates)
 
     async def _llm_judge_unified(
         self,
         query: str,
         search_candidates: List[dict],
         default_candidates: List[dict],
-        participant_candidates: Optional[List[dict]] = None  # P0-4: PARTICIPANT Narratives
+        participant_candidates: Optional[List[dict]] = None,
     ) -> dict:
-        """
-        LLM unified judgment: Considers search results, default Narratives, and PARTICIPANT Narratives
-
-        Args:
-            query: User query
-            search_candidates: Search result candidate list [{"id", "type": "search", "name", "description", "score"}]
-            default_candidates: Default Narrative candidate list [{"id", "type": "default", "name", "description", "examples"}]
-            participant_candidates: P0-4 - PARTICIPANT Narratives [{"id", "type": "participant", "name", "description"}]
-
-        Returns:
-            {
-                "matched_id": str/None,  # Matched Narrative ID
-                "matched_type": "default"/"search"/"participant"/None,  # Match type
-                "reason": str  # Judgment reason
-            }
-        """
-        if not search_candidates and not default_candidates and not participant_candidates:
-            return {"matched_id": None, "matched_type": None, "reason": "No candidates"}
-
-        # P0-4: If there are PARTICIPANT Narratives, need to indicate in prompt
-        has_participant_context = participant_candidates and len(participant_candidates) > 0
-
-        try:
-            # Adjust instructions based on whether PARTICIPANT candidates exist
-            if has_participant_context:
-                instructions = NARRATIVE_UNIFIED_MATCH_WITH_PARTICIPANT_INSTRUCTIONS
-            else:
-                instructions = NARRATIVE_UNIFIED_MATCH_INSTRUCTIONS
-
-            # Build candidate list
-            user_input = ""
-
-            # 0. (P0-4) PARTICIPANT Narratives - placed first to emphasize importance
-            if participant_candidates:
-                user_input += "## Participant-Associated Topics (user is a PARTICIPANT):\n\n"
-                for i, candidate in enumerate(participant_candidates):
-                    user_input += f"[Participant-{i}] {candidate['name']}\n"
-                    user_input += f"Description: {candidate['description']}\n"
-                    user_input += "\n"
-
-            # 1. Default Narratives
-            if default_candidates:
-                user_input += "## Default Topic Types:\n\n"
-                for i, candidate in enumerate(default_candidates):
-                    user_input += f"[Default-{i}] {candidate['name']}\n"
-                    user_input += f"Description: {candidate['description']}\n"
-                    if candidate.get('examples'):
-                        user_input += f"Examples: {', '.join(candidate['examples'][:3])}\n"
-                    user_input += "\n"
-
-            # 2. Search results
-            # Phase 1: Added matched_content (from EverMemOS episode summaries)
-            if search_candidates:
-                user_input += "## Existing Topics:\n\n"
-                for i, candidate in enumerate(search_candidates):
-                    user_input += f"[Topic-{i}] {candidate['name']}\n"
-                    user_input += f"Description: {candidate['description']}\n"
-                    user_input += f"Similarity score: {candidate['score']:.2f}\n"
-                    # Phase 1: Display matched content summary (if available)
-                    if candidate.get('matched_content'):
-                        user_input += f"Matched content:\n{candidate['matched_content']}\n"
-                        logger.info(f"[Phase 1] Candidate {i} added matched_content ({len(candidate['matched_content'])} chars)")
-                    else:
-                        logger.debug(f"[Phase 1] Candidate {i} has no matched_content")
-                    user_input += "\n"
-
-            user_input += f"## User's New Query:\n{query}\n\n"
-            user_input += "Please determine which candidate the user query should match, or create a new topic."
-
-            # Use UnifiedMatchOutput defined at top of file
-            sdk = OpenAIAgentsSDK()
-            result = await sdk.llm_function(
-                instructions=instructions,
-                user_input=user_input,
-                output_type=UnifiedMatchOutput,
-            )
-            output: UnifiedMatchOutput = result.final_output
-
-            # Parse result
-            # P0-4: Prioritize PARTICIPANT match
-            if output.matched_category == "participant":
-                if participant_candidates and 0 <= output.matched_index < len(participant_candidates):
-                    matched_id = participant_candidates[output.matched_index]["id"]
-                    logger.info(f"LLM matched PARTICIPANT Narrative (index={output.matched_index}): {matched_id}")
-                    return {
-                        "matched_id": matched_id,
-                        "matched_type": "participant",
-                        "reason": output.reason
-                    }
-                else:
-                    logger.warning(f"LLM returned participant index={output.matched_index} out of range")
-
-            elif output.matched_category == "default":
-                if 0 <= output.matched_index < len(default_candidates):
-                    matched_id = default_candidates[output.matched_index]["id"]
-                    logger.info(f"LLM matched default Narrative (index={output.matched_index}): {matched_id}")
-                    return {
-                        "matched_id": matched_id,
-                        "matched_type": "default",
-                        "reason": output.reason
-                    }
-                else:
-                    logger.warning(f"LLM returned default index={output.matched_index} out of range")
-
-            elif output.matched_category == "search":
-                if 0 <= output.matched_index < len(search_candidates):
-                    matched_id = search_candidates[output.matched_index]["id"]
-                    logger.info(f"LLM matched search result (index={output.matched_index}): {matched_id}")
-                    return {
-                        "matched_id": matched_id,
-                        "matched_type": "search",
-                        "reason": output.reason
-                    }
-                else:
-                    logger.warning(f"LLM returned search index={output.matched_index} out of range")
-
-            # matched_category == "none" or error
-            logger.info(f"LLM determined no match with any Narrative: {output.reason}")
-            return {
-                "matched_id": None,
-                "matched_type": None,
-                "reason": output.reason
-            }
-
-        except Exception as e:
-            logger.warning(f"LLM unified judgment failed: {e}")
-            return {
-                "matched_id": None,
-                "matched_type": None,
-                "reason": f"LLM call failed: {str(e)}"
-            }
+        """LLM unified judgment — delegates to _retrieval_llm module"""
+        return await llm_judge_unified(
+            query=query,
+            search_candidates=search_candidates,
+            default_candidates=default_candidates,
+            participant_candidates=participant_candidates,
+        )
 
     async def _get_participant_narratives(
         self,
@@ -1153,6 +997,10 @@ class NarrativeRetrieval:
             embedding=query_embedding,
             metadata={"user_id": user_id, "agent_id": agent_id}
         )
+
+        # Dual-write to embeddings_store
+        from xyz_agent_context.agent_framework.llm_api.embedding_store_bridge import store_embedding
+        await store_embedding("narrative", narrative.id, query_embedding, source_text=topic_hint)
 
         logger.info(f"Created new Narrative: {narrative.id}")
         return narrative

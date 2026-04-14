@@ -165,7 +165,7 @@ export function StepCard({ step, isLast }: StepCardProps) {
         'relative pl-4 border-l-2 transition-all duration-300',
         borderColor,
         bgColor,
-        step.status === 'running' && '-ml-2 pl-6 py-3 rounded-xl border border-[var(--accent-primary)]/20 shadow-[0_0_20px_var(--accent-glow)]',
+        step.status === 'running' && '-ml-2 pl-6 py-3 rounded-xl border border-[var(--accent-primary)]/20',
         step.status === 'completed' && 'opacity-80 hover:opacity-100'
       )}
     >
@@ -177,20 +177,12 @@ export function StepCard({ step, isLast }: StepCardProps) {
         )} />
       )}
 
-      {/* Running pulse effect */}
-      {step.status === 'running' && (
-        <div className="absolute inset-0 rounded-xl animate-breathe bg-gradient-to-r from-[var(--accent-glow)] to-transparent pointer-events-none" />
-      )}
-
       {/* Header */}
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-start gap-3 text-left group relative z-10"
       >
-        <div className={cn(
-          'relative',
-          step.status === 'running' && 'animate-float'
-        )}>
+        <div className="relative">
           <StatusIcon
             className={cn(
               'w-4 h-4 mt-0.5 shrink-0 transition-all duration-300',
@@ -198,11 +190,6 @@ export function StepCard({ step, isLast }: StepCardProps) {
               step.status === 'running' && 'animate-spin'
             )}
           />
-          {step.status === 'running' && (
-            <div className="absolute inset-0 animate-ping opacity-30">
-              <StatusIcon className={cn('w-4 h-4', statusColor)} />
-            </div>
-          )}
         </div>
 
         <div className="flex-1 min-w-0">

@@ -10,7 +10,9 @@ export type MessageType =
   | 'agent_thinking'
   | 'tool_call'
   | 'error'
-  | 'complete';
+  | 'complete'
+  | 'heartbeat'
+  | 'cancelled';
 
 // Progress status
 export type ProgressStatus = 'running' | 'completed' | 'failed';
@@ -67,6 +69,17 @@ export interface CompleteMessage extends BaseMessage {
   message: string;
 }
 
+// Heartbeat message - keep connection alive
+export interface HeartbeatMessage extends BaseMessage {
+  type: 'heartbeat';
+}
+
+// Cancelled message - user requested stop
+export interface CancelledMessage extends BaseMessage {
+  type: 'cancelled';
+  message: string;
+}
+
 // Union type for all runtime messages
 export type RuntimeMessage =
   | ProgressMessage
@@ -74,7 +87,9 @@ export type RuntimeMessage =
   | AgentThinking
   | AgentToolCall
   | ErrorMessage
-  | CompleteMessage;
+  | CompleteMessage
+  | HeartbeatMessage
+  | CancelledMessage;
 
 // Chat message for display
 export interface ChatMessage {
@@ -84,6 +99,8 @@ export interface ChatMessage {
   timestamp: number;
   thinking?: string;
   toolCalls?: AgentToolCall[];
+  isError?: boolean;  // True when displaying runtime errors (rate limit, API errors, etc.)
+  warnings?: string[];  // Non-fatal errors that occurred during execution (e.g., module decision LLM failed)
 }
 
 // Step for display in StepsPanel

@@ -263,6 +263,34 @@ class AwarenessModule(XYZBaseModule):
             await awareness_repo.upsert(instance_id, new_awareness)
             return "Awareness updated successfully"
 
+        @mcp.tool()
+        async def update_agent_name(agent_id: str, new_name: str) -> str:
+            """
+            Update the agent's display name.
+            Call this when your creator tells you what your name should be during bootstrap setup.
+
+            Args:
+                agent_id: Agent's unique identifier
+                new_name: The new display name chosen by the creator
+
+            Returns:
+                Success or error message
+            """
+            db = await AwarenessModule.get_mcp_db_client()
+
+            from xyz_agent_context.repository import AgentRepository
+            repo = AgentRepository(db)
+
+            agent = await repo.get_agent(agent_id)
+            if not agent:
+                return f"Error: Agent {agent_id} not found"
+
+            affected = await repo.update_agent(agent_id, {"agent_name": new_name})
+            if affected > 0:
+                return f"Agent name updated to '{new_name}' successfully"
+            else:
+                return "Error: No changes made — agent name may already be set to this value"
+
         return mcp
             
     

@@ -11,23 +11,29 @@ Protocol:
 1. Client connects to /ws/agent/run
 2. Client sends JSON: {"agent_id": "...", "user_id": "...", "input_content": "..."}
 3. Server streams RuntimeMessage objects as JSON
-4. Connection closes when execution completes
+4. Client may send {"action": "stop"} at any time to cancel the run
+5. Connection closes when execution completes or is cancelled
 
 Message Types:
 - progress: Step-by-step execution progress
 - agent_response: Text output from the agent
 - agent_thinking: Agent's thinking process
 - tool_call: Tool/function calls
+- cancelled: Sent when user cancels the run
 - error: Error messages
 """
 
+import asyncio
 import traceback
 from typing import Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ValidationError
 from loguru import logger
 
+from backend.config import settings
+
 from xyz_agent_context.agent_runtime import AgentRuntime
+from xyz_agent_context.agent_runtime.cancellation import CancellationToken, CancelledByUser
 from xyz_agent_context.schema import WorkingSource
 from xyz_agent_context.repository import MCPRepository
 from xyz_agent_context.utils.db_factory import get_db_client
@@ -44,16 +50,39 @@ class AgentRunRequest(BaseModel):
     working_source: Optional[str] = "chat"
 
 
+async def _listen_for_stop(websocket: WebSocket, cancellation: CancellationToken) -> None:
+    """
+    Background listener: watches for a stop signal from the client.
+
+    Runs concurrently with the agent loop. When the client sends
+    {"action": "stop"}, triggers the cancellation token which
+    propagates through the entire execution pipeline.
+    """
+    try:
+        while not cancellation.is_cancelled:
+            data = await websocket.receive_json()
+            if isinstance(data, dict) and data.get("action") == "stop":
+                cancellation.cancel("User clicked stop")
+                return
+    except WebSocketDisconnect:
+        # Client disconnected — treat as implicit cancellation
+        cancellation.cancel("Client disconnected")
+    except Exception:
+        # Any receive error (connection reset, etc.)
+        pass
+
+
 @router.websocket("/ws/agent/run")
 async def websocket_agent_run(websocket: WebSocket):
     """
-    WebSocket endpoint for streaming agent execution
+    WebSocket endpoint for streaming agent execution.
 
-    Protocol:
-    1. Accept WebSocket connection
-    2. Receive JSON request with agent_id, user_id, input_content
-    3. Stream RuntimeMessage objects as JSON
-    4. Close connection on completion or error
+    Uses a dual-task pattern:
+    - Task A: runs the agent pipeline and streams messages to the client
+    - Task B: listens for stop signals from the client
+
+    Both tasks share a CancellationToken. When the client sends stop,
+    Task B triggers the token, which causes Task A to exit gracefully.
     """
     await websocket.accept()
     logger.info("WebSocket connection accepted")
@@ -78,7 +107,6 @@ async def websocket_agent_run(websocket: WebSocket):
         # Convert working_source string to enum
         working_source = WorkingSource(request.working_source)
 
-        # Create runtime and stream messages
         logger.info(f"Starting agent runtime: agent_id={request.agent_id}, user_id={request.user_id}")
 
         # Load MCP URLs from database for this agent+user
@@ -89,7 +117,7 @@ async def websocket_agent_run(websocket: WebSocket):
             mcps = await mcp_repo.get_mcps_by_agent_user(
                 agent_id=request.agent_id,
                 user_id=request.user_id,
-                is_enabled=True  # Only load enabled MCPs
+                is_enabled=True
             )
             for mcp in mcps:
                 mcp_urls[mcp.name] = mcp.url
@@ -98,47 +126,111 @@ async def websocket_agent_run(websocket: WebSocket):
         except Exception as e:
             logger.warning(f"Failed to load MCP URLs: {e}")
 
-        async with AgentRuntime() as runtime:
-            async for message in runtime.run(
-                agent_id=request.agent_id,
-                user_id=request.user_id,
-                input_content=request.input_content,
-                working_source=working_source,
-                pass_mcp_urls=mcp_urls,
-            ):
-                # Convert message to dict and send
-                if hasattr(message, 'to_dict'):
-                    message_dict = message.to_dict()
-                elif hasattr(message, 'model_dump'):
-                    message_dict = message.model_dump(mode='json')
-                elif isinstance(message, dict):
-                    message_dict = message
-                else:
-                    message_dict = {"type": "unknown", "data": str(message)}
-                await websocket.send_json(message_dict)
-                # Verbose logging: show type + content preview for monitoring
-                msg_type = message_dict.get('type', '?')
-                if msg_type == 'agent_response':
-                    preview = message_dict.get('delta', '')[:80]
-                    logger.info(f"  📤 WS [{msg_type}] delta='{preview}'")
-                elif msg_type == 'agent_thinking':
-                    preview = message_dict.get('thinking_content', '')[:80]
-                    logger.info(f"  📤 WS [{msg_type}] thinking='{preview}'")
-                elif msg_type == 'progress':
-                    step = message_dict.get('step', '?')
-                    desc = message_dict.get('description', '')[:80]
-                    tool = message_dict.get('details', {}).get('tool_name', '') if isinstance(message_dict.get('details'), dict) else ''
-                    logger.info(f"  📤 WS [{msg_type}] step={step} tool={tool} desc='{desc}'")
-                else:
-                    logger.info(f"  📤 WS [{msg_type}] {str(message_dict)[:120]}")
+        # ---- Shared cancellation token ----
+        cancellation = CancellationToken()
 
-        logger.info("Agent execution completed")
+        # ---- Heartbeat task ----
+        heartbeat_stop = asyncio.Event()
 
-        # Send completion signal
-        await websocket.send_json({
-            "type": "complete",
-            "message": "Agent execution completed successfully",
-        })
+        async def heartbeat_loop():
+            while not heartbeat_stop.is_set():
+                try:
+                    await asyncio.wait_for(heartbeat_stop.wait(), timeout=settings.ws_heartbeat_interval)
+                    break
+                except asyncio.TimeoutError:
+                    try:
+                        await websocket.send_json({"type": "heartbeat"})
+                    except Exception:
+                        break
+
+        heartbeat_task = asyncio.create_task(heartbeat_loop())
+
+        # ---- Start stop listener (Task B) ----
+        stop_listener = asyncio.create_task(_listen_for_stop(websocket, cancellation))
+
+        import time as _time
+        _ws_start = _time.monotonic()
+        _step3_end: float = 0  # will be set when last agent_response arrives
+
+        try:
+            async with AgentRuntime() as runtime:
+                async for message in runtime.run(
+                    agent_id=request.agent_id,
+                    user_id=request.user_id,
+                    input_content=request.input_content,
+                    working_source=working_source,
+                    pass_mcp_urls=mcp_urls,
+                    cancellation=cancellation,
+                ):
+                    # Convert message to dict and send
+                    if hasattr(message, 'to_dict'):
+                        message_dict = message.to_dict()
+                    elif hasattr(message, 'model_dump'):
+                        message_dict = message.model_dump(mode='json')
+                    elif isinstance(message, dict):
+                        message_dict = message
+                    else:
+                        message_dict = {"type": "unknown", "data": str(message)}
+                    try:
+                        await websocket.send_json(message_dict)
+                    except RuntimeError:
+                        logger.info("WebSocket closed during streaming, stopping send loop")
+                        break
+
+                    # Verbose logging
+                    msg_type = message_dict.get('type', '?')
+                    if msg_type == 'agent_response':
+                        _step3_end = _time.monotonic()  # track last streaming token time
+                        preview = message_dict.get('delta', '')[:80]
+                        logger.info(f"  📤 WS [{msg_type}] delta='{preview}'")
+                    elif msg_type == 'agent_thinking':
+                        preview = message_dict.get('thinking_content', '')[:80]
+                        logger.info(f"  📤 WS [{msg_type}] thinking='{preview}'")
+                    elif msg_type == 'progress':
+                        step = message_dict.get('step', '?')
+                        desc = message_dict.get('description', '')[:80]
+                        tool = message_dict.get('details', {}).get('tool_name', '') if isinstance(message_dict.get('details'), dict) else ''
+                        logger.info(f"  📤 WS [{msg_type}] step={step} tool={tool} desc='{desc}'")
+                    else:
+                        logger.info(f"  📤 WS [{msg_type}] {str(message_dict)[:120]}")
+
+        except CancelledByUser as e:
+            logger.info(f"Agent run cancelled: {e.reason}")
+            try:
+                await websocket.send_json({
+                    "type": "cancelled",
+                    "message": f"Agent run stopped: {e.reason}",
+                })
+            except RuntimeError:
+                pass
+
+        finally:
+            heartbeat_stop.set()
+            stop_listener.cancel()
+            # Suppress CancelledError from the stop listener
+            try:
+                await stop_listener
+            except asyncio.CancelledError:
+                pass
+            await heartbeat_task
+
+        _ws_end = _time.monotonic()
+        _total = _ws_end - _ws_start
+        _post_stream = (_ws_end - _step3_end) if _step3_end else 0
+        logger.info(
+            f"Agent execution completed — total={_total:.1f}s, "
+            f"post-stream (step 4)={_post_stream:.1f}s"
+        )
+
+        # Send completion signal if not cancelled
+        if not cancellation.is_cancelled:
+            try:
+                await websocket.send_json({
+                    "type": "complete",
+                    "message": "Agent execution completed successfully",
+                })
+            except RuntimeError:
+                logger.info("Skipped completion signal — WebSocket already closed")
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
@@ -154,21 +246,19 @@ async def websocket_agent_run(websocket: WebSocket):
                 "traceback": traceback.format_exc(),
             })
         except Exception:
-            pass  # Client may have disconnected
+            pass
 
     finally:
         try:
             await websocket.close()
         except Exception:
-            pass  # Already closed
+            pass
         logger.info("WebSocket connection closed")
 
 
 @router.websocket("/ws/ping")
 async def websocket_ping(websocket: WebSocket):
-    """
-    Simple ping/pong WebSocket for connection testing
-    """
+    """Simple ping/pong WebSocket for connection testing"""
     await websocket.accept()
     logger.info("Ping WebSocket connected")
 

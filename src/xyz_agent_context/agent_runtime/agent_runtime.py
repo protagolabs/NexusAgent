@@ -16,8 +16,10 @@ Architecture:
 - The concrete implementation of each Step is in the _agent_runtime_steps/ directory
 """
 
-from typing import AsyncGenerator, Optional, Union, Dict
+from typing import Any, AsyncGenerator, Dict, Optional, Union
 from loguru import logger
+
+from xyz_agent_context.agent_runtime.cancellation import CancellationToken, CancelledByUser
 
 # Type alias for database client
 DatabaseClientType = Union["DatabaseClient", "AsyncDatabaseClient"]
@@ -25,6 +27,7 @@ DatabaseClientType = Union["DatabaseClient", "AsyncDatabaseClient"]
 # Schema - Runtime Messages
 from xyz_agent_context.schema import (
     ProgressMessage,
+    ProgressStatus,
     WorkingSource,
 )
 
@@ -144,6 +147,8 @@ class AgentRuntime:
         pass_mcp_urls: dict = {},
         job_instance_id: Optional[str] = None,
         forced_narrative_id: Optional[str] = None,
+        trigger_extra_data: Optional[Dict[str, Any]] = None,
+        cancellation: Optional[CancellationToken] = None,
     ) -> AsyncGenerator:
         """
         Execute the main flow of the Agent runtime
@@ -190,6 +195,7 @@ class AgentRuntime:
             pass_mcp_urls: Externally provided MCP Server URLs
             job_instance_id: Instance ID when executing a Job
             forced_narrative_id: Forced Narrative ID (used for Job triggers, skips Narrative selection)
+            trigger_extra_data: Trigger 层传入的附加数据（如 channel_tag），会合并到 ctx_data.extra_data
 
         Yields:
             ProgressMessage: Progress messages for each step
@@ -198,14 +204,30 @@ class AgentRuntime:
         # =============================================================================
         # Initialization
         # =============================================================================
-        # Save current running agent_id and user_id (used for callbacks)
-        self._current_agent_id = agent_id
-        self._current_user_id = user_id
-
         self._logging_service.setup(agent_id)
 
         # Ensure database client is initialized (lazy-load AsyncDatabaseClient)
         db_client = await self._ensure_database_client()
+
+        # Override user_id with agent's creator — all triggers share a single workspace
+        # so that Matrix conversations, Job triggers, etc. see the same narratives/jobs.
+        from xyz_agent_context.repository.agent_repository import AgentRepository
+        _agent = await AgentRepository(db_client).get_agent(agent_id)
+        if _agent and _agent.created_by:
+            original_user_id = user_id
+            user_id = _agent.created_by
+            if original_user_id != user_id:
+                logger.info(f"user_id overridden: {original_user_id} -> {user_id} (agent creator)")
+
+        # Save current running agent_id and user_id (used for callbacks)
+        self._current_agent_id = agent_id
+        self._current_user_id = user_id
+
+        # Set global cost tracking context so ALL LLM calls (narrative, job, social
+        # network, module decisions, etc.) automatically record costs without needing
+        # explicit agent_id/db parameters at each call site.
+        from xyz_agent_context.utils.cost_tracker import set_cost_context, clear_cost_context
+        set_cost_context(agent_id, db_client)
 
         # Initialize the three major Services
         self.session_service = SessionService()
@@ -228,6 +250,10 @@ class AgentRuntime:
         # =============================================================================
         # Create run context
         # =============================================================================
+        # Use a no-op token if none provided (avoids None checks everywhere)
+        if cancellation is None:
+            cancellation = CancellationToken()
+
         ctx = RunContext(
             agent_id=agent_id,
             user_id=user_id,
@@ -236,6 +262,8 @@ class AgentRuntime:
             pass_mcp_urls=pass_mcp_urls,
             job_instance_id=job_instance_id,
             forced_narrative_id=forced_narrative_id,
+            trigger_extra_data=trigger_extra_data or {},
+            cancellation=cancellation,
         )
 
         # =============================================================================
@@ -359,6 +387,9 @@ class AgentRuntime:
         async for msg in step_2_load_modules(ctx):
             yield msg
 
+        # ---- Cancellation checkpoint (before expensive Step 2.5) ----
+        cancellation.raise_if_cancelled()
+
         # =============================================================================
         # Step 2.5: Sync Instance Changes
         # =============================================================================
@@ -377,6 +408,9 @@ class AgentRuntime:
             ctx, self.narrative_service, self.markdown_manager
         ):
             yield msg
+
+        # ---- Cancellation checkpoint (before the main LLM call) ----
+        cancellation.raise_if_cancelled()
 
         # =============================================================================
         # Step 3: Execute different paths based on execution_path -- Core Step
@@ -427,6 +461,13 @@ class AgentRuntime:
         # =============================================================================
         async for msg in step_3_execute_path(ctx, db_client, self._response_processor):
             yield msg
+            # Check cancellation after each streamed message from the agent loop
+            if cancellation.is_cancelled:
+                logger.info("Cancellation detected during Step 3 (agent loop), breaking")
+                break
+
+        # ---- Cancellation checkpoint (before persistence) ----
+        cancellation.raise_if_cancelled()
 
         # =============================================================================
         # Step 4: Persist Execution Results
@@ -484,46 +525,76 @@ class AgentRuntime:
         #
         # [Output] hook_callback_results: callback requests for subsequent processing
         # =============================================================================
-        hook_callback_results = None
-        async for msg in step_5_execute_hooks(ctx, self.hook_manager):
-            if isinstance(msg, ProgressMessage):
-                yield msg
-            else:
-                # The last yield is hook_callback_results
-                hook_callback_results = msg
-
         # =============================================================================
-        # Step 6: Process Hook Callbacks
+        # Steps 5 + 6: Execute Hooks & Process Callbacks (BACKGROUND)
         # =============================================================================
-        # [Function] Process callback requests collected in Step 5
+        # Move to background so the WebSocket can close immediately after Step 4.
+        # The user already saw the full response during Step 3; Steps 5-6 are
+        # post-processing (entity extraction, memory writes, job analysis, etc.)
+        # that should not block the UI.
         #
-        # [Internal Logic]
-        #   ┌─────────────────────────────────────────────────────────┐
-        #   │  1. Check hook_callback_results                         │
-        #   │                                                         │
-        #   │  2. If there are Instances to trigger:                  │
-        #   │     - Get Instance dependencies                         │
-        #   │     - Check if dependencies are completed               │
-        #   │     - If dependencies done -> trigger new run()         │
-        #   │       in background                                     │
-        #   │       - working_source = CALLBACK                       │
-        #   │       - Async execution, non-blocking                   │
-        #   │                                                         │
-        #   │  3. Update Instance status to Narrative                 │
-        #   └─────────────────────────────────────────────────────────┘
-        #
-        # [Output] Background async execution (no direct output)
+        # Safety: Step 4.3 already persisted ctx.event.final_output, so hooks
+        # have access to the response text. Modules use the global shared DB
+        # client from db_factory (not the runtime's own client), so DB access
+        # survives after AgentRuntime.__aexit__ closes its connection.
         # =============================================================================
-        if hook_callback_results:
-            await self.hook_manager.hook_callback_results(
-                hook_callback_results=hook_callback_results,
-                narrative=ctx.main_narrative,
-                narrative_service=self.narrative_service,
-                execute_callback_instance=self._execute_callback_instance
-            )
+        import asyncio
+        import time as _time
 
-        # Clean up log handlers
-        self._logging_service.cleanup()
+        _bg_start = _time.monotonic()
+        _agent_id = ctx.agent_id
+        _logging_service = self._logging_service  # capture ref for background task
+
+        async def _run_hooks_background():
+            """Run Step 5 hooks + Step 6 callbacks in background."""
+            try:
+                hook_callback_results = None
+                async for msg in step_5_execute_hooks(ctx, self.hook_manager):
+                    if isinstance(msg, ProgressMessage):
+                        pass  # No WebSocket to send to; just skip progress messages
+                    else:
+                        hook_callback_results = msg
+
+                # Step 6: Process Hook Callbacks
+                if hook_callback_results:
+                    await self.hook_manager.hook_callback_results(
+                        hook_callback_results=hook_callback_results,
+                        narrative=ctx.main_narrative,
+                        narrative_service=self.narrative_service,
+                        execute_callback_instance=self._execute_callback_instance
+                    )
+
+                elapsed = _time.monotonic() - _bg_start
+                logger.info(
+                    f"[BG] Steps 5-6 completed for {_agent_id} in {elapsed:.1f}s"
+                )
+            except Exception as e:
+                elapsed = _time.monotonic() - _bg_start
+                logger.error(
+                    f"[BG] Steps 5-6 failed for {_agent_id} after {elapsed:.1f}s: {e}"
+                )
+            finally:
+                clear_cost_context()
+                # Clean up the agent log file handler AFTER background work finishes,
+                # so all [BG] log lines are captured in the agent's .log file.
+                _logging_service.cleanup()
+
+        asyncio.create_task(_run_hooks_background())
+        logger.info(f"[BG] Steps 5-6 dispatched to background for {_agent_id}")
+
+        # Yield a completed Step 5 progress message so the frontend sidebar
+        # shows "Post-processing (background) ✓" without actually waiting.
+        yield ProgressMessage(
+            step="5",
+            title="Post-processing (background)",
+            description="✓ Module hooks dispatched to background",
+            status=ProgressStatus.COMPLETED,
+            substeps=["Entity extraction, memory writes, job analysis running in background"],
+        )
+
+        # NOTE: Do NOT call self._logging_service.cleanup() here.
+        # The background task owns the cleanup — it will remove the log
+        # handler after hooks finish so that [BG] lines go to the agent's log file.
 
     async def _execute_callback_instance(
         self,
@@ -629,7 +700,7 @@ async def test_agent_runtime():
             input_content="Do you know what a vector bundle is?",
             working_source=WorkingSource.CHAT,  # Use enum type (also supports string "chat")
         ):
-            print(f"response: {response}")
+            logger.info(f"response: {response}")
 
 
 if __name__ == "__main__":

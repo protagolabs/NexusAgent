@@ -44,19 +44,10 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
             'shadow-[var(--shadow-inset)]',
           ],
 
-          // Glow effect
-          glow && [
-            'shadow-[var(--shadow-glow)]',
-            'border-[var(--accent-primary)]/30',
-          ],
-
           className
         )}
         {...props}
       >
-        {/* Top gradient line */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-primary)]/20 to-transparent" />
-
         {children}
       </div>
     );

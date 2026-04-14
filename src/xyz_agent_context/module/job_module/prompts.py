@@ -80,7 +80,7 @@ The following are the execution results of prerequisite tasks this task depends 
 # - {related_entity_id}: Target user ID, from job.related_entity_id
 # - {extra_requirement}: Extra requirement line (when context info exists), can be empty string
 # ============================================================================
-JOB_EXECUTION_PROMPT_TEMPLATE = """You are executing a background scheduled task. This is an asynchronous task. The user is not online right now and cannot see your real-time output, but you can still send them a message for them to check later.
+JOB_EXECUTION_PROMPT_TEMPLATE = """You are executing a background scheduled task. The user may not be online right now, but your message will appear in their chat history for them to read later.
 
 {task_info_section}
 {entities_section}
@@ -89,19 +89,80 @@ JOB_EXECUTION_PROMPT_TEMPLATE = """You are executing a background scheduled task
 ## Execution Instructions
 {payload}
 
-## Now you are facing to the target user: {related_entity_id}
-If you want to send a message to the target user, you can use the chat mcp tool 'make_response_to_user'
+## Execution Context
+- **Target entity**: {related_entity_id}
+- Your Narrative, memory, and chat history are loaded for this entity
+- When you call `send_message_to_user_directly`, the message will appear in the chat history with this entity — the owner will see it when they open this conversation
 
 ## Important Requirements
 1. Complete all steps required for the task (search, analyze, organize, etc.)
-2. **After completing the task, you MUST use the `agent_send_content_to_user_inbox` tool to send the final report to the user**
-3. The content sent should be the final report for the user, do not include the thinking process
+2. **After completing the task, you MUST use `send_message_to_user_directly` to send the final report to the user**
+3. The content sent should be the final report — do not include your thinking process
 4. The content should be complete, valuable, and clearly formatted (use Markdown)
-5. Do not use make_response_to_user, because the user is not online
+5. Send exactly ONE message with the final report. Do NOT send intermediate progress updates
 {extra_requirement}
+"""
 
-Remember:
-1. Using agent_send_content_to_user_inbox means you send a one-time message notification to the user.
-2. Using end_message_to_user_directly means you send the message directly to the conversation between you and the user.
-3. The two are slightly different, please choose the appropriate one. 1. is better for one-time message notifications; 2. is better for scenarios requiring multi-turn conversations.
+
+# ============================================================================
+# ONGOING Job chat analysis prompt
+# Used by _job_lifecycle.update_ongoing_jobs_from_chat() to check if a chat
+# interaction satisfies an ONGOING job's end_condition.
+#
+# Placeholder description:
+# - {job_id}: Job ID
+# - {title}: Job title
+# - {description}: Job description
+# - {payload_preview}: First 500 chars of payload
+# - {end_condition}: The end condition text
+# - {iteration_count}: Current iteration count
+# - {max_iterations}: Maximum iterations or "No limit"
+# - {user_query}: The user's query text
+# - {chat_content_preview}: First 1000 chars of agent response
+# ============================================================================
+ONGOING_CHAT_ANALYSIS_PROMPT = """Analyze if the current chat interaction satisfies the end condition of an ONGOING job.
+
+## Job Information
+
+**Job ID**: {job_id}
+**Title**: {title}
+**Description**: {description}
+**Payload**: {payload_preview}...
+
+**End Condition**: {end_condition}
+
+**Current Iteration**: {iteration_count}
+**Max Iterations**: {max_iterations}
+
+## Current Chat Interaction
+
+**User Query**: {user_query}
+
+**Agent Response**: {chat_content_preview}...
+
+## Your Task
+
+Determine if this chat interaction indicates that the job's end condition has been met.
+
+For example, if the end condition is "customer shows purchase intent or explicit rejection":
+- Customer says "I'll buy it" -> end condition MET
+- Customer says "No thanks, I don't need it" -> end condition MET
+- Customer asks "What's the price?" -> end condition NOT MET (still interested, continuing conversation)
+
+## Return Fields
+
+1. **job_id**: "{job_id}"
+
+2. **is_end_condition_met**: true/false - Does this interaction satisfy the end condition?
+
+3. **end_condition_reason**: Detailed explanation of why the condition is/isn't met
+
+4. **should_continue**: true/false - Should the job continue?
+   - false if end_condition is met
+   - false if max_iterations reached (current: {iteration_count}, max: {max_iterations})
+   - true otherwise
+
+5. **progress_summary**: 1-2 sentence summary of what happened in this interaction
+
+6. **process**: 2-3 concise descriptions of actions taken
 """

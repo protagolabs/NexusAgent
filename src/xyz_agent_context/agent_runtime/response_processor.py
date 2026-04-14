@@ -23,6 +23,7 @@ from xyz_agent_context.schema import (
     AgentTextDelta,
     AgentThinking,
     AgentToolCall,
+    ErrorMessage,
 )
 from .execution_state import ExecutionState
 from ._agent_runtime_steps.step_display import (
@@ -38,6 +39,7 @@ class ResponseType(str, Enum):
     TOOL_OUTPUT = "tool_output"
     THINKING = "thinking"
     DONE = "done"
+    ERROR = "error"
     OTHER = "other"
 
 
@@ -52,7 +54,7 @@ class ProcessedResponse:
         state_update: State update function name and arguments (for updating ExecutionState)
     """
     type: ResponseType
-    message: Union[AgentTextDelta, AgentThinking, AgentToolCall, ProgressMessage, dict, None]
+    message: Union[AgentTextDelta, AgentThinking, AgentToolCall, ProgressMessage, ErrorMessage, dict, None]
     state_update: Optional[dict] = None  # {"method": "append_text", "args": {"text": "..."}}
 
 
@@ -166,15 +168,47 @@ class ResponseProcessor:
                 state_update={"method": "append_text", "args": {"text": delta}}
             )
 
+        if data_type == "response.error":
+            # API error (rate limit, auth failure, quota exhaustion, etc.)
+            error_message = data.get("error_message", "Unknown API error")
+            error_type = data.get("error_type", "api_error")
+            logger.error(f"  ❌ API error ({error_type}): {error_message}")
+            return ProcessedResponse(
+                type=ResponseType.ERROR,
+                message=ErrorMessage(
+                    error_message=error_message,
+                    error_type=error_type,
+                ),
+                state_update={"method": "increment_response", "args": {}}
+            )
+
         if data_type == "response.done":
-            # Agent Loop completion marker (no longer sends ProgressMessage, Step 3 completion is handled by agent_runtime)
+            # Agent Loop completion marker — extract token usage for cost tracking
+            # Claude Agent SDK puts usage in ResultMessage; model is not available,
+            # so we default to the model configured in settings
             usage = data.get("usage", {})
+            input_tokens = usage.get("input_tokens", 0)
+            output_tokens = usage.get("output_tokens", 0)
+            model = data.get("model", "")
+            total_cost_usd = data.get("total_cost_usd")  # SDK-calculated cost
             stop_reason = data.get("stop_reason", "unknown")
-            logger.info(f"  ✅ Agent done: {stop_reason}")
+            logger.info(
+                f"  ✅ Agent done: {stop_reason} model={model or '(sdk)'} "
+                f"(tokens: {input_tokens}+{output_tokens}"
+                f"{f', sdk_cost=${total_cost_usd:.6f}' if total_cost_usd else ''})"
+            )
             return ProcessedResponse(
                 type=ResponseType.DONE,
                 message=None,  # Do not send message to avoid duplicate completion steps
-                state_update=None  # No need to update count on completion
+                state_update={
+                    "method": "accumulate_usage",
+                    "args": {
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "model": model,
+                        "total_cost_usd": total_cost_usd,
+                    },
+                },
             )
 
         # Other types of raw_response_event
@@ -234,24 +268,30 @@ class ResponseProcessor:
 
         if item_type == "tool_call_output_item":
             # Tool call result - update the corresponding tool call status to completed
-            # Step numbering uses 3.4.x format
+            # 使用 tool_output_count + 1 作为 step ID（与 tool_call 的序号一一对应）
+            # 不能用 tool_call_count，因为并行工具调用时所有 call 先到达，
+            # tool_call_count 已经递增到最终值，与第一个 output 的序号不匹配。
             output = item.get("output", "")
-            logger.info(f"  ✅ Tool output received: {len(output)} chars")
+            tool_output_num = state.tool_output_count + 1
+            logger.info(f"  ✅ Tool output #{tool_output_num} received: {len(output)} chars")
 
-            # Get the last tool call info for user-friendly display
-            last_tool_name = ""
-            last_arguments = {}
-            # Find the last tool_call from all_steps
-            for step in reversed(state.all_steps):
+            # 查找对应的 tool_call 信息用于展示
+            # tool_output 按顺序到达，第 N 个 output 对应第 N 个 call
+            matching_tool_name = ""
+            matching_arguments = {}
+            tool_calls_seen = 0
+            for step in state.all_steps:
                 if step.get("type") == "tool_call":
-                    last_tool_name = step.get("tool_name", "")
-                    last_arguments = step.get("arguments", {})
-                    break
+                    tool_calls_seen += 1
+                    if tool_calls_seen == tool_output_num:
+                        matching_tool_name = step.get("tool_name", "")
+                        matching_arguments = step.get("arguments", {})
+                        break
 
             # User-friendly display
             tool_display = format_tool_call_for_display(
-                tool_name=last_tool_name,
-                arguments=last_arguments,
+                tool_name=matching_tool_name,
+                arguments=matching_arguments,
                 output=output,
                 is_completed=True
             )
@@ -259,7 +299,7 @@ class ResponseProcessor:
             return ProcessedResponse(
                 type=ResponseType.TOOL_OUTPUT,
                 message=ProgressMessage(
-                    step=f"3.4.{state.tool_call_count}",
+                    step=f"3.4.{tool_output_num}",
                     title=f"{tool_display['icon']} {tool_display['name']}",
                     description=tool_display.get("result_summary", "✓ Execution completed"),
                     status=ProgressStatus.COMPLETED,

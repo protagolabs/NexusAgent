@@ -16,6 +16,7 @@ from xyz_agent_context.context_runtime.prompts import (
     AUXILIARY_NARRATIVES_HEADER,       # Auxiliary Narrative section header
     MODULE_INSTRUCTIONS_HEADER,        # Module instructions section header
     SHORT_TERM_MEMORY_HEADER,          # Short-term memory section header + description text
+    BOOTSTRAP_INJECTION_PROMPT,        # Bootstrap injection wrapper (first-run setup)
 )
 
 # =============================================================================
@@ -112,4 +113,12 @@ from xyz_agent_context.agent_framework.prompts import (
     CHAT_HISTORY_TRUNCATED_HEADER,     # Truncated chat history section header
     CHAT_HISTORY_END_INSTRUCTION,      # Chat history section footer instruction
     SYSTEM_PROMPT_TRUNCATION_WARNING,  # System prompt truncation warning
+)
+
+# =============================================================================
+# 11. Bootstrap — First-Run Setup Template
+# File: bootstrap/template.py
+# =============================================================================
+from xyz_agent_context.bootstrap.template import (
+    BOOTSTRAP_MD_TEMPLATE,             # Bootstrap.md content written at agent creation
 )

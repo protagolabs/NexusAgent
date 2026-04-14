@@ -35,7 +35,7 @@ from .vector_store import VectorStore
 from .prompts import NARRATIVE_UPDATE_INSTRUCTIONS
 
 # Use common utilities from utils
-from xyz_agent_context.utils.embedding import get_embedding
+from xyz_agent_context.agent_framework.llm_api.embedding import get_embedding
 from xyz_agent_context.utils.text import truncate_text
 
 if TYPE_CHECKING:
@@ -54,27 +54,31 @@ class ActorOutput(BaseModel):
 
 class NarrativeUpdateOutput(BaseModel):
     """
-    LLM-generated Narrative update content
+    LLM 生成的 Narrative 更新内容
 
-    Used for dynamically updating Narrative metadata as the conversation evolves.
+    用于随着对话演进动态更新 Narrative 元数据。
     """
     name: str = Field(
-        description="Short name for the Narrative (3-10 words), summarizing the conversation topic"
+        description="Short name for the Narrative (3-8 words), the core topic"
     )
     current_summary: str = Field(
-        description="Summary of the current conversation (50-150 words), including main topics, progress, and key information"
+        description=(
+            "Structured fact sheet in bullet format. "
+            "Format: 'Topic: ...\\nKey facts:\\n- fact1\\n- fact2\\n...\\nStatus: ...' "
+            "Max 8-12 bullets. No paragraphs, no filler. Just atomic facts."
+        )
     )
     topic_keywords: List[str] = Field(
         default_factory=list,
-        description="Topic keyword list (3-8 items), used for retrieval matching"
+        description="Concrete topic keywords (5-10 items) for retrieval matching"
     )
     actors: List[ActorOutput] = Field(
         default_factory=list,
-        description="Conversation participant list, including users, Agents, and mentioned entities"
+        description="Participants: users, Agents, and important named entities mentioned"
     )
     dynamic_summary_entry: str = Field(
         default="",
-        description="Short summary of this conversation turn (one sentence), used for dynamic_summary"
+        description="One short sentence summarizing this turn, e.g. 'User requested X; Agent did Y.'"
     )
 
 
@@ -282,7 +286,7 @@ class NarrativeUpdater:
         context_parts = []
 
         # Current Narrative information
-        context_parts.append(f"## Current Narrative Information")
+        context_parts.append("## Current Narrative Information")
         context_parts.append(f"- Name: {narrative.narrative_info.name}")
         context_parts.append(f"- Description: {narrative.narrative_info.description}")
         context_parts.append(f"- Current Summary: {narrative.narrative_info.current_summary}")
@@ -290,7 +294,7 @@ class NarrativeUpdater:
         context_parts.append("")
 
         # Recent conversation history
-        context_parts.append(f"## Recent Conversation History")
+        context_parts.append("## Recent Conversation History")
 
         # Get recent summaries from dynamic_summary
         recent_count = config.NARRATIVE_LLM_UPDATE_EVENTS_COUNT
@@ -301,7 +305,7 @@ class NarrativeUpdater:
         context_parts.append("")
 
         # Latest Event details
-        context_parts.append(f"## Latest Conversation")
+        context_parts.append("## Latest Conversation")
         if event.env_context:
             user_input = event.env_context.get("input", "")
             if user_input:
@@ -424,8 +428,12 @@ class NarrativeUpdater:
             if existing:
                 await self._vector_store.update(narrative.id, new_embedding)
 
-        # Save
+        # Save to legacy table
         await self._crud.save(narrative)
+
+        # Dual-write to embeddings_store
+        from xyz_agent_context.agent_framework.llm_api.embedding_store_bridge import store_embedding
+        await store_embedding("narrative", narrative.id, new_embedding, source_text=new_hint)
 
         logger.info(f"Narrative {narrative.id} embedding update completed")
         return True

@@ -12,17 +12,14 @@ Core concept - Thinking vs Speaking:
 - Like two people talking face-to-face: thinking in your head (invisible) vs speaking out loud (visible)
 
 Included MCP Tools:
-- send_message_to_user_directly: Agent speaks to user (real-time conversation, must be called for user to see response)
-- agent_send_content_to_user_inbox: Agent proactively sends message to user's Inbox (async notification)
-- agent_send_content_to_agent_inbox: Agent sends message to other Agents
-- get_inbox_status: Get user Inbox status
+- send_message_to_user_directly: Agent speaks to user (the ONLY way to deliver messages to the user)
+- get_chat_history: Get chat history for a Chat Instance
 
 Note: ChatModule itself does not include "multi-turn conversation" capability; multi-turn conversation requires Social-Network/Memory modules
 """
 
 
 from typing import Optional, Any, List, Dict
-from mcp.server.fastmcp import FastMCP
 from loguru import logger
 
 
@@ -36,20 +33,20 @@ from xyz_agent_context.schema import (
     HookAfterExecutionParams,
     ModuleConfig,
     MCPServerConfig,
-    InboxMessageType,
 )
 
 # Utils
 from xyz_agent_context.utils import DatabaseClient, utc_now
 
 # Repository
-from xyz_agent_context.repository import InboxRepository, AgentMessageRepository
+from xyz_agent_context.repository import AgentMessageRepository
 
 # Schema
 from xyz_agent_context.schema.agent_message_schema import MessageSourceType
 
 # Prompts
 from xyz_agent_context.module.chat_module.prompts import CHAT_MODULE_INSTRUCTIONS
+from xyz_agent_context.bootstrap.template import BOOTSTRAP_GREETING
 
 
 class ChatModule(XYZBaseModule):
@@ -63,11 +60,8 @@ class ChatModule(XYZBaseModule):
     Provided capabilities:
     1. **Instructions** - Guide Agent to understand the "thinking vs speaking" distinction
     2. **Tools** (via MCP):
-       - send_message_to_user_directly: Real-time response to user (must be called for user to see response)
-       - agent_send_content_to_user_inbox: Async notification to Inbox
-       - agent_send_content_to_agent_inbox: Inter-Agent communication
-       - get_inbox_status: Query Inbox status
-    3. **Data** - User's Inbox unread message count
+       - send_message_to_user_directly: The ONLY way to deliver messages to the user
+       - get_chat_history: Retrieve past conversations for a specific Chat Instance
 
     Dual-track memory loading (2026-01-21 P1-2):
     - Long-term memory: Current Narrative's EverMemOS semantically relevant history (2026-02-09 optimization)
@@ -108,7 +102,7 @@ class ChatModule(XYZBaseModule):
             name="ChatModule",
             priority=1,  # High priority (base module)
             enabled=True,
-            description="Provides messaging capabilities (instant chat + Inbox notifications)"
+            description="Provides messaging capabilities (chat conversation + history retrieval)"
         )
 
     # ============================================================================= MCP Server
@@ -118,7 +112,8 @@ class ChatModule(XYZBaseModule):
         Return MCP Server configuration
 
         ChatModule provides MCP Server for:
-        - agent_send_content_to_user_inbox: Agent proactively sends messages to users
+        - send_message_to_user_directly: Agent speaks to user
+        - get_chat_history: Retrieve past conversations
 
         Returns:
             MCPServerConfig
@@ -133,330 +128,10 @@ class ChatModule(XYZBaseModule):
         """
         Create MCP Server
 
-        Provides the agent_send_content_to_user_inbox tool, enabling Agent to proactively send messages to users.
+        Delegates tool registration to _chat_mcp_tools module.
         """
-        mcp = FastMCP("chat_module")
-        mcp.settings.port = self.port
-
-        @mcp.tool()
-        async def agent_send_content_to_user_inbox(
-            agent_id: str,
-            user_id: str,
-            title: str,
-            content: str,
-            event_id: str = ""
-        ) -> str:
-            """
-            Send a message to the user's inbox.
-
-            Use this tool when you want to proactively notify or communicate with the user.
-            The message will appear in the user's inbox and they can read it later.
-
-            Args:
-                agent_id: Your agent ID (the sender).
-                user_id: The user ID to send the message to.
-                title: A brief, descriptive title for the message.
-                content: The main content of the message.
-                event_id: Optional event ID for tracking. Can be left empty.
-
-            Returns:
-                A confirmation message with the created message ID.
-
-            Example:
-                agent_send_content_to_user_inbox(
-                    agent_id="agent_sales_001",
-                    user_id="user_123",
-                    title="Daily Summary",
-                    content="Here's your daily summary: ..."
-                )
-            """
-            # Use MCP-dedicated database connection
-            db = await ChatModule.get_mcp_db_client()
-            repo = InboxRepository(db)
-
-            # source_type is fixed as "agent", source_id uses the passed-in agent_id
-            actual_source_type = "agent"
-            actual_source_id = agent_id
-
-            # Message type is fixed as AGENT_MESSAGE
-            message_type = InboxMessageType.AGENT_MESSAGE
-
-            # Generate message_id
-            from uuid import uuid4
-            msg_id = f"msg_{uuid4().hex[:16]}"
-
-            # Create message
-            db_id = await repo.create_message(
-                user_id=user_id,
-                title=title,
-                content=content,
-                message_id=msg_id,
-                message_type=message_type,
-                source_type=actual_source_type,
-                source_id=actual_source_id,
-                event_id=event_id if event_id else None
-            )
-
-            logger.info(f"ChatModule: Sent message to user inbox - user={user_id}, title={title}, message_id={msg_id}")
-
-            return f"Message sent successfully! Message ID: {msg_id}"
-
-        @mcp.tool()
-        async def agent_send_content_to_agent_inbox(target_agent_id: str, content: str, self_agent_id: str) -> str:
-            """
-            Send a message to another agent's inbox (agent_messages table).
-
-            Use this tool when you want to communicate with another agent.
-            The message will be stored in the target agent's message queue,
-            and the target agent can process it later.
-
-            Args:
-                target_agent_id: The agent ID to send the message to (the receiver).
-                content: The content of the message you want to send.
-                self_agent_id: Your own agent ID (the sender).
-
-            Returns:
-                A confirmation message with the created message ID.
-
-            Example:
-                agent_send_content_to_agent_inbox(
-                    target_agent_id="agent_456",
-                    content="Please help me analyze this data...",
-                    self_agent_id="agent_123"
-                )
-            """
-            # Use MCP-dedicated database connection
-            db = await ChatModule.get_mcp_db_client()
-            repo = AgentMessageRepository(db)
-
-            # Create message: source_type is agent, source_id is the sender's agent_id
-            message_id = await repo.create_message(
-                agent_id=target_agent_id,          # Agent the message belongs to (receiver)
-                source_type=MessageSourceType.AGENT,  # Source type is agent
-                source_id=self_agent_id,           # Source ID is the sender's agent_id
-                content=content,
-                if_response=False,                 # Initial state: not replied
-                narrative_id=None,                 # Filled after Agent replies
-                event_id=None,                     # Filled after Agent replies
-            )
-
-            logger.info(
-                f"ChatModule: Sent message to agent inbox - "
-                f"from={self_agent_id}, to={target_agent_id}, message_id={message_id}"
-            )
-
-            return f"Message sent successfully to agent {target_agent_id}! Message ID: {message_id}"
-
-        @mcp.tool()
-        async def get_inbox_status(user_id: str) -> str:
-            """
-            Get the inbox status for a user.
-
-            Args:
-                user_id: The user ID to check.
-
-            Returns:
-                A summary of the user's inbox status.
-            """
-            # Use MCP-dedicated database connection
-            db = await ChatModule.get_mcp_db_client()
-            repo = InboxRepository(db)
-
-            unread_count = await repo.get_unread_count(user_id)
-
-            if unread_count == 0:
-                return f"User {user_id} has no unread messages in their inbox."
-
-            # Get recent unread messages
-            recent_messages = await repo.get_messages(user_id, is_read=False, limit=3)
-
-            status = f"User {user_id} has {unread_count} unread message(s).\n\nRecent unread messages:\n"
-            for msg in recent_messages:
-                status += f"- [{msg.title}] {msg.content[:50]}...\n"
-
-            return status
-        
-        @mcp.tool()
-        async def get_chat_history(
-            instance_id: str,
-            limit: int = 20
-        ) -> dict:
-            """
-            Get chat history for a specified Chat Instance.
-
-            Each user has an independent Chat Instance within a Narrative, used to store that user's conversation history with the Agent.
-            When a sales manager asks about interactions with a specific customer, this tool can be used to get that customer's complete chat history.
-            Returned messages are sorted chronologically and contain both user and Agent conversation content.
-
-            Args:
-                instance_id: Chat Instance ID (format: chat_xxxxxxxx), used to locate a specific user's conversation
-                limit: Maximum number of messages to return, default 20. Set to -1 to return all
-
-            Returns:
-                dict: Dictionary containing chat history, format:
-                {
-                    "success": True/False,
-                    "instance_id": "chat_xxx",
-                    "total_messages": 10,
-                    "messages": [
-                        {"role": "user", "content": "...", "timestamp": "..."},
-                        {"role": "assistant", "content": "...", "timestamp": "..."},
-                        ...
-                    ]
-                }
-
-            Example:
-                # Get conversation history with customer Alice
-                # Assuming Alice's Chat Instance ID is "chat_abc12345"
-                get_chat_history(
-                    instance_id="chat_abc12345",
-                    limit=10
-                )
-            """
-            import json
-
-            # Use MCP-dedicated database connection
-            db = await ChatModule.get_mcp_db_client()
-
-            # Query ChatModule's Instance-based JSON Format Memory table
-            # Table name format: instance_json_format_memory_chat
-            table_name = "instance_json_format_memory_chat"
-
-            # Check if table exists
-            check_query = """
-                SELECT COUNT(*) as cnt
-                FROM information_schema.tables
-                WHERE table_schema = DATABASE()
-                AND table_name = %s
-            """
-            result = await db.execute(check_query, params=(table_name,), fetch=True)
-            table_exists = result and len(result) > 0 and result[0].get("cnt", 0) > 0
-
-            if not table_exists:
-                return {
-                    "success": False,
-                    "instance_id": instance_id,
-                    "error": f"Chat history table {table_name} does not exist",
-                    "total_messages": 0,
-                    "messages": []
-                }
-
-            # Query chat history
-            query = f"""
-                SELECT `memory` FROM `{table_name}`
-                WHERE `instance_id` = %s
-            """
-
-            try:
-                result = await db.execute(query, params=(instance_id,), fetch=True)
-
-                if not result or len(result) == 0 or not result[0].get("memory"):
-                    return {
-                        "success": True,
-                        "instance_id": instance_id,
-                        "total_messages": 0,
-                        "messages": [],
-                        "note": "This Chat Instance has no chat history yet"
-                    }
-
-                # Parse JSON format memory
-                memory_str = result[0]["memory"]
-                memory_data = json.loads(memory_str)
-                messages = memory_data.get("messages", [])
-
-                # Apply limit
-                total_messages = len(messages)
-                if limit > 0 and total_messages > limit:
-                    # Return the most recent `limit` messages
-                    messages = messages[-limit:]
-
-                # Format output
-                formatted_messages = []
-                for msg in messages:
-                    formatted_msg = {
-                        "role": msg.get("role", "unknown"),
-                        "content": msg.get("content", ""),
-                    }
-                    # Add metadata (if available)
-                    if "meta_data" in msg:
-                        meta = msg["meta_data"]
-                        if "timestamp" in meta:
-                            formatted_msg["timestamp"] = meta["timestamp"]
-                        if "event_id" in meta:
-                            formatted_msg["event_id"] = meta["event_id"]
-
-                    formatted_messages.append(formatted_msg)
-
-                return {
-                    "success": True,
-                    "instance_id": instance_id,
-                    "total_messages": total_messages,
-                    "returned_messages": len(formatted_messages),
-                    "messages": formatted_messages
-                }
-
-            except json.JSONDecodeError as e:
-                logger.error(f"ChatModule.get_chat_history: JSON parsing failed - {e}")
-                return {
-                    "success": False,
-                    "instance_id": instance_id,
-                    "error": f"Chat history data format error: {str(e)}",
-                    "total_messages": 0,
-                    "messages": []
-                }
-            except Exception as e:
-                logger.error(f"ChatModule.get_chat_history: Query failed - {e}")
-                return {
-                    "success": False,
-                    "instance_id": instance_id,
-                    "error": f"Query failed: {str(e)}",
-                    "total_messages": 0,
-                    "messages": []
-                }
-
-        @mcp.tool()
-        async def send_message_to_user_directly(agent_id: str, user_id: str, content: str) -> dict:
-            """
-            Speak to the user - This is the ONLY way to deliver your response to the user.
-
-            **CRITICAL**: Think of this as "opening your mouth to speak". All your internal reasoning,
-            tool calls, and agent loop outputs are like thoughts in your mind - completely invisible
-            to the user. The user ONLY sees what you say through this tool.
-
-            Analogy: Imagine you and the user are face-to-face:
-            - Your LLM reasoning = thinking in your head (user cannot hear)
-            - Your tool calls = actions you take silently (user cannot see)
-            - Calling this tool = opening your mouth to speak (user CAN hear)
-
-            Without calling this tool, your response stays in your head - the user receives NOTHING!
-
-            Args:
-                agent_id: Your agent ID (the speaker).
-                user_id: The user ID you are speaking to (the listener).
-                content: What you want to say to the user. This is the actual message
-                         the user will see. Make it clear, helpful, and appropriate.
-                         Which is in markdown format.
-
-            Returns:
-                A confirmation dict indicating the response was delivered successfully.
-
-            Example:
-                # After thinking and gathering information, speak to the user:
-                send_message_to_user_directly(
-                    agent_id="agent_123",
-                    user_id="user_456",
-                    content="Based on my analysis, here are the results you requested..."
-                )
-            """
-            return {
-                "success": True,
-                "message": "Response delivered to user successfully",
-                "user_id": user_id,
-                "agent_id": agent_id,
-                "content": content
-            }
-
-        return mcp
+        from xyz_agent_context.module.chat_module._chat_mcp_tools import create_chat_mcp_server
+        return create_chat_mcp_server(self.port, ChatModule.get_mcp_db_client)
 
 
     # ============================================================================= Private Helper Methods
@@ -477,21 +152,19 @@ class ChatModule(XYZBaseModule):
         """
         Extract user-visible response content from agent_loop_response
 
-        Iterates through agent_loop_response, looking for send_message_to_user_directly tool calls,
-        and extracts the content parameter as the actual content displayed to the user.
-
-        Logic is consistent with getUserVisibleResponse in the frontend chatStore.ts:
-        - Tool name ends with 'send_message_to_user_directly' (Claude SDK format: mcp__chat_module__send_message_to_user_directly)
-        - Extracts content field from tool_input/arguments
+        Iterates through agent_loop_response, looking for ALL send_message_to_user_directly
+        tool calls, and concatenates their content. Agent may call this tool multiple times
+        in a single turn (e.g. sending a greeting then a detailed answer).
 
         Args:
             agent_loop_response: Raw response list from Agent Loop, containing ProgressMessage etc.
 
         Returns:
-            str: User-visible response content; returns default message if send_message_to_user_directly was not called
+            str: Concatenated user-visible response content; returns default message if not called
         """
         from xyz_agent_context.schema import ProgressMessage
 
+        parts = []
         for response in agent_loop_response:
             # Check if it's a ProgressMessage (tool calls are wrapped as ProgressMessage)
             if isinstance(response, ProgressMessage) and response.details:
@@ -501,11 +174,15 @@ class ChatModule(XYZBaseModule):
                     arguments = response.details.get("arguments", {})
                     content = arguments.get("content", "")
                     if content:
-                        logger.debug(
-                            f"ChatModule._extract_user_visible_response: "
-                            f"Extracted reply content from {tool_name}, length {len(content)}"
-                        )
-                        return content
+                        parts.append(content)
+
+        if parts:
+            combined = "\n\n".join(parts)
+            logger.debug(
+                f"ChatModule._extract_user_visible_response: "
+                f"Extracted {len(parts)} reply(s), total length {len(combined)}"
+            )
+            return combined
 
         # send_message_to_user_directly call not found
         logger.debug(
@@ -513,6 +190,32 @@ class ChatModule(XYZBaseModule):
             "send_message_to_user_directly tool call not found, Agent did not reply to user"
         )
         return "(Agent decided no response needed)"
+
+    @staticmethod
+    def _build_activity_summary(working_source: str, meta: dict) -> str:
+        """
+        Build a human-readable activity summary for background tasks
+        where the agent chose not to send a message to the user.
+
+        Args:
+            working_source: Execution source ("job", "matrix", etc.)
+            meta: Shared meta_data dict (may contain channel_tag)
+
+        Returns:
+            Short activity description string
+        """
+        if working_source == "matrix":
+            channel_tag = meta.get("channel_tag", {})
+            room_name = channel_tag.get("room_name") or channel_tag.get("room_id", "unknown room")
+            sender = channel_tag.get("sender_name") or channel_tag.get("sender_id", "")
+            if sender:
+                return f"Handled a message from {sender} in {room_name}"
+            return f"Handled a message in {room_name}"
+
+        if working_source == "job":
+            return "Executed a background job"
+
+        return f"Background activity ({working_source})"
 
     async def hook_data_gathering(self, ctx_data: ContextData) -> ContextData:
         """
@@ -787,36 +490,67 @@ class ChatModule(XYZBaseModule):
         existing_memory = await self.event_memory_module.search_instance_json_format_memory(module_name, instance_id)
         messages = existing_memory.get("messages", []) if existing_memory else []
 
+        # Bootstrap greeting injection: if this is the first turn and bootstrap is active,
+        # prepend the static greeting as the first assistant message so DB history starts with it.
+        if len(messages) == 0 and getattr(params.ctx_data, 'bootstrap_active', False):
+            messages.append({
+                "role": "assistant",
+                "content": BOOTSTRAP_GREETING,
+                "meta_data": {
+                    "event_id": params.event_id,
+                    "timestamp": utc_now().isoformat(),
+                    "instance_id": instance_id,
+                    "bootstrap": True,
+                }
+            })
+            logger.debug("ChatModule: Prepended bootstrap greeting as first assistant message")
+
         # Append this conversation
         # Get working_source (execution source: chat/job/a2a)
         working_source = params.execution_ctx.working_source.value if params.execution_ctx else "unknown"
 
-        # User message
-        messages.append({
-            "role": "user",
-            "content": params.input_content,
-            "meta_data": {
-                "event_id": params.event_id,
-                "timestamp": utc_now().isoformat(),
-                "instance_id": instance_id,
-                "working_source": working_source
-            }
-        })
+        # Build shared meta_data fields
+        shared_meta = {
+            "event_id": params.event_id,
+            "timestamp": utc_now().isoformat(),
+            "instance_id": instance_id,
+            "working_source": working_source,
+        }
 
-        # Assistant message - Extract actual reply content from send_message_to_user_directly tool call
-        # Instead of using final_output (which is the Agent's internal thinking result)
+        # Inject channel_tag if available (set by Triggers for source tracking)
+        if params.ctx_data and params.ctx_data.extra_data:
+            channel_tag_data = params.ctx_data.extra_data.get("channel_tag")
+            if channel_tag_data:
+                # Ensure channel_tag is always stored as dict (not ChannelTag object)
+                if hasattr(channel_tag_data, "to_dict"):
+                    channel_tag_data = channel_tag_data.to_dict()
+                shared_meta["channel_tag"] = channel_tag_data
+
+        # Extract the user-visible response (from send_message_to_user_directly tool call)
         assistant_content = self._extract_user_visible_response(params.agent_loop_response)
+        is_no_response = assistant_content == "(Agent decided no response needed)"
 
-        messages.append({
-            "role": "assistant",
-            "content": assistant_content,
-            "meta_data": {
-                "event_id": params.event_id,
-                "timestamp": utc_now().isoformat(),
-                "instance_id": instance_id,
-                "working_source": working_source
-            }
-        })
+        if working_source == "chat" or not is_no_response:
+            # Normal conversation: store user message + assistant reply
+            messages.append({
+                "role": "user",
+                "content": params.input_content,
+                "meta_data": {**shared_meta},
+            })
+            messages.append({
+                "role": "assistant",
+                "content": assistant_content,
+                "meta_data": {**shared_meta},
+            })
+        else:
+            # Background task (job/matrix) where agent chose not to message user:
+            # Store a lightweight activity record instead of a fake conversation pair
+            activity_summary = self._build_activity_summary(working_source, shared_meta)
+            messages.append({
+                "role": "assistant",
+                "content": activity_summary,
+                "meta_data": {**shared_meta, "message_type": "activity"},
+            })
 
         # Save updated history (using instance_id)
         memory = {

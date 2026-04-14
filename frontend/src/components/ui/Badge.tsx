@@ -62,12 +62,6 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
           size === 'md' && 'h-6 px-2.5 text-xs',
           size === 'lg' && 'h-7 px-3 text-sm',
 
-          // Glow effect
-          glow && variant === 'accent' && 'shadow-[0_0_12px_var(--accent-glow)]',
-          glow && variant === 'success' && 'shadow-[0_0_12px_rgba(0,255,136,0.2)]',
-          glow && variant === 'warning' && 'shadow-[0_0_12px_rgba(251,191,36,0.2)]',
-          glow && variant === 'error' && 'shadow-[0_0_12px_rgba(255,77,109,0.2)]',
-
           className
         )}
         {...props}
@@ -83,15 +77,6 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
               variant === 'error' && 'bg-[var(--color-error)]',
               variant === 'default' && 'bg-[var(--text-tertiary)]',
               'animate-pulse'
-            )} />
-            <span className={cn(
-              'absolute h-2 w-2 rounded-full',
-              variant === 'accent' && 'bg-[var(--accent-primary)]',
-              variant === 'success' && 'bg-[var(--color-success)]',
-              variant === 'warning' && 'bg-[var(--color-warning)]',
-              variant === 'error' && 'bg-[var(--color-error)]',
-              variant === 'default' && 'bg-[var(--text-tertiary)]',
-              'animate-ping opacity-75'
             )} />
           </span>
         )}

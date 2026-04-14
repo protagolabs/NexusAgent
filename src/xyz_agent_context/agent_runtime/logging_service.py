@@ -79,11 +79,8 @@ class LoggingService:
 
     @staticmethod
     def _get_default_log_dir() -> Path:
-        """Get the default log directory (logs folder under the project root)"""
-        current_file = Path(__file__).resolve()
-        # agent_runtime/logging_service.py -> agent_runtime -> xyz_agent_context -> src -> project_root
-        project_root = current_file.parents[3]
-        return project_root / "logs"
+        """Get the default log directory (~/.narranexus/logs/agents/)."""
+        return Path.home() / ".narranexus" / "logs" / "agents"
 
     @property
     def current_log_file(self) -> Optional[Path]:
@@ -150,6 +147,9 @@ class LoggingService:
                 logger.remove(self._handler_id)
             except ValueError:
                 # Handler may have already been removed
+                pass
+            except OSError:
+                # Log file may have been deleted before compression could run
                 pass
             self._handler_id = None
             self._current_log_file = None
