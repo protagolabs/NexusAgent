@@ -15,8 +15,11 @@ agent_workspace/
 requirements/
 !./frontend/src/lib/api.ts
 !./frontend/src/lib/utils.ts
+# Runtime dumps: conversation_dumps/, trajectories/, narratives/
 data
 experiment_scripts/test_data
+# LoCoMo benchmark data (~117MB) — pulled locally, not versioned
+benchmark/locomo_eval/
 CLAUDE.md
 sessions/
 new_task/

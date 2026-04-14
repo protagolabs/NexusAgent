@@ -191,6 +191,16 @@ async def step_1_select_narrative(
     ctx.narrative_list = narrative_list
     ctx.query_embedding = query_embedding
 
+    # Capture the narrative-selection decision for the conversation dump.
+    # Also includes continuity detection hints if surfaced on the result.
+    ctx.continuity_result = {
+        "selection_method": selection_method,
+        "selection_reason": selection_reason,
+        "retrieval_method": retrieval_method,
+        "is_new": is_new,
+        "narrative_count": len(narrative_list),
+    }
+
     logger.success(
         f"✅ Narratives selected: count={len(narrative_list)}, "
         f"method={selection_method}, reason={selection_reason[:50]}..."

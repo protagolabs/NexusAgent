@@ -114,6 +114,14 @@ class RunContext:
     substeps_4: List[str] = field(default_factory=list)
     substeps_5: List[str] = field(default_factory=list)
 
+    # ===== Conversation Dump (feeds trace.md) =====
+    # Populated opportunistically; every field may stay None if the dump
+    # feature is disabled or the producing step didn't populate it.
+    dump_service: Optional[Any] = None  # ConversationDumpService (circular import)
+    continuity_result: Optional[Any] = None  # ContinuityResult from Step 1
+    execution_state: Optional[Any] = None  # ExecutionState snapshot after Step 3
+    llm_usage: Optional[Dict[str, Any]] = None  # token usage from Step 3
+
     def __post_init__(self):
         """Post-initialization processing: merge pass_mcp_urls into mcp_urls"""
         if self.pass_mcp_urls:

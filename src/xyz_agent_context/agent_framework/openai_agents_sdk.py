@@ -38,7 +38,22 @@ class OpenAIAgentsSDK:
                 openai_client=AsyncOpenAI(api_key=settings.openai_api_key),
             ),
         )
-        
+
+        # Conversation dump — OpenAI Runner is black-box, so we only record
+        # the input snapshot. No stream events available.
+        try:
+            from xyz_agent_context.agent_runtime.dump_context import get_current_dump
+            _dump = get_current_dump()
+            if _dump is not None:
+                _dump.record_initial_request({
+                    "framework": "openai_agents_sdk",
+                    "instructions": instructions,
+                    "user_input": user_input,
+                    "output_type": repr(output_type) if output_type else None,
+                })
+        except Exception:
+            pass
+
         result = await Runner.run(agent, user_input)
-        
+
         return result

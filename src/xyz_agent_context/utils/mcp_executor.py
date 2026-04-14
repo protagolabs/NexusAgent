@@ -5,6 +5,7 @@
 We can use this script to execute the mcp tools independently.
 """
 
+import time
 from urllib.parse import urlparse
 
 from mcp.client.session import ClientSession
@@ -65,42 +66,74 @@ async def mcp_tool_executor(mcp_server_url: str, mcp_tool_name: str, args: dict)
         ValueError: When the tool name does not exist or URL scheme is unsupported
         ConnectionError: When unable to connect to the MCP server
     """
-    # 1. Select appropriate transport method based on URL
-    client_context = _get_mcp_client(mcp_server_url)
+    # Conversation dump — capture args / output / latency / error for every
+    # tool invocation when enabled. No-op if disabled.
+    try:
+        from xyz_agent_context.agent_runtime.dump_context import get_current_dump
+        _dump = get_current_dump()
+    except Exception:
+        _dump = None
 
-    # 2. Connect to MCP server and execute tool
-    async with client_context as (read_stream, write_stream, *_):
-        async with ClientSession(read_stream, write_stream) as session:
-            # Initialize connection
-            await session.initialize()
+    t0 = time.monotonic()
+    captured_output = None
+    captured_error = None
 
-            # 3. Get available tools list and verify tool exists
-            tools_response = await session.list_tools()
-            available_tools = {tool.name: tool for tool in tools_response.tools}
+    try:
+        # 1. Select appropriate transport method based on URL
+        client_context = _get_mcp_client(mcp_server_url)
 
-            if mcp_tool_name not in available_tools:
-                available_names = list(available_tools.keys())
-                raise ValueError(
-                    f"Tool '{mcp_tool_name}' does not exist. Available tools: {available_names}"
+        # 2. Connect to MCP server and execute tool
+        async with client_context as (read_stream, write_stream, *_):
+            async with ClientSession(read_stream, write_stream) as session:
+                # Initialize connection
+                await session.initialize()
+
+                # 3. Get available tools list and verify tool exists
+                tools_response = await session.list_tools()
+                available_tools = {tool.name: tool for tool in tools_response.tools}
+
+                if mcp_tool_name not in available_tools:
+                    available_names = list(available_tools.keys())
+                    raise ValueError(
+                        f"Tool '{mcp_tool_name}' does not exist. Available tools: {available_names}"
+                    )
+
+                # 4. Call the specified tool
+                result = await session.call_tool(mcp_tool_name, arguments=args)
+
+                # 5. Parse and return results
+                if result.content:
+                    # Extract text content
+                    text_parts = []
+                    for content_block in result.content:
+                        if isinstance(content_block, types.TextContent):
+                            text_parts.append(content_block.text)
+                        elif isinstance(content_block, types.ImageContent):
+                            text_parts.append(f"[Image: {content_block.mimeType}]")
+                        elif isinstance(content_block, types.EmbeddedResource):
+                            text_parts.append(f"[Embedded resource: {content_block.resource}]")
+                    captured_output = "\n".join(text_parts) if text_parts else ""
+                    return captured_output
+
+                captured_output = repr(result)
+                return result
+    except Exception as exc:
+        captured_error = repr(exc)
+        raise
+    finally:
+        if _dump is not None:
+            try:
+                await _dump.on_mcp_call(
+                    server_url=mcp_server_url,
+                    tool_name=mcp_tool_name,
+                    args=args,
+                    output=captured_output,
+                    latency_s=time.monotonic() - t0,
+                    error=captured_error,
                 )
-
-            # 4. Call the specified tool
-            result = await session.call_tool(mcp_tool_name, arguments=args)
-
-            # 5. Parse and return results
-            if result.content:
-                # Extract text content
-                text_parts = []
-                for content_block in result.content:
-                    if isinstance(content_block, types.TextContent):
-                        text_parts.append(content_block.text)
-                    elif isinstance(content_block, types.ImageContent):
-                        text_parts.append(f"[Image: {content_block.mimeType}]")
-                    elif isinstance(content_block, types.EmbeddedResource):
-                        text_parts.append(f"[Embedded resource: {content_block.resource}]")
-                return "\n".join(text_parts) if text_parts else ""
-
-            return result
+            except Exception:
+                # Dump failures must never break the executor.
+                pass
 
 
 async def list_mcp_tools(mcp_server_url: str) -> list[dict]:

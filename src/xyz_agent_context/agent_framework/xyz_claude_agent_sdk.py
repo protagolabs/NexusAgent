@@ -95,6 +95,27 @@ class ClaudeAgentSDK:
         )   # TODO: There are actually many more parameters available; see: https://docs.claude.com/en/docs/agent-sdk/python#message. These should be fully supported and passed through in the future.
         
         
+        # Conversation dump hook — record the initial request and, later, every
+        # stream event. No-op when CONVERSATION_DUMP_ENABLED is not set.
+        _dump = None
+        try:
+            from xyz_agent_context.agent_runtime.dump_context import get_current_dump
+            _dump = get_current_dump()
+            if _dump is not None:
+                _dump.record_initial_request({
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": this_turn_user_message}],
+                    "mcp_server_urls": mcp_server_urls,
+                    "claude_agent_mcp_dict": claude_agent_mcp_dict,
+                    "options": {
+                        "permission_mode": "bypassPermissions",
+                        "max_buffer_size": 50 * 1024 * 1024,
+                        "include_partial_messages": True,
+                    },
+                })
+        except Exception as _dump_exc:
+            logger.debug(f"[ConversationDump] initial_request hook failed: {_dump_exc}")
+
         # Step 2: Create a ClaudeSDKClient instance, send the user message, and receive the response
         # TODO: The output adaptation may not be thorough enough and the display may not be ideal; needs more experimentation and design
         client = None
@@ -103,6 +124,13 @@ class ClaudeAgentSDK:
             await client.connect()
             await client.query(this_turn_user_message)
             async for message in client.receive_response():
+                # Record the raw SDK message for the conversation dump before
+                # transferring it downstream.
+                if _dump is not None:
+                    try:
+                        await _dump.on_stream_event(_message_to_dict(message))
+                    except Exception as _dump_exc:
+                        logger.debug(f"[ConversationDump] on_stream_event failed: {_dump_exc}")
                 yield output_transfer(message, transfer_type="claude_agent_sdk", streaming=streaming)
         except GeneratorExit:
             # Gracefully handle when the async generator is terminated early (e.g., user closes the connection)
@@ -124,3 +152,58 @@ class ClaudeAgentSDK:
                 except Exception as e:
                     logger.warning(f"Error during client disconnect: {e}")
 
+
+_BLOCK_CLASS_TO_TYPE = {
+    "TextBlock": "text",
+    "ThinkingBlock": "thinking",
+    "ToolUseBlock": "tool_use",
+    "ToolResultBlock": "tool_result",
+    "ImageBlock": "image",
+    "DocumentBlock": "document",
+}
+
+
+def _block_to_dict(block: Any) -> Any:
+    """Serialize a content block, injecting a canonical `type` field based on
+    the block's class name. Claude SDK block objects expose `type` as a
+    @property that does not appear in __dict__, so we reintroduce it here."""
+    if not hasattr(block, "__dict__"):
+        return block
+    out = {k: v for k, v in block.__dict__.items() if not k.startswith("_")}
+    if "type" not in out:
+        out["type"] = _BLOCK_CLASS_TO_TYPE.get(type(block).__name__, type(block).__name__)
+    return out
+
+
+def _message_to_dict(message: Any) -> dict:
+    """
+    Convert a Claude Agent SDK message object into a JSON-safe dict for
+    the conversation dump. Works for both pydantic-like messages and
+    arbitrary objects; never raises.
+    """
+    try:
+        result = {"_class": type(message).__name__}
+        if hasattr(message, "model_dump"):
+            try:
+                result.update(message.model_dump(mode="json"))
+                return result
+            except Exception:
+                pass
+        if hasattr(message, "__dict__"):
+            for k, v in message.__dict__.items():
+                if k.startswith("_"):
+                    continue
+                try:
+                    # Surface nested content blocks as dicts with proper `type`
+                    if isinstance(v, list):
+                        result[k] = [_block_to_dict(item) for item in v]
+                    elif hasattr(v, "__dict__"):
+                        result[k] = _block_to_dict(v)
+                    else:
+                        result[k] = v
+                except Exception:
+                    result[k] = repr(v)
+            return result
+        return {"_class": type(message).__name__, "repr": repr(message)}
+    except Exception as exc:
+        return {"_class": "Unknown", "error": repr(exc)}

@@ -44,6 +44,8 @@ from xyz_agent_context.module import HookManager
 # Extracted services
 from xyz_agent_context.agent_runtime.response_processor import ResponseProcessor
 from xyz_agent_context.agent_runtime.logging_service import LoggingService
+from xyz_agent_context.agent_runtime.conversation_dump_service import ConversationDumpService
+from xyz_agent_context.agent_runtime.dump_context import set_current_dump, reset_current_dump
 
 # Step functions
 from xyz_agent_context.agent_runtime._agent_runtime_steps import (
@@ -239,6 +241,18 @@ class AgentRuntime:
         )
 
         # =============================================================================
+        # ConversationDump setup (opt-in via CONVERSATION_DUMP_ENABLED=1)
+        # =============================================================================
+        # Service is always constructed; when the env flag is off every method
+        # is a no-op. The ContextVar lets deeper layers (SDK wrapper, MCP
+        # executor) find this session without receiving ctx.
+        dump_service = ConversationDumpService(
+            agent_id=agent_id, user_id=user_id, event_id=None
+        )
+        ctx.dump_service = dump_service
+        dump_token = set_current_dump(dump_service)
+
+        # =============================================================================
         # Step 0: Initialization
         # =============================================================================
         # [Function] Execute all initialization work
@@ -260,6 +274,12 @@ class AgentRuntime:
             ctx, db_client, self.event_service, self.session_service
         ):
             yield msg
+
+        # After Step 0 the Event is created — tell the dump service so the
+        # output directory can include the real event_id, then create the dir.
+        if ctx.event is not None:
+            dump_service.set_event_id(ctx.event.id)
+        await dump_service.start()
 
         # =============================================================================
         # Step 1: Select Narrative
@@ -521,6 +541,31 @@ class AgentRuntime:
                 narrative_service=self.narrative_service,
                 execute_callback_instance=self._execute_callback_instance
             )
+
+        # Finalize conversation dump (writes manifest/trace.md/reconstructed.json).
+        # No-op when CONVERSATION_DUMP_ENABLED is not set.
+        try:
+            final_output = None
+            if ctx.event is not None and getattr(ctx.event, "final_output", None):
+                final_output = ctx.event.final_output
+            elif getattr(ctx, "execution_result", None) is not None:
+                final_output = getattr(ctx.execution_result, "final_output", None)
+
+            execution_state_snapshot = None
+            exec_state = getattr(ctx, "execution_state", None)
+            if exec_state is not None and hasattr(exec_state, "get_all_steps_as_list"):
+                try:
+                    execution_state_snapshot = exec_state.get_all_steps_as_list()
+                except Exception:
+                    execution_state_snapshot = None
+
+            await dump_service.finalize(
+                final_output=final_output,
+                usage=getattr(ctx, "llm_usage", None),
+                execution_state=execution_state_snapshot,
+            )
+        finally:
+            reset_current_dump(dump_token)
 
         # Clean up log handlers
         self._logging_service.cleanup()

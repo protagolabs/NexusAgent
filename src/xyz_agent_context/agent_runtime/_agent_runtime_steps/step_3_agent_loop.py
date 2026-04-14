@@ -150,6 +150,9 @@ async def step_3_agent_loop(
     if not os.path.exists(agent_working_path):
         os.makedirs(agent_working_path)
 
+    import time as _time
+    _loop_t0 = _time.monotonic()
+
     async for response in ClaudeAgentSDK(working_path=agent_working_path).agent_loop(
         messages=messages,
         mcp_server_urls=ctx.mcp_urls,
@@ -163,6 +166,19 @@ async def step_3_agent_loop(
 
     # After Agent Loop completes, record final output
     state = state.finalize()
+
+    # Record timing + execution state on ctx for the conversation dump.
+    try:
+        ctx.execution_state = state
+        dump_svc = getattr(ctx, "dump_service", None)
+        if dump_svc is not None:
+            dump_svc.record_step_time("step_3_agent_loop", _time.monotonic() - _loop_t0)
+        # Best-effort token usage aggregation from the recorded stream events.
+        usage = _aggregate_usage_from_responses(agent_loop_response)
+        if usage:
+            ctx.llm_usage = usage
+    except Exception as _exc:
+        logger.debug(f"[ConversationDump] step_3 timing/usage capture failed: {_exc}")
 
     # Update 3.4 sub-step to completed status
     substeps[-1] = (
@@ -215,3 +231,39 @@ async def step_3_agent_loop(
         agent_loop_response=agent_loop_response,
         ctx_data=context.ctx_data,
     )
+
+
+def _aggregate_usage_from_responses(agent_loop_response) -> dict:
+    """Sum input/output/cache tokens across collected SDK responses.
+
+    Returns an empty dict if no usage could be extracted. Never raises.
+    """
+    totals = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+    }
+    found_any = False
+    try:
+        for r in agent_loop_response or []:
+            usage = None
+            if isinstance(r, dict):
+                usage = r.get("usage")
+            else:
+                usage = getattr(r, "usage", None)
+            if usage is None:
+                continue
+            found_any = True
+            if not isinstance(usage, dict):
+                try:
+                    usage = usage.__dict__
+                except Exception:
+                    continue
+            for k in list(totals.keys()):
+                v = usage.get(k)
+                if isinstance(v, (int, float)):
+                    totals[k] += v
+    except Exception:
+        return {}
+    return totals if found_any else {}

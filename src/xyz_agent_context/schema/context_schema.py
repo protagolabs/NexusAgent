@@ -68,3 +68,4 @@ class ContextRuntimeOutput(BaseModel):
     messages: List[Dict[str, Any]]  # messages list (includes system prompt and history messages)
     mcp_urls: Dict[str, str]  # MCP server URLs (module_name -> url)
     ctx_data: ContextData  # ContextData (contains all collected data)
+    system_prompt: str = ""  # Assembled system prompt (exposed for debugging/dump)

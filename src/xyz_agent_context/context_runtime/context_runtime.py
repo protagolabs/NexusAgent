@@ -174,8 +174,27 @@ class ContextRuntime:
         )
         logger.success(f"    │ ✅ Framework input built: {len(messages)} messages, {len(mcp_urls)} MCP servers")
 
+        # Conversation dump: snapshot the final context before handing off to
+        # the agent framework. No-op when dump is disabled.
+        try:
+            from xyz_agent_context.agent_runtime.dump_context import get_current_dump
+            _dump = get_current_dump()
+            if _dump is not None:
+                await _dump.snapshot_context(
+                    system_prompt=system_prompt,
+                    messages=messages,
+                    mcp_urls=mcp_urls,
+                    narrative_list=narrative_list,
+                    load_result=None,  # not available here; captured via ctx earlier
+                    tools=None,        # resolved inside SDK wrapper
+                )
+        except Exception as _dump_exc:
+            logger.warning(f"[ConversationDump] snapshot hook failed: {_dump_exc}")
+
         logger.info("    └─ ContextRuntime.run() completed")
-        return ContextRuntimeOutput(messages=messages, mcp_urls=mcp_urls, ctx_data=ctx_data)
+        return ContextRuntimeOutput(
+            messages=messages, mcp_urls=mcp_urls, ctx_data=ctx_data, system_prompt=system_prompt
+        )
 
 
     async def build_module_instructions(
