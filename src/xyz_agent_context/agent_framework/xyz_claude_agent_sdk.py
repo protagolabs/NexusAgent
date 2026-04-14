@@ -174,6 +174,30 @@ class ClaudeAgentSDK:
         # 和 complete AssistantMessage 都会携带同一个 ToolUseBlock，导致重复
         # 的 tool_call_item。通过 tool_call_id 去重，只保留首次出现。
         seen_tool_call_ids: set[str] = set()
+
+        # Conversation dump — record initial request; later also every stream event.
+        # No-op when CONVERSATION_DUMP_ENABLED is not set.
+        _dump = None
+        try:
+            from xyz_agent_context.agent_runtime.dump_context import get_current_dump
+            _dump = get_current_dump()
+            if _dump is not None:
+                _dump.record_initial_request({
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": this_turn_user_message}],
+                    "mcp_server_urls": mcp_server_urls,
+                    "claude_agent_mcp_dict": claude_agent_mcp_dict,
+                    "model": claude_config.model,
+                    "options": {
+                        "permission_mode": "bypassPermissions",
+                        "max_turns": 100,
+                        "max_buffer_size": 50 * 1024 * 1024,
+                        "include_partial_messages": True,
+                    },
+                })
+        except Exception as _dump_exc:
+            logger.debug(f"[ConversationDump] initial_request hook failed: {_dump_exc}")
+
         try:
             client = ClaudeSDKClient(options=options)
             logger.info("[ClaudeAgentSDK] Connecting to Claude Code CLI...")
@@ -214,6 +238,14 @@ class ClaudeAgentSDK:
                 msg_type = type(message).__name__
                 if message_count <= 5 or message_count % 20 == 0:
                     logger.debug(f"[ClaudeAgentSDK] Message #{message_count}: {msg_type}")
+
+                # Conversation dump — record the raw SDK message before transfer.
+                if _dump is not None:
+                    try:
+                        await _dump.on_stream_event(_message_to_dict(message))
+                    except Exception as _dump_exc:
+                        logger.debug(f"[ConversationDump] on_stream_event failed: {_dump_exc}")
+
                 # 检测 AssistantMessage 的 error 字段（认证失败、额度不足等）
                 if msg_type == "AssistantMessage" and hasattr(message, 'error') and message.error:
                     logger.error(f"[ClaudeAgentSDK] Claude API 返回错误: {message.error}")

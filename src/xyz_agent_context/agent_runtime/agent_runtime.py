@@ -564,6 +564,8 @@ class AgentRuntime:
         _bg_start = _time.monotonic()
         _agent_id = ctx.agent_id
         _logging_service = self._logging_service  # capture ref for background task
+        _dump_service_ref = dump_service           # capture for BG finalize
+        _dump_token_ref = dump_token
 
         async def _run_hooks_background():
             """Run Step 5 hooks + Step 6 callbacks in background."""
@@ -594,6 +596,36 @@ class AgentRuntime:
                     f"[BG] Steps 5-6 failed for {_agent_id} after {elapsed:.1f}s: {e}"
                 )
             finally:
+                # Finalize conversation dump AFTER hooks have run (writes
+                # manifest/trace.md/reconstructed.json). No-op if disabled.
+                try:
+                    final_output = None
+                    if ctx.event is not None and getattr(ctx.event, "final_output", None):
+                        final_output = ctx.event.final_output
+                    elif getattr(ctx, "execution_result", None) is not None:
+                        final_output = getattr(ctx.execution_result, "final_output", None)
+
+                    execution_state_snapshot = None
+                    exec_state = getattr(ctx, "execution_state", None)
+                    if exec_state is not None and hasattr(exec_state, "get_all_steps_as_list"):
+                        try:
+                            execution_state_snapshot = exec_state.get_all_steps_as_list()
+                        except Exception:
+                            execution_state_snapshot = None
+
+                    await _dump_service_ref.finalize(
+                        final_output=final_output,
+                        usage=getattr(ctx, "llm_usage", None),
+                        execution_state=execution_state_snapshot,
+                    )
+                except Exception as _dump_exc:
+                    logger.warning(f"[ConversationDump] BG finalize failed: {_dump_exc}")
+                finally:
+                    try:
+                        reset_current_dump(_dump_token_ref)
+                    except Exception:
+                        pass
+
                 clear_cost_context()
                 # Clean up the agent log file handler AFTER background work finishes,
                 # so all [BG] log lines are captured in the agent's .log file.
