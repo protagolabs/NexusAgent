@@ -7,10 +7,8 @@ import type {
   JobListResponse,
   JobDetailResponse,
   CancelJobResponse,
-  InboxListResponse,
-  MarkReadResponse,
   AgentInboxListResponse,
-  MarkRespondedResponse,
+  MarkReadResponse,
   AwarenessResponse,
   ClearHistoryResponse,
   SocialNetworkResponse,
@@ -18,6 +16,7 @@ import type {
   SocialNetworkSearchResponse,
   ChatHistoryResponse,
   SimpleChatHistoryResponse,
+  EventLogResponse,
   CreateAgentResponse,
   UpdateAgentResponse,
   DeleteAgentResponse,
@@ -35,40 +34,18 @@ import type {
   RAGFileDeleteResponse,
   CreateJobComplexRequest,
   CreateJobComplexResponse,
+  LoginResponse,
+  AgentListResponse,
+  CreateUserResponse,
+  UpdateTimezoneResponse,
   SkillListResponse,
   SkillOperationResponse,
   SkillStudyResponse,
+  CostResponse,
+  SkillEnvConfigResponse,
+  EmbeddingStatusResponse,
+  EmbeddingRebuildResponse,
 } from '@/types';
-
-// Auth types
-export interface LoginResponse {
-  success: boolean;
-  user_id?: string;
-  error?: string;
-}
-
-export interface AgentInfo {
-  agent_id: string;
-  name?: string;
-  description?: string;
-  status?: string;
-  created_at?: string;
-  is_public?: boolean;
-  created_by?: string;
-}
-
-export interface AgentListResponse {
-  success: boolean;
-  agents: AgentInfo[];
-  count: number;
-  error?: string;
-}
-
-export interface CreateUserResponse {
-  success: boolean;
-  user_id?: string;
-  error?: string;
-}
 
 // In development, use relative paths (Vite proxy handles it)
 // In production, can be configured via environment variable
@@ -128,42 +105,19 @@ class ApiClient {
     });
   }
 
-  // Inbox API
-  async getInbox(userId: string, isRead?: boolean): Promise<InboxListResponse> {
-    let url = `/api/inbox?user_id=${encodeURIComponent(userId)}`;
-    if (isRead !== undefined) url += `&is_read=${isRead}`;
-    return this.request<InboxListResponse>(url);
-  }
-
-  async markMessageRead(messageId: string): Promise<MarkReadResponse> {
-    return this.request<MarkReadResponse>(
-      `/api/inbox/${encodeURIComponent(messageId)}/read`,
-      { method: 'PUT' }
-    );
-  }
-
-  async markAllRead(userId: string): Promise<MarkReadResponse> {
-    return this.request<MarkReadResponse>(
-      `/api/inbox/read-all?user_id=${encodeURIComponent(userId)}`,
-      { method: 'PUT' }
-    );
-  }
-
-  // Agent Inbox API
-  async getAgentInbox(agentId: string, sourceType?: string, ifResponse?: boolean): Promise<AgentInboxListResponse> {
+  // Agent Inbox API (Matrix channel messages)
+  async getAgentInbox(agentId: string, isRead?: boolean, limit?: number): Promise<AgentInboxListResponse> {
     let url = `/api/agent-inbox?agent_id=${encodeURIComponent(agentId)}`;
-    if (sourceType) url += `&source_type=${encodeURIComponent(sourceType)}`;
-    if (ifResponse !== undefined) url += `&if_response=${ifResponse}`;
+    if (isRead !== undefined) url += `&is_read=${isRead}`;
+    if (limit !== undefined) url += `&limit=${limit}`;
     return this.request<AgentInboxListResponse>(url);
   }
 
-  async markAgentMessageResponded(messageId: string, narrativeId?: string, eventId?: string): Promise<MarkRespondedResponse> {
-    let url = `/api/agent-inbox/${encodeURIComponent(messageId)}/respond`;
-    const params: string[] = [];
-    if (narrativeId) params.push(`narrative_id=${encodeURIComponent(narrativeId)}`);
-    if (eventId) params.push(`event_id=${encodeURIComponent(eventId)}`);
-    if (params.length > 0) url += `?${params.join('&')}`;
-    return this.request<MarkRespondedResponse>(url, { method: 'PUT' });
+  async markAgentMessageRead(messageId: string): Promise<MarkReadResponse> {
+    return this.request<MarkReadResponse>(
+      `/api/agent-inbox/${encodeURIComponent(messageId)}/read`,
+      { method: 'PUT' }
+    );
   }
 
   // Agents API
@@ -216,13 +170,20 @@ class ApiClient {
     return this.request<ChatHistoryResponse>(url);
   }
 
-  async getSimpleChatHistory(agentId: string, userId: string, limit: number = 20): Promise<SimpleChatHistoryResponse> {
+  async getSimpleChatHistory(agentId: string, userId: string, limit: number = 20, offset: number = 0): Promise<SimpleChatHistoryResponse> {
     const params = new URLSearchParams({
       user_id: userId,
       limit: limit.toString(),
+      offset: offset.toString(),
     });
     return this.request<SimpleChatHistoryResponse>(
       `/api/agents/${encodeURIComponent(agentId)}/simple-chat-history?${params}`
+    );
+  }
+
+  async getEventLog(agentId: string, eventId: string): Promise<EventLogResponse> {
+    return this.request<EventLogResponse>(
+      `/api/agents/${encodeURIComponent(agentId)}/event-log/${encodeURIComponent(eventId)}`
     );
   }
 
@@ -240,19 +201,18 @@ class ApiClient {
     });
   }
 
-  async createUser(userId: string, adminSecretKey: string, displayName?: string): Promise<CreateUserResponse> {
+  async createUser(userId: string, displayName?: string): Promise<CreateUserResponse> {
     return this.request<CreateUserResponse>('/api/auth/create-user', {
       method: 'POST',
       body: JSON.stringify({
         user_id: userId,
-        admin_secret_key: adminSecretKey,
         display_name: displayName,
       }),
     });
   }
 
-  async updateTimezone(userId: string, timezone: string): Promise<{ success: boolean; timezone?: string; error?: string }> {
-    return this.request<{ success: boolean; timezone?: string; error?: string }>('/api/auth/timezone', {
+  async updateTimezone(userId: string, timezone: string): Promise<UpdateTimezoneResponse> {
+    return this.request<UpdateTimezoneResponse>('/api/auth/timezone', {
       method: 'POST',
       body: JSON.stringify({
         user_id: userId,
@@ -528,6 +488,14 @@ class ApiClient {
     );
   }
 
+  // Cost API
+  async getCosts(agentId: string, days: number = 7): Promise<CostResponse> {
+    const params = new URLSearchParams({ days: days.toString() });
+    return this.request<CostResponse>(
+      `/api/agents/${encodeURIComponent(agentId)}/costs?${params}`
+    );
+  }
+
   // Skill Study API
   async studySkill(
     skillName: string,
@@ -556,6 +524,51 @@ class ApiClient {
     return this.request<SkillStudyResponse>(
       `/api/skills/${encodeURIComponent(skillName)}/study?${params}`
     );
+  }
+
+  // Skill Env Config API
+  async getSkillEnvConfig(
+    skillName: string,
+    agentId: string,
+    userId: string
+  ): Promise<SkillEnvConfigResponse> {
+    const params = new URLSearchParams({
+      agent_id: agentId,
+      user_id: userId,
+    });
+    return this.request<SkillEnvConfigResponse>(
+      `/api/skills/${encodeURIComponent(skillName)}/env?${params}`
+    );
+  }
+
+  async setSkillEnvConfig(
+    skillName: string,
+    agentId: string,
+    userId: string,
+    envConfig: Record<string, string>
+  ): Promise<SkillEnvConfigResponse> {
+    const params = new URLSearchParams({
+      agent_id: agentId,
+      user_id: userId,
+    });
+    return this.request<SkillEnvConfigResponse>(
+      `/api/skills/${encodeURIComponent(skillName)}/env?${params}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ env_config: envConfig }),
+      }
+    );
+  }
+  // Embedding Status API
+  async getEmbeddingStatus(): Promise<EmbeddingStatusResponse> {
+    return this.request<EmbeddingStatusResponse>('/api/providers/embeddings/status');
+  }
+
+  async rebuildEmbeddings(): Promise<EmbeddingRebuildResponse> {
+    return this.request<EmbeddingRebuildResponse>('/api/providers/embeddings/rebuild', {
+      method: 'POST',
+    });
   }
 }
 

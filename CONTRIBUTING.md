@@ -1,4 +1,4 @@
-# Contributing to NexusMind
+# Contributing to NarraNexus
 
 Thanks for your interest in contributing. This document covers the conventions we use for issues, pull requests, and commits.
 
@@ -152,8 +152,8 @@ Extended description if needed...
 
 ```bash
 # Clone and install
-git clone https://github.com/your-org/nexus-mind.git
-cd nexus-mind
+git clone https://github.com/your-org/narra-nexus.git
+cd narra-nexus
 uv sync
 
 # Copy and configure environment

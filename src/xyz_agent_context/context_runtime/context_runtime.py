@@ -32,6 +32,7 @@ from xyz_agent_context.context_runtime.prompts import (
     AUXILIARY_NARRATIVES_HEADER,
     MODULE_INSTRUCTIONS_HEADER,
     SHORT_TERM_MEMORY_HEADER,
+    BOOTSTRAP_INJECTION_PROMPT,
 )
 
 
@@ -85,6 +86,7 @@ class ContextRuntime:
         query_embedding: Optional[List[float]] = None,  # Used for intelligent Event selection
         created_job_ids: Optional[List[str]] = None,  # Job IDs created this turn (to distinguish "created this turn" from "previously existing")
         evermemos_memories: Optional[Dict[str, Any]] = None,  # Phase 2: EverMemOS cache
+        trigger_extra_data: Optional[Dict[str, Any]] = None,  # Trigger 层附加数据（channel_tag 等）
     ) -> ContextRuntimeOutput:
         logger.info("    ┌─ ContextRuntime.run() started")
         logger.info(f"    │ Narratives: {len(narrative_list)}, Instances: {len(active_instances)}")
@@ -103,8 +105,12 @@ class ContextRuntime:
             model_name="sonnet-4",
             working_source=working_source
         )
-        # Pass the Top-K Narrative ID list to Module (used for merging conversation history)
+        # Merge Trigger 层传入的附加数据（如 channel_tag）
         ctx_data.extra_data = ctx_data.extra_data or {}
+        if trigger_extra_data:
+            ctx_data.extra_data.update(trigger_extra_data)
+
+        # Pass the Top-K Narrative ID list to Module (used for merging conversation history)
         if narrative_list:
             ctx_data.extra_data["narrative_ids"] = [n.id for n in narrative_list]
             logger.debug(f"    │ ContextData initialized with narrative_id={main_narrative_id}, narrative_ids={len(narrative_list)}")
@@ -130,7 +136,7 @@ class ContextRuntime:
         # )
         messages = []  # Temporarily set to empty; ChatModule.hook_data_gathering() will populate ctx_data.chat_history
         selected_events = []  # Temporarily not selecting Events
-        logger.success(f"    │ ✅ Narrative data extracted (Event selection disabled, using ChatModule for history)")
+        logger.success("    │ ✅ Narrative data extracted (Event selection disabled, using ChatModule for history)")
 
         # Step 2: Gather data from Modules (executed for each instance)
         logger.info("    │ Step 1-2: Gathering information from Module Instances")
@@ -421,6 +427,52 @@ class ContextRuntime:
             prompt_parts.append(module_prompt)
             logger.debug(f"        Added Module Instructions: {len(module_prompt)} chars")
 
+        # ========================================================================
+        # Part 5: Bootstrap Injection (first-run setup, creator only)
+        # Derives creator status directly from DB to avoid dependency on
+        # BasicInfoModule being loaded.
+        # ========================================================================
+        try:
+            import os
+            from xyz_agent_context.settings import settings
+            from xyz_agent_context.repository import AgentRepository
+
+            agent_record = await AgentRepository(self.db).get_agent(self.agent_id)
+            if agent_record and agent_record.created_by and agent_record.created_by == ctx_data.user_id:
+                bootstrap_path = os.path.join(
+                    settings.base_working_path,
+                    f"{self.agent_id}_{agent_record.created_by}",
+                    "Bootstrap.md"
+                )
+                if os.path.isfile(bootstrap_path):
+                    # Auto-delete Bootstrap.md after 3 rounds to prevent
+                    # perpetual bootstrap mode if the agent fails to delete it.
+                    try:
+                        event_count_rows = await self.db.execute(
+                            "SELECT COUNT(*) AS cnt FROM events WHERE agent_id = %s",
+                            (self.agent_id,),
+                            fetch=True,
+                        )
+                        event_count = event_count_rows[0]["cnt"] if event_count_rows else 0
+                    except Exception:
+                        event_count = 0
+
+                    if event_count >= 3:
+                        try:
+                            os.remove(bootstrap_path)
+                            logger.info(
+                                f"        Auto-deleted Bootstrap.md after {event_count} events "
+                                f"(agent={self.agent_id})"
+                            )
+                        except OSError as rm_err:
+                            logger.warning(f"        Failed to auto-delete Bootstrap.md: {rm_err}")
+                    else:
+                        prompt_parts.append(BOOTSTRAP_INJECTION_PROMPT)
+                        ctx_data.bootstrap_active = True
+                        logger.debug("        Added Bootstrap injection (file-read approach)")
+        except Exception as e:
+            logger.warning(f"        Failed to inject Bootstrap: {e}")
+
         # Combine all parts
         full_prompt = "\n\n".join(prompt_parts)
         logger.debug(f"      build_complete_system_prompt() completed: {len(full_prompt)} total chars")
@@ -529,7 +581,7 @@ class ContextRuntime:
         - Long-term memory (long_term): Complete conversation history of current Narrative -> as normal messages
         - Short-term memory (short_term): Cross-Narrative recent conversations -> added to system prompt
         """
-        logger.debug(f"      → build_input_for_framework() called")
+        logger.debug("      → build_input_for_framework() called")
         logger.debug(f"        Input: {len(messages)} event messages, {len(active_instances)} instances")
 
         # Get chat_history
@@ -596,10 +648,12 @@ class ContextRuntime:
             if inst.module_class not in seen_module_classes and inst.module is not None:
                 logger.debug(f"          Getting MCP config from {inst.module_class} ({inst.instance_id})")
                 mcp_config = await inst.module.get_mcp_config()
-                if mcp_config:
+                if mcp_config and mcp_config.server_url:
                     mcp_urls[mcp_config.server_name] = mcp_config.server_url
                     collected_count += 1
-                    logger.debug(f"          ✓ Added MCP: {mcp_config.server_name} -> {mcp_config.server_url or '(empty)'}")
+                    logger.debug(f"          ✓ Added MCP: {mcp_config.server_name} -> {mcp_config.server_url}")
+                elif mcp_config:
+                    logger.debug(f"          ⏭ Skipped MCP: {mcp_config.server_name} -> (empty URL)")
                 seen_module_classes.add(inst.module_class)
 
         logger.debug(f"        Collected {collected_count} MCP URLs from {len(active_instances)} instances (deduped by module_class)")
@@ -607,14 +661,20 @@ class ContextRuntime:
         logger.debug(f"      build_input_for_framework() completed: {len(final_messages)} messages, {len(mcp_urls)} MCP URLs")
         return final_messages, mcp_urls
 
+    # Token budget for the short-term memory section.
+    # ~4 chars per token is a rough estimate; keeps the section under ~10k tokens.
+    SHORT_TERM_TOKEN_LIMIT = 40000  # characters (≈ 10000 tokens)
+
     def _build_short_term_memory_prompt(
         self,
         short_term_messages: List[Dict[str, Any]]
     ) -> str:
         """
-        Build the short-term memory Prompt section (2026-01-21 P1-2).
+        Build the short-term memory Prompt section.
 
-        Format cross-Narrative recent conversations into a Prompt to help the Agent understand the user's recent context.
+        Loads recent messages at full length (up to per-message limit) and stops
+        when the total token budget is reached. Most recent messages are
+        prioritised — groups are processed in reverse chronological order.
 
         Args:
             short_term_messages: List of short-term memory messages
@@ -626,8 +686,8 @@ class ContextRuntime:
 
         prompt = SHORT_TERM_MEMORY_HEADER
 
-        # Group by instance_id
-        messages_by_instance = {}
+        # Group by instance_id, preserving insertion order (most-recent last)
+        messages_by_instance: dict[str, list] = {}
         for msg in short_term_messages:
             meta = msg.get("meta_data", {})
             instance_id = meta.get("instance_id", "unknown")
@@ -635,8 +695,16 @@ class ContextRuntime:
                 messages_by_instance[instance_id] = []
             messages_by_instance[instance_id].append(msg)
 
-        # Format each group of messages
-        for instance_id, msgs in messages_by_instance.items():
+        # Reverse so most-recent groups are processed first
+        groups = list(reversed(messages_by_instance.items()))
+
+        budget = self.SHORT_TERM_TOKEN_LIMIT - len(prompt)
+        sections: list[str] = []
+
+        for instance_id, msgs in groups:
+            if budget <= 0:
+                break
+
             # Get the earliest message timestamp for display
             first_timestamp = ""
             for msg in msgs:
@@ -646,7 +714,7 @@ class ContextRuntime:
                     first_timestamp = ts
                     break
 
-            # Calculate relative time (if timestamp is available)
+            # Calculate relative time
             time_ago = ""
             if first_timestamp:
                 try:
@@ -665,17 +733,35 @@ class ContextRuntime:
                 except Exception:
                     time_ago = "Recently"
 
-            prompt += f"\n**[{time_ago}]**\n"
-
-            # Add conversation content
+            # Build source label from channel_tag if available
+            source_label = ""
             for msg in msgs:
+                ct = msg.get("meta_data", {}).get("channel_tag")
+                if ct and isinstance(ct, dict):
+                    ch = ct.get("channel", "").capitalize()
+                    name = ct.get("sender_name", "")
+                    source_label = f" via {ch}" + (f" ({name})" if name else "")
+                    break
+
+            section = f"\n**[{time_ago}{source_label}]**\n"
+
+            for msg in msgs:
+                if budget <= 0:
+                    break
                 role = msg.get("role", "user")
                 content = msg.get("content", "")
-                # Truncate overly long content
-                if len(content) > 200:
-                    content = content[:200] + "..."
                 role_label = "User" if role == "user" else "Assistant"
-                prompt += f"- {role_label}: {content}\n"
+                line = f"- {role_label}: {content}\n"
+                if len(section) + len(line) > budget:
+                    break
+                section += line
+
+            budget -= len(section)
+            sections.append(section)
+
+        # Reverse back to chronological order for the final prompt
+        sections.reverse()
+        prompt += "".join(sections)
 
         return prompt
 

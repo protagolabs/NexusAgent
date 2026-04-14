@@ -73,9 +73,6 @@ from xyz_agent_context.schema.job_schema import (
     JobType,
     TriggerConfig,
 )
-from xyz_agent_context.schema.inbox_schema import (
-    InboxMessageType,
-)
 from xyz_agent_context.schema.runtime_message import (
     MessageType,
 )
@@ -85,17 +82,11 @@ from xyz_agent_context.schema.hook_schema import WorkingSource
 from xyz_agent_context.utils import DatabaseClient, get_db_client, utc_now, format_for_llm
 
 # Repository
-from xyz_agent_context.repository import JobRepository, InboxRepository, UserRepository
-from xyz_agent_context.repository.job_repository import calculate_next_run_time
+from xyz_agent_context.repository import JobRepository, UserRepository
+from xyz_agent_context.module.job_module._job_scheduling import calculate_next_run_time
 
-# Prompts
-from xyz_agent_context.module.job_module.prompts import (
-    JOB_TASK_INFO_TEMPLATE,
-    JOB_ENTITIES_SECTION_TEMPLATE,
-    JOB_PROGRESS_SECTION_TEMPLATE,
-    JOB_DEPENDENCIES_SECTION_TEMPLATE,
-    JOB_EXECUTION_PROMPT_TEMPLATE,
-)
+# Context builder (extracted: dependency outputs, social network, narrative, prompt assembly)
+from xyz_agent_context.module.job_module._job_context_builder import build_execution_prompt
 
 
 class JobTrigger:
@@ -142,7 +133,6 @@ class JobTrigger:
 
         # Repository (lazy initialization)
         self._job_repo: Optional[JobRepository] = None
-        self._inbox_repo: Optional[InboxRepository] = None
 
         # Worker Pool related
         self._job_queue: asyncio.Queue[JobModel] = asyncio.Queue()
@@ -167,12 +157,6 @@ class JobTrigger:
         if self._job_repo is None:
             self._job_repo = JobRepository(self.db)
         return self._job_repo
-
-    def _get_inbox_repo(self) -> InboxRepository:
-        """Get or create InboxRepository instance"""
-        if self._inbox_repo is None:
-            self._inbox_repo = InboxRepository(self.db)
-        return self._inbox_repo
 
     async def _get_user_timezone(self, user_id: str) -> str:
         """
@@ -504,8 +488,7 @@ class JobTrigger:
            - Dependency Outputs (prerequisite task results)
         3. Call AgentRuntime (using related_entity_id as user_id)
         4. Process execution results
-        5. Write to Inbox (notify job.user_id original requester)
-        6. Update Job status and next execution time
+        5. Update Job status and next execution time
 
         Args:
             job: Job to execute
@@ -525,11 +508,12 @@ class JobTrigger:
                 await self._update_instance_for_execution(job.instance_id)
 
             # 2. Build execution Prompt (including dependency Job outputs)
-            prompt = await self._build_execution_prompt(job)
+            user_tz = await self._get_user_timezone(job.user_id)
+            prompt = await build_execution_prompt(self.db, job, user_tz)
             logger.debug(f"Built prompt for job {job.job_id}: {prompt[:100]}...")
 
             # 3. Call AgentRuntime
-            # Agent will send report to user via agent_send_content_to_user_inbox after task execution
+            # Agent will send report to user via send_message_to_user_directly
             result = await self._run_agent(job, prompt)
 
             # 4. Update Job status
@@ -541,365 +525,13 @@ class JobTrigger:
             logger.error(f"Error executing job {job.job_id}: {e}")
             await self._handle_job_failure(job, str(e))
 
-    async def _get_dependency_outputs(self, instance_id: str) -> List[Dict[str, Any]]:
-        """
-        Get execution outputs of dependency Jobs
-
-        Queries module_instances.dependencies via instance_id,
-        then retrieves execution results of each dependency Job.
-
-        Args:
-            instance_id: Current Job's instance_id
-
-        Returns:
-            List of dependency Job outputs, each element contains:
-            - instance_id: Dependency's instance_id
-            - title: Job title
-            - output: Complete execution output
-            - status: Execution status
-        """
-        import json
-
-        outputs = []
-
-        try:
-            # 1. Get dependency list of current instance
-            query = """
-                SELECT dependencies FROM module_instances WHERE instance_id = %s
-            """
-            rows = await self.db.execute(query, (instance_id,), fetch=True)
-            if not rows or not rows[0].get('dependencies'):
-                return outputs
-
-            deps_raw = rows[0]['dependencies']
-            if isinstance(deps_raw, str):
-                dep_ids = json.loads(deps_raw)
-            else:
-                dep_ids = deps_raw
-
-            if not dep_ids:
-                return outputs
-
-            logger.debug(f"Found {len(dep_ids)} dependencies for {instance_id}: {dep_ids}")
-
-            # 2. Get execution output of each dependency
-            for dep_id in dep_ids:
-                try:
-                    # 2.1 Get dependency Job info and process (event_ids)
-                    query = """
-                        SELECT ij.title, ij.status, ij.process, mi.status as instance_status
-                        FROM instance_jobs ij
-                        LEFT JOIN module_instances mi ON ij.instance_id = mi.instance_id
-                        WHERE ij.instance_id = %s
-                    """
-                    job_rows = await self.db.execute(query, (dep_id,), fetch=True)
-                    if not job_rows:
-                        logger.warning(f"Dependency job not found: {dep_id}")
-                        continue
-
-                    job_row = job_rows[0]
-                    process_raw = job_row.get('process')
-
-                    # 2.2 Get event_id from process
-                    event_ids = []
-                    if process_raw:
-                        if isinstance(process_raw, str):
-                            event_ids = json.loads(process_raw)
-                        else:
-                            event_ids = process_raw
-
-                    # 2.3 Get latest event output
-                    output_text = ""
-                    if event_ids:
-                        latest_event_id = event_ids[-1]  # Get the latest
-                        event_query = """
-                            SELECT final_output FROM events WHERE event_id = %s
-                        """
-                        event_rows = await self.db.execute(event_query, (latest_event_id,), fetch=True)
-                        if event_rows and event_rows[0].get('final_output'):
-                            output_text = event_rows[0]['final_output']
-
-                    outputs.append({
-                        'instance_id': dep_id,
-                        'title': job_row.get('title', dep_id),
-                        'status': job_row.get('instance_status', job_row.get('status', 'unknown')),
-                        'output': output_text,
-                    })
-
-                except Exception as e:
-                    logger.error(f"Error fetching dependency output for {dep_id}: {e}")
-                    outputs.append({
-                        'instance_id': dep_id,
-                        'title': dep_id,
-                        'status': 'error',
-                        'output': f"[Failed to get output: {str(e)}]",
-                    })
-
-        except Exception as e:
-            logger.error(f"Error getting dependency outputs: {e}")
-
-        return outputs
-
-    async def _load_social_network_context(
-        self,
-        entity_ids: List[str],
-        agent_id: str
-    ) -> List[Dict[str, Any]]:
-        """
-        Load Social Network context (Feature 3.1 Enhancement)
-
-        Loads detailed Entity information for the given entity_ids for Job execution.
-
-        Args:
-            entity_ids: List of Entity IDs (may contain only a single related_entity_id)
-            agent_id: Agent ID (for querying SocialNetworkModule's instance_id)
-
-        Returns:
-            List of Entity information, each element contains:
-            - entity_id: Entity ID
-            - entity_name: Entity name
-            - entity_type: Entity type (user/agent/organization)
-            - description: Entity description (truncated to 500 characters)
-            - tags: Tag list (max 10)
-            - persona: Persona information (truncated to 300 characters)
-            - expertise_domains: Expertise domains (max 5)
-        """
-        if not entity_ids:
-            return []
-
-        try:
-            from xyz_agent_context.repository import (
-                SocialNetworkRepository,
-                InstanceRepository
-            )
-
-            # 1. Get SocialNetworkModule's instance_id
-            instance_repo = InstanceRepository(self.db)
-            instances = await instance_repo.get_by_agent(
-                agent_id=agent_id,
-                module_class="SocialNetworkModule"
-            )
-
-            if not instances:
-                logger.warning(f"No SocialNetworkModule found for agent {agent_id}")
-                return []
-
-            social_instance_id = instances[0].instance_id
-            logger.debug(f"Found SocialNetworkModule instance: {social_instance_id}")
-
-            # 2. Query detailed information for each Entity
-            social_repo = SocialNetworkRepository(self.db)
-            entities_info = []
-
-            for entity_id in entity_ids:
-                try:
-                    entity = await social_repo.get_entity(entity_id, social_instance_id)
-                    if entity:
-                        # Truncate overly long fields (avoid prompt being too long)
-                        description = entity.entity_description[:500] if entity.entity_description else ""
-
-                        # Extract persona from identity_info (if available)
-                        persona = None
-                        if entity.identity_info and isinstance(entity.identity_info, dict):
-                            persona_raw = entity.identity_info.get('persona', '')
-                            if persona_raw:
-                                persona = str(persona_raw)[:300]
-
-                        entities_info.append({
-                            "entity_id": entity.entity_id,
-                            "entity_name": entity.entity_name,
-                            "entity_type": entity.entity_type,
-                            "description": description,
-                            "tags": entity.tags[:10],  # Limit tag count
-                            "persona": persona,
-                            "expertise_domains": entity.expertise_domains[:5] if entity.expertise_domains else []
-                        })
-                        logger.debug(f"Loaded entity: {entity.entity_name} ({entity_id})")
-                    else:
-                        logger.warning(f"Entity {entity_id} not found")
-                except Exception as e:
-                    logger.error(f"Failed to load entity {entity_id}: {e}")
-                    # Continue processing other entities
-
-            logger.info(f"Loaded {len(entities_info)} entities for job context")
-            return entities_info
-
-        except Exception as e:
-            logger.error(f"Failed to load social network context: {e}")
-            return []
-
-    async def _load_narrative_summary(self, narrative_id: str) -> str:
-        """
-        Load Narrative summary (Feature 3.1 Enhancement)
-
-        Gets the Narrative's current_summary field for understanding overall progress during Job execution.
-
-        Args:
-            narrative_id: Narrative ID
-
-        Returns:
-            Narrative summary string (truncated to 800 characters)
-        """
-        if not narrative_id:
-            return ""
-
-        try:
-            from xyz_agent_context.repository import NarrativeRepository
-
-            narrative_repo = NarrativeRepository(self.db)
-
-            # Query Narrative
-            narrative = await narrative_repo.get_by_id(narrative_id)
-
-            if not narrative:
-                logger.warning(f"Narrative {narrative_id} not found")
-                return ""
-
-            # Extract current_summary
-            if narrative.narrative_info and narrative.narrative_info.current_summary:
-                summary = narrative.narrative_info.current_summary
-                # Truncate overly long summary
-                truncated_summary = summary[:800] if len(summary) > 800 else summary
-                logger.info(f"Loaded narrative summary for {narrative_id} (length: {len(truncated_summary)})")
-                return truncated_summary
-            else:
-                logger.debug(f"Narrative {narrative_id} has no current_summary")
-                return ""
-
-        except Exception as e:
-            logger.error(f"Failed to load narrative summary for {narrative_id}: {e}")
-            return ""
-
-    async def _build_execution_prompt(self, job: JobModel) -> str:
-        """
-        Build execution prompt for AgentRuntime (Feature 3.1 Enhanced).
-
-        Combines job metadata with the payload to create a complete,
-        self-contained prompt for the Agent to execute.
-
-        Enhancement (Feature 3.1):
-        - Loads Social Network context (related entities information)
-        - Loads Narrative Summary (overall progress, includes conversation history summary)
-        - Loads Dependency Outputs (existing feature)
-
-        Timezone enhancement:
-        - Gets user timezone, formats time in user-friendly display format
-        - Adds current execution time to Prompt
-
-        Args:
-            job: JobModel instance
-
-        Returns:
-            Complete execution prompt string with enriched context
-        """
-        # ===== Get user timezone, format time =====
-        user_tz = await self._get_user_timezone(job.user_id)
-        current_time_str = format_for_llm(utc_now(), user_tz)
-        created_str = format_for_llm(job.created_at, user_tz) if job.created_at else "Unknown"
-
-        # ===== Load all context (Feature 3.1) =====
-
-        # 1. Load Social Network context (single target user)
-        entities_info = []
-        if job.related_entity_id:
-            entities_info = await self._load_social_network_context(
-                entity_ids=[job.related_entity_id],  # Convert single value to list
-                agent_id=job.agent_id
-            )
-
-        # 2. Load Narrative Summary (includes conversation history summary)
-        narrative_summary = ""
-        if job.narrative_id:
-            narrative_summary = await self._load_narrative_summary(
-                narrative_id=job.narrative_id
-            )
-
-        # 3. Load dependency Job outputs (existing feature)
-        dep_outputs = []
-        if job.instance_id:
-            dep_outputs = await self._get_dependency_outputs(job.instance_id)
-
-        # ===== Build Prompt sections =====
-
-        # Section: Task information
-        # Execution identity: use related_entity_id if available, otherwise use job.user_id
-        execution_user_id = job.related_entity_id or job.user_id
-        task_info_section = JOB_TASK_INFO_TEMPLATE.format(
-            title=job.title,
-            description=job.description,
-            created_str=created_str,
-            current_time_str=current_time_str,
-            execution_user_id=execution_user_id,
-            user_id=job.user_id,
-        )
-
-        # Section: Related people/entities
-        entities_section = ""
-        if entities_info:
-            entity_lines = []
-            for entity in entities_info:
-                entity_line = f"- **{entity['entity_name']}** ({entity['entity_type']})"
-                if entity.get('description'):
-                    entity_line += f"\n  - Description: {entity['description']}"
-                if entity.get('tags'):
-                    entity_line += f"\n  - Tags: {', '.join(entity['tags'])}"
-                if entity.get('persona'):
-                    entity_line += f"\n  - Persona: {entity['persona']}"
-                entity_lines.append(entity_line)
-
-            entities_section = JOB_ENTITIES_SECTION_TEMPLATE.format(
-                entity_lines=chr(10).join(entity_lines)
-            )
-            logger.info(f"Added {len(entities_info)} entities to prompt")
-
-        # Section: Current progress (Narrative Summary already includes conversation history summary)
-        narrative_section = ""
-        if narrative_summary:
-            narrative_section = JOB_PROGRESS_SECTION_TEMPLATE.format(
-                narrative_summary=narrative_summary
-            )
-            logger.info("Added narrative summary to prompt")
-
-        # Section: Prerequisite task results
-        dependency_section = ""
-        if dep_outputs:
-            dep_parts = []
-            for dep in dep_outputs:
-                dep_part = f"""### {dep['title']} (`{dep['instance_id']}`)
-**Status**: {dep['status']}
-
-**Execution Output**:
-{dep['output'] if dep['output'] else '*This task has no output content*'}
-"""
-                dep_parts.append(dep_part)
-
-            dependency_section = JOB_DEPENDENCIES_SECTION_TEMPLATE.format(
-                dep_parts=chr(10).join(dep_parts)
-            )
-            logger.info(f"Added {len(dep_outputs)} dependency outputs to prompt")
-
-        # ===== Assemble complete Prompt =====
-        extra_requirement = ""
-        if dep_outputs or entities_info or narrative_summary:
-            extra_requirement = "6. Make full use of prerequisite task results and context information, do not repeat already completed work"
-
-        prompt = JOB_EXECUTION_PROMPT_TEMPLATE.format(
-            task_info_section=task_info_section,
-            entities_section=entities_section,
-            narrative_section=narrative_section,
-            dependency_section=dependency_section,
-            payload=job.payload,
-            related_entity_id=job.related_entity_id,
-            extra_requirement=extra_requirement,
-        )
-        return prompt
-
     async def _run_agent(self, job: JobModel, prompt: str) -> Dict[str, Any]:
         """
         Execute job using AgentRuntime.
 
         Creates an AgentRuntime instance and runs the prompt,
-        collecting all output for delivery to the user's inbox.
+        collecting all output. The agent sends the final report
+        to the user via send_message_to_user_directly.
 
         Args:
             job: JobModel instance
@@ -995,43 +627,6 @@ The task was executed but produced no text output.
     # =========================================================================
     # Result Processing
     # =========================================================================
-
-    async def _write_to_inbox(self, job: JobModel, result: Dict[str, Any]) -> None:
-        """
-        Write execution result to user's Inbox.
-
-        Uses ChatModule's inbox capability to deliver job results
-        to the user. The message will appear in their Streamlit inbox.
-
-        Args:
-            job: JobModel instance
-            result: Execution result containing content and event_id
-        """
-        try:
-            # Get user timezone, format timestamp
-            user_tz = await self._get_user_timezone(job.user_id)
-            timestamp = format_for_llm(utc_now(), user_tz)
-            title = f"{job.title} - {timestamp}"
-
-            # Generate message_id
-            msg_id = f"msg_{uuid4().hex[:16]}"
-
-            # Create inbox message
-            db_id = await self._get_inbox_repo().create_message(
-                user_id=job.user_id,
-                title=title,
-                content=result.get("content", ""),
-                message_id=msg_id,
-                message_type=InboxMessageType.JOB_RESULT,
-                source_type="job",
-                source_id=job.job_id,
-                event_id=result.get("event_id")
-            )
-
-            logger.debug(f"Created inbox message {msg_id} (db_id={db_id}) for job {job.job_id}")
-
-        except Exception as e:
-            logger.error(f"Error writing to inbox for job {job.job_id}: {e}")
 
     async def _finalize_job_execution(
         self,
@@ -1198,28 +793,6 @@ The task was executed but produced no text output.
 
             logger.warning(f"Job {job.job_id} failed: {error}")
 
-            # Get user timezone, format error time
-            user_tz = await self._get_user_timezone(job.user_id)
-            error_time_str = format_for_llm(utc_now(), user_tz)
-
-            # Send error notification to user's inbox
-            await self._get_inbox_repo().create_message(
-                user_id=job.user_id,
-                title=f"Job Failed: {job.title}",
-                content=f"""## Job Execution Failed
-
-**Job:** {job.title}
-**Job ID:** {job.job_id}
-**Error:** {error}
-**Time:** {error_time_str}
-
-Please check the job configuration and try again.
-""",
-                message_type=InboxMessageType.JOB_RESULT,
-                source_type="job",
-                source_id=job.job_id
-            )
-
         except Exception as e:
             logger.error(f"Error handling job failure for {job.job_id}: {e}")
 
@@ -1308,14 +881,17 @@ Examples:
         logger.remove()
         logger.add(sys.stderr, level="DEBUG")
 
-    print("=" * 60)
-    print("🚀 JobTrigger - Background Task Executor (Worker Pool)")
-    print("=" * 60)
-    print(f"   Poll interval: {args.interval}s")
-    print(f"   Max workers: {args.workers}")
-    print(f"   Mode: {'Single run' if args.once else 'Continuous'}")
-    print("=" * 60)
-    print("\n💡 Press Ctrl+C to stop\n")
+    from xyz_agent_context.utils.service_logger import setup_service_logger
+    setup_service_logger("job_trigger")
+
+    logger.info("=" * 60)
+    logger.info("JobTrigger - Background Task Executor (Worker Pool)")
+    logger.info("=" * 60)
+    logger.info(f"   Poll interval: {args.interval}s")
+    logger.info(f"   Max workers: {args.workers}")
+    logger.info(f"   Mode: {'Single run' if args.once else 'Continuous'}")
+    logger.info("=" * 60)
+    logger.info("Press Ctrl+C to stop")
 
     if args.once:
         # Run once for testing (single poll, no worker pool)
@@ -1328,7 +904,7 @@ Examples:
             # Manually initialize database client
             trigger._db = await get_db_client()
             await trigger._poll_and_enqueue()
-            print(f"\n✅ Single poll completed, {trigger._job_queue.qsize()} jobs in queue")
+            logger.info(f"Single poll completed, {trigger._job_queue.qsize()} jobs in queue")
 
         asyncio.run(run_once())
     else:

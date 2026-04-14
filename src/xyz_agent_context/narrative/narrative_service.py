@@ -139,10 +139,10 @@ class NarrativeService:
             NarrativeSelectionResult: Contains Narrative list, selection reason, and other complete info
         """
         from .config import config
-        from xyz_agent_context.utils.embedding import get_embedding
+        from xyz_agent_context.agent_framework.llm_api.embedding import get_embedding
 
         max_narratives = max_narratives or config.MAX_NARRATIVES_IN_CONTEXT
-        logger.info(f"NarrativeService.select() started")
+        logger.info("NarrativeService.select() started")
 
         # Continuity detection
         is_continuous = False

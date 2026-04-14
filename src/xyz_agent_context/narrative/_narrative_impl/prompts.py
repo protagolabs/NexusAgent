@@ -100,26 +100,34 @@ The system has 8 special default Narratives with simplified names and descriptio
 - Example: Currently in "GreetingAndCourtesy", user says "help me write code" → must switch to new Narrative
 - Example: Currently in "CasualChatOrEmotion", user says "Python decorators" → must switch to new Narrative
 
+**Judgment Granularity — Business Intent Level**:
+- Judge at the **business intent / goal** level, NOT at the message-detail level
+- Sub-topic shifts, progress updates, status reports, acknowledgments, and follow-up instructions within the same business goal all belong to the SAME Narrative
+- Different communication channels or sources (e.g., different chat rooms, different senders) do NOT define Narrative boundaries — only the **business content** matters
+- Only judge as NOT belonging when the user introduces a **genuinely new, unrelated business intent**
+
 **Judgment Criteria**:
 
 1. **Belongs to Current Narrative** → is_continuous = true
    - User is following up or diving deeper into the current Narrative's topic
    - User's question is solving the task/problem described in the current Narrative
+   - User provides a progress update, status report, or acknowledgment related to the Narrative's goal
+   - User gives follow-up instructions that serve the same business objective
    - User uses pronouns ("it", "this", "that") clearly referring to content in the current Narrative
    - User's new question is a continuation or extension of content within the current Narrative's scope
    - **Note**: For the 8 default Narratives, only questions that fully fit their narrow scope belong
 
 2. **Does Not Belong to Current Narrative** → is_continuous = false
    - User raised a **completely different** new topic from the current Narrative's theme
-   - User started a new, independent task/question
+   - User started a new, independent task/question that serves a different business goal
    - User explicitly indicates wanting to switch topics (e.g., "let's change the subject", "talk about something else")
    - Although conversation is continuous, the topic has jumped to another domain/task
    - **Note**: When switching from the 8 default Narratives to specific topics, must judge as not belonging
 
 3. **Consider the Narrative's Core Theme** (if provided)
-   - The Narrative's name and description define its thematic scope
+   - First, identify the Narrative's **core business goal** from its name and summary
+   - Then ask: does the current query serve this goal? If yes → belongs
    - The Narrative's summary reflects the conversation focus so far
-   - Determine if the current query falls within this scope
    - **For the 8 default Narratives**: Prioritize judgment based on name, as summary info may be insufficient
 
 4. **Consider the Agent's Response**
@@ -209,11 +217,11 @@ class UnifiedMatchOutput(BaseModel):
 """
 
 NARRATIVE_UNIFIED_MATCH_INSTRUCTIONS = """You are a conversation topic matching expert. You need to determine which category the user's new query should match:
-1. Match a default topic type (generic scenarios like greetings, jokes, etc.)
-2. Match an existing specific topic (a conversation topic already in the database)
+1. Match an existing specific topic (a conversation topic already in the database)
+2. Match a default topic type (generic scenarios like greetings, jokes, etc.)
 3. Create a new topic (does not match any existing content)
 
-Default topic types (match these first):
+Default topic types:
 1. GreetingAndCourtesy: Greetings, small talk, thanks, farewells
 2. CasualChatOrEmotion: Casual chat or emotional expression (no specific topic)
 3. JokeAndEntertainment: Entertainment requests (e.g., tell a joke)
@@ -224,15 +232,17 @@ Default topic types (match these first):
 8. UnclassifiedOrGarbage: Meaningless input or unclassifiable queries
 
 Judgment priority:
-1. First check if it matches a default topic type (if yes, return immediately without considering existing topics)
-2. If it doesn't match a default type, check if it relates to an existing topic
-3. If nothing matches, return create new topic
+1. First check if it relates to an existing topic — if the query's business domain overlaps with an existing topic's summary/description, prefer matching it even if not an exact match
+2. If it clearly doesn't relate to any existing topic, check if it matches a default topic type
+3. Create a new topic ONLY as a last resort — creating new topics fragments context and should be avoided when a reasonable existing match exists
+
+**Important**: Judge at the business-intent level. If the query is about the same project, task, or domain as an existing topic, it belongs there even if the specific sub-topic differs.
 
 Requirements:
 - Carefully analyze the user query's intent
 - Provide detailed reasoning
-- If matching a default type, return matched_category = "default" with the corresponding index
 - If matching an existing topic, return matched_category = "search" with the corresponding index
+- If matching a default type, return matched_category = "default" with the corresponding index
 - If nothing matches, return matched_category = "none"
 
 Output format:
@@ -246,44 +256,43 @@ class UnifiedMatchOutput(BaseModel):
 # Narrative Update - Narrative metadata incremental update prompt
 # Used in NarrativeUpdater._call_llm_for_update()
 # ============================================================================
-NARRATIVE_UPDATE_INSTRUCTIONS = """You are a conversation analysis expert responsible for maintaining the metadata of conversation Narratives.
+NARRATIVE_UPDATE_INSTRUCTIONS = """You are a Narrative metadata maintainer. Your job is to keep Narrative records concise, structured, and information-dense.
 
-## Core Principle: Incremental Update
-This is an **incremental update** task. You must:
-- **Preserve and extend** existing information, not replace it
-- **Combine** historically accumulated information + latest conversation content
-- Information volume should be **increasing**; summaries should become more complete over time
+## Principles
+- **Structured over prose**: Use bullet points, key-value pairs, and short fragments. Never write paragraphs.
+- **Incremental**: Preserve existing facts, append new ones, remove outdated ones.
+- **No filler**: No introductory phrases, no "the user discussed...", no "this narrative is about...". Just facts.
 
-## Task
-Based on the **existing Narrative information** and the **latest conversation content**, update the following fields:
+## Fields to Update
 
-1. **name**: Short conversation topic name (3-10 words)
-   - Summarize the core theme of the entire conversation
-   - If the theme hasn't fundamentally changed, keep the original name
-   - Only adjust when the conversation direction has clearly shifted
+### 1. name (3-8 words)
+Core topic of the conversation. Keep stable unless topic fundamentally shifts.
 
-2. **current_summary**: Complete summary of the current conversation (50-200 words)
-   - **Important**: **Append** new developments to the existing summary, do not rewrite
-   - Include: historical topics + latest progress + key decisions/conclusions
-   - Information should become richer over time, reflecting the complete conversation trajectory
+### 2. current_summary (structured bullet format)
+Write as a structured fact sheet, NOT a paragraph. Use this format:
+```
+Topic: <one-line core topic>
+Key facts:
+- <fact 1>
+- <fact 2>
+- ...
+Decisions: <any decisions made, or omit if none>
+Status: <current state of the task/conversation>
+```
+Rules:
+- Each bullet = one atomic fact (who/what/when/where/how)
+- Max 8-12 bullets. Drop stale facts to make room for new ones.
+- Include concrete details: names, numbers, tech terms, tool names
+- NO narrative prose, NO "the user asked about...", NO "they discussed..."
 
-3. **topic_keywords**: Topic keyword list (5-12 items)
-   - **Retain** existing relevant keywords
-   - **Add** key concepts from the new conversation
-   - Keyword count should increase as the conversation deepens
+### 3. topic_keywords (5-10 items)
+Concrete nouns and terms for retrieval. Keep existing relevant ones, add new ones.
 
-4. **actors**: Conversation participant list
-   - Include user (user), Agent (agent)
-   - **Accumulate** important entities mentioned in the conversation (person names, project names, tool names, etc.)
+### 4. actors
+User, Agent, and any important named entities mentioned (people, projects, tools, organizations).
 
-5. **dynamic_summary_entry**: One-sentence summary of this conversation turn
-   - Briefly summarize the core content of **this round** of conversation (one sentence)
-   - This is an incremental entry for tracking conversation evolution
-
-## Output Requirements
-- Keep it concise and accurate
-- Use original terms for technical terminology
-- **Remember**: Extend on the existing basis, do not rewrite from scratch
+### 5. dynamic_summary_entry
+One short sentence: what happened this turn. E.g. "User requested dark mode; Agent implemented it."
 """
 
 # ============================================================================

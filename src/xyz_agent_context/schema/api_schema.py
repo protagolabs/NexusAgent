@@ -10,7 +10,7 @@ Includes:
 - Auth related: LoginRequest, LoginResponse, AgentInfo, etc.
 - Agents related: AwarenessResponse, SocialNetworkEntityInfo, etc.
 - Jobs related: JobResponse, JobListResponse, etc.
-- Inbox related: InboxMessageResponse, InboxListResponse, etc.
+- RAG File related: RAGFileInfo, etc.
 - MCP related: MCPInfo, MCPCreateRequest, etc.
 - Files related: FileInfo, FileListResponse, etc.
 """
@@ -42,6 +42,7 @@ class AgentInfo(BaseModel):
     created_at: Optional[str] = None
     is_public: bool = False
     created_by: Optional[str] = None
+    bootstrap_active: bool = False
 
 
 class AgentListResponse(BaseModel):
@@ -89,9 +90,8 @@ class DeleteAgentResponse(BaseModel):
 
 
 class CreateUserRequest(BaseModel):
-    """Request model for creating user (requires admin secret key)"""
+    """Request model for creating a local user"""
     user_id: str
-    admin_secret_key: str
     display_name: Optional[str] = None
 
 
@@ -243,6 +243,9 @@ class SimpleChatMessage(BaseModel):
     content: str
     timestamp: Optional[str] = None
     narrative_id: Optional[str] = None  # Source Narrative
+    working_source: Optional[str] = None  # "chat" | "job" | "matrix" | etc.
+    message_type: Optional[str] = None  # "chat" (default) | "activity"
+    event_id: Optional[str] = None  # Associated Event ID (for loading event_log on demand)
 
 
 class SimpleChatHistoryResponse(BaseModel):
@@ -255,6 +258,22 @@ class SimpleChatHistoryResponse(BaseModel):
     success: bool
     messages: List[SimpleChatMessage] = []
     total_count: int = 0
+    error: Optional[str] = None
+
+
+class EventLogToolCall(BaseModel):
+    """A single tool call extracted from event_log"""
+    tool_name: str
+    tool_input: Dict[str, Any] = {}
+    tool_output: Optional[str] = None
+
+
+class EventLogResponse(BaseModel):
+    """Response for event log detail endpoint (on-demand loading)"""
+    success: bool
+    event_id: str = ""
+    thinking: Optional[str] = None
+    tool_calls: List[EventLogToolCall] = []
     error: Optional[str] = None
 
 
@@ -398,43 +417,6 @@ class JobDetailResponse(BaseModel):
     error: Optional[str] = None
 
 
-# ===== Inbox Schemas =====
-
-class MessageSourceResponse(BaseModel):
-    """Response model for message source"""
-    type: Optional[str] = None
-    id: Optional[str] = None
-
-
-class InboxMessageResponse(BaseModel):
-    """Response model for an inbox message"""
-    message_id: str
-    user_id: str
-    message_type: str
-    title: str
-    content: str
-    source: Optional[MessageSourceResponse] = None
-    event_id: Optional[str] = None
-    is_read: bool = False
-    created_at: Optional[str] = None
-
-
-class InboxListResponse(BaseModel):
-    """Response model for inbox list"""
-    success: bool
-    messages: List[InboxMessageResponse] = []
-    count: int = 0
-    unread_count: int = 0
-    error: Optional[str] = None
-
-
-class MarkReadResponse(BaseModel):
-    """Response model for mark read operations"""
-    success: bool
-    marked_count: int = 0
-    error: Optional[str] = None
-
-
 # ===== RAG File Schemas =====
 
 class RAGFileInfo(BaseModel):
@@ -469,4 +451,52 @@ class RAGFileDeleteResponse(BaseModel):
     """Response for RAG file deletion"""
     success: bool
     filename: Optional[str] = None
+    error: Optional[str] = None
+
+
+# ===== Cost Schemas =====
+
+class CostModelBreakdown(BaseModel):
+    """Cost breakdown for a single model"""
+    cost: float = 0.0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    call_count: int = 0
+
+
+class CostDailyEntry(BaseModel):
+    """Daily token usage entry"""
+    date: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+class CostSummary(BaseModel):
+    """Aggregated cost summary"""
+    total_cost_usd: float = 0.0
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    by_model: Dict[str, CostModelBreakdown] = {}
+    daily: List[CostDailyEntry] = []
+
+
+class CostRecord(BaseModel):
+    """Single cost record"""
+    id: int
+    agent_id: str
+    event_id: Optional[str] = None
+    call_type: str
+    model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_cost_usd: float = 0.0
+    created_at: Optional[str] = None
+
+
+class CostResponse(BaseModel):
+    """Response for cost endpoint"""
+    success: bool
+    summary: Optional[CostSummary] = None
+    records: List[CostRecord] = []
+    total_count: int = 0
     error: Optional[str] = None

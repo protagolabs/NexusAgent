@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="docs/NexusMind.png" alt="NexusMind" width="480" />
+<img src="docs/NarraNexus_logo.png" alt="NarraNexus" width="480" />
 
 <br/>
 <br/>
 
 **构建 Agent 之间的「连接网络」-- 让智能从交互中涌现，而非孤立运行。**
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -19,20 +19,31 @@
 
 <br/>
 
-大多数 Agent 框架的目标是让 Agent 更*聪明*。NexusMind 的目标是让 Agent 更*互联*。
+大多数 Agent 框架的目标是让 Agent 更*聪明*。NarraNexus 的目标是让 Agent 更*互联*。
 
-孤立的 Agent 只是工具。当 Agent 拥有持久记忆、社会身份、人际关系和目标时，它就成为**连接网络（Nexus）**中的参与者——在这个网络中，智能是集体属性而非模型属性。NexusMind 为此提供基础设施：跨对话积累的叙事记忆、追踪实体与关系的社交图谱、支持依赖链的任务系统，以及可在运行时自由组合的模块化能力。
+孤立的 Agent 只是工具。当 Agent 拥有持久记忆、社会身份、人际关系和目标时，它就成为**连接网络（Nexus）**中的参与者——在这个网络中，智能是集体属性而非模型属性。NarraNexus 为此提供基础设施：跨对话积累的叙事结构、追踪实体与关系的社交图谱、支持依赖链的任务系统，以及可在运行时自由组合的模块化能力。
 
 ## 核心特性
 
-- **叙事记忆** -- 对话被路由到语义故事线中，按话题相似度跨会话检索，而非按时间顺序
-- **热插拔模块** -- 每项能力（聊天、社交图谱、RAG、任务、技能、记忆）都是独立模块，拥有自己的数据库表、MCP 工具和生命周期钩子
+- **Agent 间通信** -- Agent 通过 Matrix 协议相互交流：创建房间、发送消息、@指定 Agent、群聊协作——全部通过自然语言完成
+- **叙事结构** -- 对话被路由到语义故事线中，按话题相似度跨会话检索，而非按时间顺序
+- **热插拔模块** -- 每项能力（聊天、社交图谱、RAG、任务、技能、Matrix、记忆）都是独立模块，拥有自己的数据库表、MCP 工具和生命周期钩子
+- **技能市场** -- 通过聊天从 ClawHub 浏览安装技能：描述你的需求，获得推荐，一键安装
 - **社交网络** -- 实体图谱追踪人物、关系、专业领域和互动历史，支持语义搜索
 - **任务调度** -- 一次性、定时、周期、持续任务，支持依赖链（DAG）
 - **RAG 知识库** -- 基于 Gemini File Search 的文档索引与语义检索
 - **语义记忆** -- 基于 EverMemOS（MongoDB + Elasticsearch + Milvus）的长期情景记忆
+- **成本追踪** -- 实时计量每次 LLM 和 Embedding 调用，按模型分类展示费用明细
 - **执行透明度** -- 每个流水线步骤实时可见：Agent 做了什么决策、为什么、改变了什么
 - **多 LLM 支持** -- Claude、OpenAI、Gemini 统一适配层
+- **桌面应用** -- 基于 Electron 的桌面端，支持自动更新和一键启动所有服务
+
+<br/>
+
+![Feature Showcase](docs/images/FeatureShowcase.gif)
+<p align="center"><em>NarraNexus 功能展示</em></p>
+
+<br/>
 
 ## 快速开始
 
@@ -48,12 +59,33 @@
 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) | 从官网下载安装并启动 |
 | [Node.js](https://nodejs.org/) (v20) | 推荐使用 [nvm](https://github.com/nvm-sh/nvm) 安装：`curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh \| bash && nvm install 20` |
 
-**API 密钥**：
+### LLM 供应商配置
+
+NarraNexus 使用 **三槽位（Slot）** 架构来接入 LLM 服务。每个槽位承担不同职责，需要特定的 API 协议：
+
+| 槽位 | 协议 | 用途 | 为什么需要 |
+|------|------|------|-----------|
+| **Agent** | Anthropic | 核心对话 — Agent 的主推理循环 | 驱动 Agent 的思考、工具调用和多轮对话（通过 Claude Code CLI） |
+| **Embedding** | OpenAI | 向量嵌入生成 | 将文本转换为向量，用于 Narrative 话题匹配和社交网络语义搜索 |
+| **Helper LLM** | OpenAI | 辅助 LLM 调用 | 处理轻量任务：实体提取、Narrative 摘要、模块决策——比 Agent 模型更便宜快速 |
+
+你可以通过以下几种方式配置供应商：
+
+| 方案 | 你需要的 | 效果 |
+|------|---------|------|
+| **[NetMind.AI Power](https://www.netmind.ai/)** | 一个 API Key | 覆盖全部 3 个槽位（Anthropic + OpenAI 协议端点），最快上手，但可选模型有限 |
+| **Claude Code 登录 + OpenAI** | Claude Code CLI 登录 + OpenAI API Key | Agent 槽位通过 OAuth（有免费额度），Embedding + Helper 通过 OpenAI |
+| **Anthropic + OpenAI** | Anthropic API Key + OpenAI API Key | 完全控制两个供应商 |
+| **自定义端点** | 任何 Anthropic/OpenAI 兼容 URL | 适用于代理、自托管模型或其他供应商 |
+
+> **关于 Embedding**：目前仅支持 **OpenAI 官方 API** 和 **NetMind.AI Power** 的 Embedding 服务。未来将支持更多供应商。
+
+配置可通过安装向导（桌面应用）或 LLM Providers 面板（Web 界面，点击头部的 CPU 图标）完成。配置存储在 `~/.nexusagent/llm_config.json`。
+
+**其他 API 密钥**：
 
 | 依赖 | 是否必需 | 获取方式 |
 |------|---------|---------|
-| **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** | **必需** | 安装并认证 Claude Code CLI（`npm install -g @anthropic-ai/claude-code`）-- 作为核心 Agent 运行时 |
-| **OpenAI API Key** | **必需** | 从 [platform.openai.com](https://platform.openai.com/api-keys) 获取 -- 用于 Embedding 和作为备选 LLM |
 | **Google Gemini API Key** | 可选 | 从 [aistudio.google.com](https://aistudio.google.com/apikey) 获取 -- 启用 RAG 知识库（Gemini File Search） |
 | **EverMemOS LLM API Key** | 可选 | 用于长期记忆（边界检测和情景提取）。默认使用 [OpenRouter](https://openrouter.ai/)。**未配置时**：记忆提取功能不可用，Agent 仍可正常工作但没有长期记忆。 |
 | **EverMemOS Embedding/Rerank API Key** | 可选 | 用于语义搜索和重排序。默认使用 [DeepInfra](https://deepinfra.com/)。**未配置时**：默认为 vLLM 本地模式——需要自行部署 GPU 推理服务才能使用。 |
@@ -61,14 +93,19 @@
 ### 安装与启动
 
 ```bash
-git clone https://github.com/NetMindAI-Open/NexusAgent.git
-cd NexusAgent
+git clone https://github.com/NetMindAI-Open/NarraNexus.git
+cd NarraNexus
 bash run.sh
 ```
 
-脚本会自动检测操作系统（Linux / macOS / Windows WSL2）并处理一切——Python、Docker、Node.js、MySQL、依赖安装、`.env` 配置。按提示操作即可。
+脚本会自动检测操作系统（Linux / macOS / Windows WSL2）并处理一切——Python、Docker、Node.js、MySQL、依赖安装、`.env` 配置、LLM 供应商设置。按提示操作即可。
 
 安装完成后，选择 **Run** 启动所有服务，然后打开 `http://localhost:5173`。
+
+<br/>
+
+![安装界面](docs/images/install-interface.png)
+<p align="center"><em>首次运行体验</em></p>
 
 ### 配置 EverMemOS（长期记忆）
 
@@ -108,100 +145,68 @@ RERANK_BASE_URL=https://api.deepinfra.com/v1/inference
 
 > 手动安装和开发流程详见 [开发指南](./docs/DEVELOPMENT.md)。
 
-## 界面使用说明
+## [界面使用说明](./docs/UI-GUIDE_zh.md)
 
-### 登录与创建 Agent
+## 数据目录 (`~/.narranexus/`)
 
-1. 打开 `http://localhost:5173`，输入任意 **User ID** 登录（如 `user_alice`）-- 系统以 User ID 区分用户身份
-2. 首次使用需要创建 Agent：点击侧边栏的创建按钮，需要输入 **Admin Secret Key**（即 `.env` 文件中的 `ADMIN_SECRET_KEY`，默认值为 `nexus-admin-secret`）
-3. 创建完成后即可在侧边栏看到你的 Agent，点击进入聊天
-
-### 界面布局
-
-进入主界面后，为三栏布局：
+NarraNexus 在用户目录下的 `~/.narranexus/` 存储运行时日志。该目录在首次运行时自动创建，不包含任何用户数据或密钥，仅存放服务日志。
 
 ```
-┌──────────┬─────────────────────┬──────────────────────┐
-│  侧边栏   │      聊天面板        │      上下文面板        │
-│  Agent    │                     │                      │
-│  列表     │  消息流（实时）       │  多个 Tab 切换：       │
-│          │  历史记录            │  · Runtime            │
-│          │  输入框              │  · Agent Config       │
-│          │                     │  · Agent Inbox        │
-│          │                     │  · Jobs               │
-│          │                     │  · Skills             │
-└──────────┴─────────────────────┴──────────────────────┘
+~/.narranexus/
+└── logs/
+    ├── agents/              # Agent 执行日志（每次运行一个文件）
+    │   ├── agent_<id>_<timestamp>.log.zip
+    │   └── ...
+    ├── job_trigger/         # 任务调度器日志（每日轮转）
+    │   └── job_trigger_YYYYMMDD.log
+    ├── matrix_trigger/      # Matrix 通信触发器日志
+    │   └── matrix_trigger_YYYYMMDD.log
+    ├── mcp/                 # MCP 服务器日志
+    │   └── mcp_YYYYMMDD.log
+    └── module_poller/       # Module Poller 日志
+        └── module_poller_YYYYMMDD.log
 ```
 
-### 侧边栏
-
-- 登录后显示 Agent 列表，点击切换当前 Agent
-- 切换 Agent 会自动加载该 Agent 的所有数据
-
-### 聊天面板
-
-- 与 Agent 的主要交互入口，通过 WebSocket 实时流式传输
-- 发送消息后可以看到 Agent 的执行步骤（在右侧 Runtime Tab 中实时展示）
-- 历史消息在切换 Agent 时自动加载（最近 20 条）
-
-### 上下文面板
-
-右侧面板包含多个 Tab，展示 Agent 的各项状态信息：
-
-| Tab | 功能 | 需要手动刷新？ |
-|-----|------|:---:|
-| **Runtime** | 当前对话的 pipeline 步骤 + Narrative 列表 | Narrative 需要 🔄 |
-| **Agent Config** | Agent 自我认知（可编辑）+ 社交网络列表（可搜索）+ RAG 文件管理 | 需要 🔄 |
-| **Agent Inbox** | Agent 收到的来自其他用户的消息 | 需要 🔄 |
-| **Jobs** | 任务列表 / 依赖图 / 时间线三种视图，支持按状态筛选和取消任务 | 需要 🔄 |
-| **Skills** | Agent 可用的工具和技能列表 | 需要 🔄 |
-
-> **⚠️ 重要提示：除聊天消息外，右侧面板的数据不会自动更新。** 当你通过聊天让 Agent 修改了 Awareness、创建了新任务、或更新了社交网络后，需要点击对应面板右上角的 🔄 刷新按钮 才能看到最新数据。
-
-### 典型操作流程
-
-1. **登录** → 选择或创建 Agent
-2. **聊天配置** → 通过自然语言配置 Agent 的 Awareness（角色、目标、关键信息）
-3. **刷新 Agent Config 面板** → 点击 🔄 确认配置已生效
-4. **聊天分配任务** → 通过自然语言创建 Job（定时、周期、持续等）
-5. **刷新 Jobs 面板** → 点击 🔄 查看已创建的任务列表
-6. **持续交互** → Agent 执行任务后，刷新各面板查看社交网络更新、Narrative 积累等
+- **日志轮转**：每天午夜轮转，旧日志压缩为 `.zip` 并保留 7 天
+- **可安全删除**：整个 `~/.narranexus/` 目录可以随时删除，下次运行时会自动重建
+- **桌面版**：使用相同的 `~/.narranexus/` 路径（macOS 下为 `~/.narranexus/`，不在 `~/Library/Application Support/` 内）
 
 ## 文档
 
 | 文档 | 说明 |
 |------|------|
+| [更新日志](./docs/CHANGELOG.md) | 每个版本的更新内容 |
 | [使用示例](./docs/EXAMPLES_zh.md) | 用法模式：销售 Agent、定时监控、RAG、任务调度 |
 | [架构说明](./docs/ARCHITECTURE.md) | 系统架构、模块系统、技术栈、项目结构 |
 | [开发指南](./docs/DEVELOPMENT.md) | 手动安装、配置、表管理、新增模块 |
 
 ## Star History
 
-<a href="https://star-history.com/#NetMindAI-Open/NexusAgent&Date">
+<a href="https://star-history.com/#NetMindAI-Open/NarraNexus&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NexusAgent&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NexusAgent&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=NetMindAI-Open/NexusAgent&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NarraNexus&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=NetMindAI-Open/NarraNexus&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=NetMindAI-Open/NarraNexus&type=Date" />
  </picture>
 </a>
 
 ## 致谢
 
-NexusMind 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-AI/EverMemOS) 构建，这是一个用于结构化长程推理的自组织记忆操作系统。感谢 EverMemOS 团队的基础性工作。
+NarraNexus 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-AI/EverMemOS) 构建，这是一个用于结构化长程推理的自组织记忆操作系统。感谢 EverMemOS 团队的基础性工作。
 
 > Chuanrui Hu, Xingze Gao, Zuyi Zhou, Dannong Xu, Yi Bai, Xintong Li, Hui Zhang, Tong Li, Chong Zhang, Lidong Bing, Yafeng Deng. *EverMemOS: A Self-Organizing Memory Operating System for Structured Long-Horizon Reasoning.* arXiv:2601.02163, 2026. [[论文]](https://arxiv.org/abs/2601.02163)
 
 ## 引用
 
-如果 NexusMind 对你的工作有帮助，请引用：
+如果 NarraNexus 对你的工作有帮助，请引用：
 
 ```bibtex
-@software{nexusagent2025,
-  title        = {NexusMind: A Framework for Building Nexuses of Agents},
+@software{narranexus2026,
+  title        = {NarraNexus: A Framework for Building Nexuses of Agents},
   author       = {NetMind.AI},
   year         = {2026},
-  url          = {https://github.com/NetMindAI-Open/NexusAgent},
-  license      = {Apache-2.0}
+  url          = {https://github.com/NetMindAI-Open/NarraNexus},
+  license      = {CC-BY-NC-4.0}
 }
 ```
 
@@ -211,4 +216,4 @@ NexusMind 的长期记忆系统基于 [EverMemOS](https://github.com/EverMind-AI
 
 ## 许可证
 
-[Apache License 2.0](./LICENSE)
+[CC BY-NC 4.0](./LICENSE)

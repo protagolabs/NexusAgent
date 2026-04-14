@@ -44,6 +44,7 @@ export default defineConfig({
       '/ws': {
         target: 'ws://localhost:8000',
         ws: true,
+        timeout: 0,  // 禁用代理超时，防止长时间运行的 agent loop 被断开
       },
     },
   },

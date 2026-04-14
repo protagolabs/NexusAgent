@@ -48,6 +48,7 @@ from .runtime_message import (
     AgentTextDelta,
     AgentThinking,
     AgentToolCall,
+    ErrorMessage,
 )
 
 # ===== Job Schema =====
@@ -73,6 +74,9 @@ from .hook_schema import (
     HookExecutionTrace,
     HookAfterExecutionParams,
 )
+
+# ===== Channel Tag Schema =====
+from .channel_tag import ChannelTag
 
 # ===== RAG Store Schema =====
 from .rag_store_schema import (
@@ -131,6 +135,9 @@ from .api_schema import (
     # Simple Chat History
     SimpleChatMessage,
     SimpleChatHistoryResponse,
+    # Event Log Detail
+    EventLogToolCall,
+    EventLogResponse,
     # Files
     FileInfo,
     FileListResponse,
@@ -148,16 +155,17 @@ from .api_schema import (
     JobResponse,
     JobListResponse,
     JobDetailResponse,
-    # Inbox
-    MessageSourceResponse,
-    InboxMessageResponse,
-    InboxListResponse,
-    MarkReadResponse,
     # RAG Files
     RAGFileInfo,
     RAGFileListResponse,
     RAGFileUploadResponse,
     RAGFileDeleteResponse,
+    # Cost
+    CostModelBreakdown,
+    CostDailyEntry,
+    CostSummary,
+    CostRecord,
+    CostResponse,
 )
 
 # ===== Skill Schema =====
@@ -274,6 +282,9 @@ __all__ = [
     "HookExecutionTrace",
     "HookAfterExecutionParams",
 
+    # Channel Tag Schema
+    "ChannelTag",
+
     # RAG Store Schema
     "RAGStoreModel",
     "KeywordsUpdateRequest",
@@ -322,6 +333,9 @@ __all__ = [
     # Simple Chat History
     "SimpleChatMessage",
     "SimpleChatHistoryResponse",
+    # Event Log Detail
+    "EventLogToolCall",
+    "EventLogResponse",
     # Files
     "FileInfo",
     "FileListResponse",
@@ -339,11 +353,6 @@ __all__ = [
     "JobResponse",
     "JobListResponse",
     "JobDetailResponse",
-    # Inbox (API)
-    "MessageSourceResponse",
-    "InboxMessageResponse",
-    "InboxListResponse",
-    "MarkReadResponse",
     # RAG Files
     "RAGFileInfo",
     "RAGFileListResponse",

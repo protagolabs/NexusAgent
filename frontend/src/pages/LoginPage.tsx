@@ -9,7 +9,6 @@ import { Button, Input } from '@/components/ui';
 import { useConfigStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { ParticleBackground } from './ParticleBackground';
 import { CreateUserDialog } from './CreateUserDialog';
 
 export function LoginPage() {
@@ -60,24 +59,18 @@ export function LoginPage() {
 
   return (
     <div className="login-container">
-      <ParticleBackground />
-
       {/* Main login card */}
       <div className="login-card animate-scale-in">
         {/* Logo / Header */}
         <div className="text-center mb-10">
           <div className="relative inline-block mb-5">
-            <div className="absolute -inset-4 bg-[var(--accent-primary)] rounded-3xl opacity-20 blur-2xl animate-breathe" />
-            <div className="relative w-20 h-20 rounded-2xl bg-[var(--gradient-primary)] flex items-center justify-center shadow-[0_0_40px_var(--accent-glow)] animate-float">
+            <div className="relative w-20 h-20 rounded-2xl bg-[var(--gradient-primary)] flex items-center justify-center">
               <Zap className="w-10 h-10 text-[var(--text-inverse)] dark:text-[var(--bg-deep)]" />
-            </div>
-            <div className="absolute -inset-6 animate-rotate-slow">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[var(--accent-primary)] shadow-[0_0_10px_var(--accent-primary)]" />
             </div>
           </div>
 
           <h1 className="text-3xl font-bold font-[family-name:var(--font-display)] text-[var(--text-primary)] mb-2 tracking-tight">
-            Nexus<span className="text-[var(--accent-primary)]">Mind</span>
+            Narra<span className="text-[var(--accent-primary)]">Nexus</span>
           </h1>
           <p className="text-[var(--text-secondary)] text-sm">Intelligent Agent Platform</p>
           <p className="text-[10px] text-[var(--text-tertiary)] font-mono tracking-[0.2em] uppercase mt-1">
@@ -115,7 +108,6 @@ export function LoginPage() {
             onClick={handleLogin}
             disabled={loading || !userId.trim()}
             className="w-full h-12 text-base font-semibold group"
-            glow={!loading && !!userId.trim()}
           >
             {loading ? (
               <>
@@ -157,7 +149,7 @@ export function LoginPage() {
         <div className="mt-10 pt-6 border-t border-[var(--border-subtle)]">
           <div className="flex items-center justify-center gap-2 text-xs text-[var(--text-tertiary)]">
             <Sparkles className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-            <span>Powered by NexusMind</span>
+            <span>Powered by NarraNexus</span>
           </div>
         </div>
       </div>

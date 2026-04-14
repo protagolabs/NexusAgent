@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# NexusMind Unified Entry Script
+# NarraNexus Unified Entry Script
 #
 # One-click: Environment Install → Service Startup → Status Monitor → Stop
 #
@@ -10,7 +10,7 @@
 #   bash run.sh run          # Start all services directly
 #   bash run.sh status       # View service status
 #   bash run.sh stop         # Stop all services
-#   bash run.sh update       # Pull latest code & update deps (DB untouched)
+#   bash run.sh update       # Pull latest code (run Install after to apply changes)
 # ============================================================================
 
 set -uo pipefail
@@ -22,6 +22,9 @@ PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 EVERMEMOS_DIR="${PROJECT_ROOT}/.evermemos"
 EVERMEMOS_REPO="https://github.com/NetMindAI-Open/EverMemOS.git"
 EVERMEMOS_BRANCH="main"
+NEXUSMATRIX_DIR="${PROJECT_ROOT}/related_project/NetMind-AI-RS-NexusMatrix"
+NEXUSMATRIX_REPO="https://github.com/protagolabs/NetMind-AI-RS-NexusMatrix.git"
+NEXUSMATRIX_BRANCH="main"
 TMUX_SESSION="xyz-dev"
 
 # OS Detection
@@ -75,6 +78,180 @@ version_gte() {
 }
 
 # ============================================================================
+# Compute Colima resource allocation (~50% system resources, clamped)
+#   Output: "CPU MEMORY_GB"  e.g. "4 6"
+# ============================================================================
+get_colima_resources() {
+    local total_cpu total_mem_kb mem_gb
+    if [ "$OS_TYPE" = "Darwin" ]; then
+        total_cpu=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
+        total_mem_kb=$(( $(sysctl -n hw.memsize 2>/dev/null || echo 8589934592) / 1024 ))
+    else
+        total_cpu=$(nproc 2>/dev/null || echo 4)
+        total_mem_kb=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}')
+        total_mem_kb=${total_mem_kb:-8388608}
+    fi
+    local cpu=$(( total_cpu / 2 ))
+    [ "$cpu" -lt 2 ] && cpu=2
+    [ "$cpu" -gt 8 ] && cpu=8
+    mem_gb=$(( total_mem_kb / 1024 / 1024 / 2 ))
+    [ "$mem_gb" -lt 2 ] && mem_gb=2
+    [ "$mem_gb" -gt 12 ] && mem_gb=12
+    echo "$cpu $mem_gb"
+}
+
+# ============================================================================
+# Wait for Docker daemon to become ready (poll docker info)
+#   Args: max_seconds (default 60)
+#   Returns: 0=ready  1=timeout
+# ============================================================================
+wait_for_docker() {
+    local max_wait="${1:-60}"
+    local elapsed=0
+    printf "    Waiting for Docker daemon "
+    while ! docker info &>/dev/null 2>&1; do
+        if [ $elapsed -ge $max_wait ]; then
+            echo -e " ${YELLOW}Timeout${RESET}"
+            return 1
+        fi
+        printf "."
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+    echo -e " ${GREEN}Ready${RESET}"
+    return 0
+}
+
+# ============================================================================
+# macOS Docker multi-strategy automatic installation
+#
+# Strategies (tried in order):
+#   1. Launch existing Docker Desktop
+#   2. Launch existing Colima
+#   3. Brew install Colima + Docker CLI + Compose
+#   4. Download Docker Desktop .dmg and install
+#   Falls through to manual instructions if all fail
+# ============================================================================
+install_docker_macos() {
+    local arch
+    arch="$(uname -m)"  # arm64 or x86_64
+
+    # --- Strategy 1: Launch Docker Desktop if already installed ---
+    info "Strategy 1: Checking for Docker Desktop..."
+    if open -Ra Docker 2>/dev/null; then
+        info "Docker Desktop found, launching..."
+        open -a Docker
+        if wait_for_docker 60; then
+            success "Docker Desktop started successfully"
+            return 0
+        fi
+        warn "Docker Desktop launched but daemon did not become ready"
+    else
+        info "Docker Desktop not installed, skipping"
+    fi
+
+    # --- Strategy 2: Launch existing Colima ---
+    info "Strategy 2: Checking for Colima..."
+    if command -v colima &>/dev/null; then
+        info "Colima found, starting..."
+        local resources
+        resources=$(get_colima_resources)
+        local cpu mem
+        cpu=$(echo "$resources" | awk '{print $1}')
+        mem=$(echo "$resources" | awk '{print $2}')
+        info "Allocating ${cpu} CPUs, ${mem}GB memory"
+        if colima start --cpu "$cpu" --memory "$mem" 2>&1; then
+            if docker info &>/dev/null 2>&1; then
+                success "Colima started successfully"
+                return 0
+            fi
+        fi
+        warn "Colima start failed"
+    else
+        info "Colima not installed, skipping"
+    fi
+
+    # --- Strategy 3: Brew install Colima + Docker + Compose ---
+    info "Strategy 3: Checking Homebrew..."
+    if command -v brew &>/dev/null; then
+        # Skip Intel Homebrew on Apple Silicon (would install x86 binaries via Rosetta)
+        local brew_prefix
+        brew_prefix="$(brew --prefix 2>/dev/null)"
+        if [ "$arch" = "arm64" ] && [ "$brew_prefix" = "/usr/local" ]; then
+            warn "Detected Intel Homebrew on Apple Silicon — skipping to avoid Rosetta issues"
+        else
+            info "Installing Colima + Docker via Homebrew..."
+            brew install colima docker docker-compose 2>&1 || true
+            if command -v colima &>/dev/null; then
+                local resources
+                resources=$(get_colima_resources)
+                local cpu mem
+                cpu=$(echo "$resources" | awk '{print $1}')
+                mem=$(echo "$resources" | awk '{print $2}')
+                info "Starting Colima (${cpu} CPUs, ${mem}GB memory)..."
+                colima start --cpu "$cpu" --memory "$mem" 2>&1 || true
+                if docker info &>/dev/null 2>&1; then
+                    success "Docker installed and started via Colima"
+                    return 0
+                fi
+            fi
+            warn "Homebrew install succeeded but Docker daemon not ready"
+        fi
+    else
+        info "Homebrew not installed, skipping"
+    fi
+
+    # --- Strategy 4: Download and install Docker Desktop .dmg ---
+    info "Strategy 4: Downloading Docker Desktop .dmg..."
+    local dmg_arch="arm64"
+    [ "$arch" = "x86_64" ] && dmg_arch="amd64"
+    local dmg_url="https://desktop.docker.com/mac/main/${dmg_arch}/Docker.dmg"
+    local dmg_tmp="/tmp/Docker_$$.dmg"
+
+    info "Downloading from ${dmg_url}..."
+    if curl -fSL -o "$dmg_tmp" "$dmg_url"; then
+        info "Mounting disk image..."
+        local mount_point
+        mount_point=$(hdiutil mount "$dmg_tmp" 2>/dev/null | tail -1 | awk '{print $NF}')
+        if [ -d "$mount_point/Docker.app" ]; then
+            info "Installing Docker.app (may require password)..."
+            sudo cp -R "$mount_point/Docker.app" /Applications/
+            hdiutil detach "$mount_point" 2>/dev/null || true
+            rm -f "$dmg_tmp"
+            info "Launching Docker Desktop..."
+            open -a Docker
+            if wait_for_docker 120; then
+                success "Docker Desktop installed and started"
+                return 0
+            fi
+            warn "Docker Desktop installed but daemon did not start in time"
+        else
+            warn "Could not find Docker.app in mounted image"
+            hdiutil detach "$mount_point" 2>/dev/null || true
+            rm -f "$dmg_tmp"
+        fi
+    else
+        warn "Docker Desktop download failed"
+        rm -f "$dmg_tmp" 2>/dev/null || true
+    fi
+
+    # --- All strategies failed ---
+    fail "All automatic Docker installation strategies failed"
+    echo ""
+    echo -e "    Please install Docker manually:"
+    echo -e "    ${WHITE}https://www.docker.com/products/docker-desktop/${RESET}"
+    echo -e "    ${DIM}Or via Homebrew: brew install --cask docker${RESET}"
+    echo ""
+    read -rp "    Press Enter after installing Docker..."
+    if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+        success "Docker is now available"
+        return 0
+    fi
+    warn "Docker still not detected. Docker-related steps may fail."
+    return 1
+}
+
+# ============================================================================
 # Color Definitions
 # ============================================================================
 BOLD='\033[1m'
@@ -111,23 +288,16 @@ step()    { echo -e "\n${BOLD}${WHITE}  [$1]${RESET} $2"; }
 show_banner() {
     clear
     echo ""
-    echo -e "${G1}    ███╗   ██╗${G2}███████╗${G3}██╗  ██╗${G4}██╗   ██╗${G5}███████╗${RESET}"
-    echo -e "${G1}    ████╗  ██║${G2}██╔════╝${G3}╚██╗██╔╝${G4}██║   ██║${G5}██╔════╝${RESET}"
-    echo -e "${G1}    ██╔██╗ ██║${G2}█████╗  ${G3} ╚███╔╝ ${G4}██║   ██║${G5}███████╗${RESET}"
-    echo -e "${G1}    ██║╚██╗██║${G2}██╔══╝  ${G3} ██╔██╗ ${G4}██║   ██║${G5}╚════██║${RESET}"
-    echo -e "${G1}    ██║ ╚████║${G2}███████╗${G3}██╔╝ ██╗${G4}╚██████╔╝${G5}███████║${RESET}"
-    echo -e "${G1}    ╚═╝  ╚═══╝${G2}╚══════╝${G3}╚═╝  ╚═╝${G4} ╚═════╝ ${G5}╚══════╝${RESET}"
+    echo -e "${G1}    ███╗   ██╗${G2} █████╗ ██████╗ ${G3}██████╗  █████╗ ${G4}███╗   ██╗███████╗${G5}██╗  ██╗██╗   ██╗${G6}███████╗${RESET}"
+    echo -e "${G1}    ████╗  ██║${G2}██╔══██╗██╔══██╗${G3}██╔══██╗██╔══██╗${G4}████╗  ██║██╔════╝${G5}╚██╗██╔╝██║   ██║${G6}██╔════╝${RESET}"
+    echo -e "${G1}    ██╔██╗ ██║${G2}███████║██████╔╝${G3}██████╔╝███████║${G4}██╔██╗ ██║█████╗  ${G5} ╚███╔╝ ██║   ██║${G6}███████╗${RESET}"
+    echo -e "${G1}    ██║╚██╗██║${G2}██╔══██║██╔══██╗${G3}██╔══██╗██╔══██║${G4}██║╚██╗██║██╔══╝  ${G5} ██╔██╗ ██║   ██║${G6}╚════██║${RESET}"
+    echo -e "${G1}    ██║ ╚████║${G2}██║  ██║██║  ██║${G3}██║  ██║██║  ██║${G4}██║ ╚████║███████╗${G5}██╔╝ ██╗╚██████╔╝${G6}███████║${RESET}"
+    echo -e "${G1}    ╚═╝  ╚═══╝${G2}╚═╝  ╚═╝╚═╝  ╚═╝${G3}╚═╝  ╚═╝╚═╝  ╚═╝${G4}╚═╝  ╚═══╝╚══════╝${G5}╚═╝  ╚═╝ ╚═════╝ ${G6}╚══════╝${RESET}"
     echo ""
-    echo -e "${G3}    ███╗   ███╗${G4}██╗${G5}███╗   ██╗${G6}██████╗ ${RESET}"
-    echo -e "${G3}    ████╗ ████║${G4}██║${G5}████╗  ██║${G6}██╔══██╗${RESET}"
-    echo -e "${G3}    ██╔████╔██║${G4}██║${G5}██╔██╗ ██║${G6}██║  ██║${RESET}"
-    echo -e "${G3}    ██║╚██╔╝██║${G4}██║${G5}██║╚██╗██║${G6}██║  ██║${RESET}"
-    echo -e "${G3}    ██║ ╚═╝ ██║${G4}██║${G5}██║ ╚████║${G6}██████╔╝${RESET}"
-    echo -e "${G3}    ╚═╝     ╚═╝${G4}╚═╝${G5}╚═╝  ╚═══╝${G6}╚═════╝ ${RESET}"
-    echo ""
-    echo -e "${DIM}    ─────────────────────────────────────────────────${RESET}"
-    echo -e "${DIM}      Modular Agent Framework with Long-term Memory${RESET}"
-    echo -e "${DIM}    ─────────────────────────────────────────────────${RESET}"
+    echo -e "${DIM}    ─────────────────────────────────────────────────────────────────────────────────────${RESET}"
+    echo -e "${DIM}                        Modular Agent Framework with Long-term Memory${RESET}"
+    echo -e "${DIM}    ─────────────────────────────────────────────────────────────────────────────────────${RESET}"
     echo ""
 }
 
@@ -137,24 +307,26 @@ show_banner() {
 show_menu() {
     echo -e "    ${BOLD}${WHITE}Select an action:${RESET}"
     echo ""
-    echo -e "    ${G1}[1]${RESET}  ${BOLD}Install${RESET}   Install all dependencies and environment"
-    echo -e "    ${G3}[2]${RESET}  ${BOLD}Run${RESET}       Start all services"
-    echo -e "    ${G5}[3]${RESET}  ${BOLD}Status${RESET}    View service status"
-    echo -e "    ${YELLOW}[4]${RESET}  ${BOLD}Stop${RESET}      Stop all services"
-    echo -e "    ${CYAN}[5]${RESET}  ${BOLD}Update${RESET}    Pull latest code and update dependencies"
-    echo -e "    ${DIM}[q]${RESET}  ${DIM}Quit${RESET}      ${DIM}Exit${RESET}"
+    echo -e "    ${G1}[1]${RESET}  ${BOLD}Install${RESET}     Install all dependencies and environment"
+    echo -e "    ${BLUE}[2]${RESET}  ${BOLD}Configure${RESET}   Configure LLM providers and API keys"
+    echo -e "    ${G3}[3]${RESET}  ${BOLD}Run${RESET}         Start all services"
+    echo -e "    ${G5}[4]${RESET}  ${BOLD}Status${RESET}      View service status"
+    echo -e "    ${YELLOW}[5]${RESET}  ${BOLD}Stop${RESET}        Stop all services"
+    echo -e "    ${CYAN}[6]${RESET}  ${BOLD}Update${RESET}      Pull latest code (run Install after to apply)"
+    echo -e "    ${DIM}[q]${RESET}  ${DIM}Quit${RESET}        ${DIM}Exit${RESET}"
     echo ""
     read -rp "    > " choice
     echo ""
 
     case "$choice" in
-        1|install)  do_install ;;
-        2|run)      do_run ;;
-        3|status)   do_status ;;
-        4|stop)     do_stop ;;
-        5|update)   do_update ;;
-        q|Q|quit)   echo -e "    ${DIM}Bye!${RESET}"; exit 0 ;;
-        *)          warn "Invalid option: $choice"; show_menu ;;
+        1|install)    do_install ;;
+        2|configure)  do_configure ;;
+        3|run)        do_run ;;
+        4|status)     do_status ;;
+        5|stop)       do_stop ;;
+        6|update)     do_update ;;
+        q|Q|quit)     echo -e "    ${DIM}Bye!${RESET}"; exit 0 ;;
+        *)            warn "Invalid option: $choice"; show_menu ;;
     esac
 }
 
@@ -207,15 +379,54 @@ check_docker_health() {
         return 2
     fi
 
-    # 2. Check if Docker daemon is running
+    # 2. Check if Docker daemon is running — auto-start if not
     if ! docker info &>/dev/null 2>&1 && ! sudo docker info &>/dev/null 2>&1; then
-        fail "Docker daemon is not running"
+        warn "Docker daemon is not running, attempting to start..."
         if [ "$OS_TYPE" = "Darwin" ]; then
-            info "  Please start Docker Desktop"
+            # Try Docker Desktop first, then Colima
+            if open -Ra Docker 2>/dev/null; then
+                info "Launching Docker Desktop..."
+                open -a Docker
+                if wait_for_docker 30; then
+                    success "Docker Desktop started"
+                else
+                    fail "Docker Desktop did not start in time"
+                    return 2
+                fi
+            elif command -v colima &>/dev/null; then
+                info "Starting Colima..."
+                local resources
+                resources=$(get_colima_resources)
+                local cpu mem
+                cpu=$(echo "$resources" | awk '{print $1}')
+                mem=$(echo "$resources" | awk '{print $2}')
+                colima start --cpu "$cpu" --memory "$mem" 2>&1 || true
+                if ! docker info &>/dev/null 2>&1; then
+                    fail "Colima started but Docker daemon not ready"
+                    return 2
+                fi
+            else
+                fail "Docker daemon is not running and no runtime found to start"
+                info "  Please install and start Docker Desktop or Colima"
+                return 2
+            fi
         else
-            info "  Try: sudo systemctl start docker"
+            # Linux: try systemctl
+            if command -v systemctl &>/dev/null; then
+                systemctl start docker 2>/dev/null || sudo systemctl start docker 2>/dev/null || true
+                sleep 2
+                if ! docker info &>/dev/null 2>&1 && ! sudo docker info &>/dev/null 2>&1; then
+                    fail "Docker daemon failed to start"
+                    info "  Try: sudo systemctl start docker"
+                    return 2
+                fi
+                success "Docker daemon started via systemctl"
+            else
+                fail "Docker daemon is not running"
+                info "  Try: sudo service docker start"
+                return 2
+            fi
         fi
-        return 2
     fi
 
     detect_docker_permission
@@ -340,10 +551,10 @@ verify_services_health() {
 
     # MCP Server
     if is_port_up 7801; then
-        echo -e "    ${GREEN}●${RESET}  MCP Server             ${GREEN}Running${RESET}  (port 7801)"
+        echo -e "    ${GREEN}●${RESET}  MCP Server             ${GREEN}Running${RESET}  (ports 7801-7810)"
     else
-        echo -e "    ${RED}○${RESET}  MCP Server             ${RED}Not running${RESET}  (port 7801)"
-        warnings="${warnings}\n    - MCP Server failed to start on port 7801."
+        echo -e "    ${RED}○${RESET}  MCP Server             ${RED}Not running${RESET}  (ports 7801-7810)"
+        warnings="${warnings}\n    - MCP Server failed to start on ports 7801-7810."
         warnings="${warnings}\n      Check logs: tmux attach -t ${TMUX_SESSION} then Ctrl-b 5"
         all_healthy=false
     fi
@@ -365,12 +576,45 @@ verify_services_health() {
         all_healthy=false
     fi
 
+    # NexusMatrix Server - HTTP health check
+    if is_port_up 8953; then
+        if http_health_check "http://localhost:8953/health" 5; then
+            echo -e "    ${GREEN}●${RESET}  NexusMatrix Server     ${GREEN}Healthy${RESET}  (HTTP OK on /health)"
+        else
+            echo -e "    ${YELLOW}●${RESET}  NexusMatrix Server     ${YELLOW}Port open but not responding to HTTP${RESET}"
+            warnings="${warnings}\n    - NexusMatrix: Port 8953 is open but HTTP requests fail."
+            warnings="${warnings}\n      Check logs: tmux attach -t ${TMUX_SESSION} then Ctrl-b 6"
+            all_healthy=false
+        fi
+    else
+        echo -e "    ${RED}○${RESET}  NexusMatrix Server     ${RED}Not running${RESET}  (port 8953)"
+        warnings="${warnings}\n    - NexusMatrix Server failed to start on port 8953."
+        warnings="${warnings}\n      Check logs: tmux attach -t ${TMUX_SESSION} then Ctrl-b 6"
+        all_healthy=false
+    fi
+
     # MySQL connectivity
     if is_port_up 3306; then
         echo -e "    ${GREEN}●${RESET}  MySQL                  ${GREEN}Running${RESET}  (port 3306)"
     else
         echo -e "    ${YELLOW}○${RESET}  MySQL                  ${YELLOW}Not running${RESET}  (port 3306)"
         warnings="${warnings}\n    - MySQL is not running. Backend services may fail to connect to the database."
+        all_healthy=false
+    fi
+
+    # Synapse (Matrix homeserver) connectivity
+    if is_port_up 8008; then
+        if http_health_check "http://localhost:8008/health" 5; then
+            echo -e "    ${GREEN}●${RESET}  Synapse                ${GREEN}Healthy${RESET}  (HTTP OK on :8008/health)"
+        else
+            echo -e "    ${YELLOW}●${RESET}  Synapse                ${YELLOW}Port open but not healthy${RESET}"
+            warnings="${warnings}\n    - Synapse: Port 8008 is open but health check failed."
+            all_healthy=false
+        fi
+    else
+        echo -e "    ${RED}○${RESET}  Synapse                ${RED}Not running${RESET}  (port 8008)"
+        warnings="${warnings}\n    - Synapse is not running. Matrix/NexusMatrix features will be unavailable."
+        warnings="${warnings}\n      Run: docker compose up -d synapse"
         all_healthy=false
     fi
 
@@ -433,9 +677,32 @@ sed_inplace() {
 }
 
 # ============================================================================
-# Start MySQL Docker container and wait until ready
+# Ensure Synapse config exists (copy template on first run)
 # ============================================================================
-start_mysql_docker() {
+ensure_synapse_config() {
+    local template_dir="${PROJECT_ROOT}/deploy/synapse"
+    local data_dir="${template_dir}/data"
+
+    if [ -f "${data_dir}/homeserver.yaml" ]; then
+        return 0
+    fi
+
+    info "Synapse config not found, copying templates (first run)..."
+    mkdir -p "${data_dir}"
+    if [ -f "${template_dir}/homeserver.yaml" ]; then
+        cp "${template_dir}/homeserver.yaml" "${data_dir}/homeserver.yaml"
+        cp "${template_dir}/localhost.log.config" "${data_dir}/localhost.log.config" 2>/dev/null || true
+        success "Synapse config templates copied to ${data_dir}"
+    else
+        warn "Synapse template not found at ${template_dir}/homeserver.yaml"
+        return 1
+    fi
+}
+
+# ============================================================================
+# Start Docker containers (MySQL + Synapse) and wait until ready
+# ============================================================================
+start_docker_services() {
     detect_compose_cmd
     if [ -z "${COMPOSE_CMD:-}" ]; then
         fail "Docker Compose is not available"
@@ -443,8 +710,37 @@ start_mysql_docker() {
     fi
 
     cd "$PROJECT_ROOT"
-    info "Starting MySQL Docker container..."
-    $COMPOSE_CMD up -d mysql 2>&1 | grep -v "is obsolete" || true
+
+    # Skip compose if both MySQL and Synapse are already reachable
+    if is_port_up 3306 && is_port_up 8008; then
+        success "MySQL (3306) and Synapse (8008) are already reachable, skipping compose"
+        return 0
+    fi
+
+    # Ensure Synapse config exists before starting containers
+    ensure_synapse_config
+
+    info "Starting Docker containers (MySQL + Synapse)..."
+    # Containers may have been created by a previous compose project (e.g. directory was renamed).
+    # Current compose won't recognize them and throws "name already in use" Conflict.
+    # Fix: detect existing containers via docker ps -a, start them directly,
+    #       only compose-create truly missing ones.
+    local existing_containers
+    existing_containers=$($DOCKER_CMD ps -a --format '{{.Names}}' 2>/dev/null)
+    local services_to_create=()
+    if echo "$existing_containers" | grep -q '^xyz-mysql$'; then
+        $DOCKER_CMD start xyz-mysql 2>/dev/null || true
+    else
+        services_to_create+=("mysql")
+    fi
+    if echo "$existing_containers" | grep -q '^nexus-synapse$'; then
+        $DOCKER_CMD start nexus-synapse 2>/dev/null || true
+    else
+        services_to_create+=("synapse")
+    fi
+    if [ ${#services_to_create[@]} -gt 0 ]; then
+        $COMPOSE_CMD up -d "${services_to_create[@]}" 2>&1 | grep -v "is obsolete\|already exists" || true
+    fi
 
     # Wait for MySQL to be ready
     local elapsed=0
@@ -461,31 +757,93 @@ start_mysql_docker() {
         elapsed=$((elapsed + 2))
     done
     echo -e " ${GREEN}Ready${RESET}"
-    success "MySQL Docker is ready (127.0.0.1:3306)"
+    success "MySQL is ready (127.0.0.1:3306)"
+
+    # Wait for Synapse to be ready (non-fatal)
+    elapsed=0
+    max_wait=90
+    printf "    Waiting for Synapse "
+    while ! curl -sf --max-time 2 http://localhost:8008/health &>/dev/null; do
+        if [ $elapsed -ge $max_wait ]; then
+            echo -e " ${YELLOW}Timeout${RESET}"
+            warn "Synapse startup timed out (${max_wait}s). Matrix features will be unavailable."
+            warn "Check Docker logs: $DOCKER_CMD logs nexus-synapse"
+            return 0  # Non-fatal: MySQL is up, app is usable
+        fi
+        printf "."
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+    echo -e " ${GREEN}Ready${RESET}"
+    success "Synapse is ready (127.0.0.1:8008)"
+
+    # Create Synapse admin user if NexusMatrix scripts are available
+    local create_admin="${NEXUSMATRIX_DIR}/scripts/create_admin.py"
+    if [ -f "$create_admin" ] && command -v uv &>/dev/null; then
+        info "Creating Synapse admin user..."
+        cd "${NEXUSMATRIX_DIR}"
+        uv run python "$create_admin" \
+            --homeserver "http://localhost:8008" \
+            --shared-secret '9_HimzS2a&CBS^DPyP&mLBT2Nry-e-tR=39.w&jkwf9IGkOCGH' \
+            --username nexus_admin \
+            --password nexus_admin_password \
+            --admin \
+            --display-name NexusAdmin 2>/dev/null \
+            && success "Synapse admin user ready" \
+            || info "Admin user may already exist (OK)"
+        cd "$PROJECT_ROOT"
+    fi
 }
 
 # ============================================================================
-# Ensure MySQL is available (detect port conflicts + interactive handling)
+# Ensure Docker services (MySQL + Synapse) are available
 #
-# Returns: 0=MySQL ready  1=user skipped or failed
+# Returns: 0=services ready  1=user skipped or failed
 # ============================================================================
-ensure_mysql() {
+ensure_docker_services() {
     detect_compose_cmd
     if [ -z "${COMPOSE_CMD:-}" ] || ! command -v docker &>/dev/null; then
-        warn "Docker is not available, skipping MySQL Docker startup"
-        info "Please ensure you have a MySQL service running"
+        warn "Docker is not available, skipping Docker service startup"
+        info "Please ensure you have MySQL and Synapse running"
         return 1
     fi
 
     # Port not occupied → normal startup
     if ! is_port_up 3306; then
-        start_mysql_docker
+        start_docker_services
         return $?
     fi
 
     # Port occupied → check if it's our own container
     if $DOCKER_CMD ps --format '{{.Names}}' 2>/dev/null | grep -q '^xyz-mysql$'; then
         success "xyz-mysql is already running (port 3306)"
+        # MySQL is ours, but also ensure Synapse is up
+        if ! $DOCKER_CMD ps --format '{{.Names}}' 2>/dev/null | grep -q '^nexus-synapse$'; then
+            info "Starting Synapse container..."
+            ensure_synapse_config
+            if $DOCKER_CMD ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^nexus-synapse$'; then
+                $DOCKER_CMD start nexus-synapse 2>/dev/null || true
+            else
+                $COMPOSE_CMD up -d synapse 2>&1 | grep -v "is obsolete\|already exists" || true
+            fi
+            # Wait for Synapse (non-fatal)
+            local elapsed=0
+            printf "    Waiting for Synapse "
+            while ! curl -sf --max-time 2 http://localhost:8008/health &>/dev/null; do
+                if [ $elapsed -ge 90 ]; then
+                    echo -e " ${YELLOW}Timeout${RESET}"
+                    warn "Synapse startup timed out. Matrix features will be unavailable."
+                    return 0
+                fi
+                printf "."
+                sleep 2
+                elapsed=$((elapsed + 2))
+            done
+            echo -e " ${GREEN}Ready${RESET}"
+            success "Synapse is ready (127.0.0.1:8008)"
+        else
+            success "nexus-synapse is already running (port 8008)"
+        fi
         return 0
     fi
 
@@ -542,7 +900,7 @@ ensure_mysql() {
                 fail "Port 3306 is still occupied. Please check manually."
                 return 1
             fi
-            start_mysql_docker
+            start_docker_services
             return $?
             ;;
         2)
@@ -551,7 +909,7 @@ ensure_mysql() {
             return 0
             ;;
         3|*)
-            info "Skipping MySQL startup. Please handle it manually later."
+            info "Skipping Docker service startup. Please handle it manually later."
             return 1
             ;;
     esac
@@ -619,7 +977,7 @@ do_install() {
             ;;
     esac
 
-    local total_steps=10
+    local total_steps=12
     local current=0
 
     # --- Step 1: uv ---
@@ -705,6 +1063,16 @@ do_install() {
                     sudo usermod -aG docker "$USER" 2>/dev/null || true
                     success "Docker installed successfully"
                     warn "Current user added to docker group. You may need to re-login for it to take effect."
+                    # Install docker-compose-plugin
+                    info "Installing docker-compose-plugin..."
+                    sudo apt-get install -y docker-compose-plugin 2>/dev/null \
+                        || sudo yum install -y docker-compose-plugin 2>/dev/null \
+                        || true
+                    # Start daemon
+                    info "Starting Docker daemon..."
+                    sudo systemctl start docker 2>/dev/null \
+                        || sudo service docker start 2>/dev/null \
+                        || true
                     # Verify after install
                     check_docker_health || true
                 else
@@ -714,19 +1082,10 @@ do_install() {
                 fi
                 ;;
             macos)
-                fail "Docker is not installed"
-                echo ""
-                echo -e "    macOS: Please install ${BOLD}Docker Desktop${RESET}:"
-                echo -e "    ${WHITE}https://www.docker.com/products/docker-desktop/${RESET}"
-                echo ""
-                echo -e "    ${DIM}Or via Homebrew:${RESET}"
-                echo -e "    ${WHITE}brew install --cask docker${RESET}"
-                echo ""
-                read -rp "    Press Enter after installing Docker..."
+                info "Installing Docker (macOS) — trying multiple strategies..."
+                install_docker_macos
                 if command -v docker &>/dev/null; then
                     check_docker_health || true
-                else
-                    warn "Docker still not detected. Docker-related steps may fail."
                 fi
                 ;;
         esac
@@ -879,37 +1238,59 @@ do_install() {
     if command -v claude &>/dev/null; then
         success "Claude CLI is installed ($(claude -v 2>/dev/null || echo 'unknown version'))"
     else
-        if command -v npm &>/dev/null; then
-            info "Installing Claude CLI..."
-            npm install -g @anthropic-ai/claude-code
+        local claude_installed=false
+
+        # Strategy 1: Official install script (no npm dependency)
+        info "Installing Claude CLI via official install script..."
+        if curl -fsSL https://claude.ai/install.sh | sh 2>&1; then
+            # Refresh PATH to pick up newly installed binary
+            export PATH="$HOME/.claude/bin:$HOME/.local/bin:$PATH"
             if command -v claude &>/dev/null; then
-                success "Claude CLI installed successfully"
-            else
-                fail "Claude CLI installation failed"
-                echo ""
-                echo "    Claude Code is the core Agent runtime for this project."
-                echo "    Without it, the system cannot function. Please install manually:"
-                echo ""
-                echo "      npm install -g @anthropic-ai/claude-code"
-                echo ""
-                echo "    If npm global install has permission issues, try:"
-                echo "      sudo npm install -g @anthropic-ai/claude-code"
-                echo "      # Or configure npm prefix:"
-                echo "      npm config set prefix ~/.npm-global"
-                echo "      export PATH=\$HOME/.npm-global/bin:\$PATH"
-                echo ""
-                read -rp "    Press Enter to continue (but subsequent runs may fail)..."
+                success "Claude CLI installed successfully (official script)"
+                claude_installed=true
             fi
-        else
-            fail "npm is not available, cannot install Claude CLI"
+        fi
+
+        # Strategy 2: Fallback to npm
+        if [ "$claude_installed" = false ] && command -v npm &>/dev/null; then
+            warn "Official script failed, trying npm install..."
+            npm install -g @anthropic-ai/claude-code 2>&1 || true
+            if command -v claude &>/dev/null; then
+                success "Claude CLI installed successfully (npm)"
+                claude_installed=true
+            fi
+        fi
+
+        # All strategies failed
+        if [ "$claude_installed" = false ]; then
+            fail "Claude CLI installation failed"
             echo ""
             echo "    Claude Code is the core Agent runtime for this project."
-            echo "    Without it, the system cannot function."
-            echo "    Please install Node.js (>= 18) and npm first, then run:"
+            echo "    Without it, the system cannot function. Please install manually:"
             echo ""
-            echo "      npm install -g @anthropic-ai/claude-code"
+            echo "      curl -fsSL https://claude.ai/install.sh | sh"
+            echo "      # Or: npm install -g @anthropic-ai/claude-code"
             echo ""
             read -rp "    Press Enter to continue (but subsequent runs may fail)..."
+        fi
+    fi
+
+    # --- Step 6b: ClawHub CLI (skill registry) ---
+    current=$((current + 1))
+    step "${current}/${total_steps}" "Checking ClawHub CLI (skill registry)"
+    if command -v clawhub &>/dev/null; then
+        success "ClawHub CLI is installed"
+    else
+        if command -v npm &>/dev/null; then
+            info "Installing ClawHub CLI..."
+            npm install -g clawhub 2>&1 || true
+            if command -v clawhub &>/dev/null; then
+                success "ClawHub CLI installed successfully"
+            else
+                warn "ClawHub CLI installation failed (skill install from chat will not work)"
+            fi
+        else
+            warn "npm not found, skipping ClawHub CLI installation"
         fi
     fi
 
@@ -938,26 +1319,31 @@ do_install() {
         warn "Frontend directory not found or npm not available, skipping"
     fi
 
-    # --- Step 9: MySQL Docker ---
+    # --- Step 9: NexusMatrix (related project) ---
     current=$((current + 1))
-    step "${current}/${total_steps}" "Starting MySQL database (Docker)"
-    ensure_mysql
-
-    # --- Step 10: .env configuration ---
-    current=$((current + 1))
-    step "${current}/${total_steps}" "Configuring environment variables (.env)"
-    if [ -f "${PROJECT_ROOT}/.env" ]; then
-        success ".env already exists"
-        read -rp "    Reconfigure .env? [y/N] " reconfigure
-        if [[ "$reconfigure" == "y" || "$reconfigure" == "Y" ]]; then
-            configure_env
+    step "${current}/${total_steps}" "Setting up NexusMatrix Server"
+    if command -v uv &>/dev/null; then
+        if [ ! -d "${NEXUSMATRIX_DIR}" ]; then
+            info "Cloning NexusMatrix..."
+            mkdir -p "${PROJECT_ROOT}/related_project"
+            git clone "${NEXUSMATRIX_REPO}" -b "${NEXUSMATRIX_BRANCH}" "${NEXUSMATRIX_DIR}"
+            success "NexusMatrix cloned"
         else
-            info "Keeping existing .env, skipping"
+            success "NexusMatrix directory already exists"
         fi
+        info "Installing NexusMatrix dependencies..."
+        cd "${NEXUSMATRIX_DIR}"
+        uv sync
+        success "NexusMatrix dependencies installed"
+        cd "$PROJECT_ROOT"
     else
-        # Auto-generate .env: copy from .env.example, then ask about API keys
-        auto_generate_env
+        fail "uv is not available, cannot set up NexusMatrix"
     fi
+
+    # --- Step 10: Docker services (MySQL + Synapse) ---
+    current=$((current + 1))
+    step "${current}/${total_steps}" "Starting Docker services (MySQL + Synapse)"
+    ensure_docker_services
 
     # --- Done ---
     echo ""
@@ -965,7 +1351,7 @@ do_install() {
     echo -e "  ${BOLD}${GREEN}║           Installation Complete!                 ║${RESET}"
     echo -e "  ${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}"
     echo ""
-    echo -e "    ${DIM}Next step: Select [2] Run to start all services${RESET}"
+    echo -e "    ${DIM}Next step: Select [2] Configure to set up LLM providers${RESET}"
     echo ""
 
     read -rp "    Press Enter to return to menu..."
@@ -992,9 +1378,7 @@ configure_env() {
         echo ""
     fi
 
-    read -rp "    OPENAI_API_KEY: " val_openai
-    read -rp "    GOOGLE_API_KEY: " val_google
-    read -rp "    NETMIND_API_KEY (optional, for EverMemOS, press Enter to skip): " val_netmind
+    read -rp "    GOOGLE_API_KEY (optional, for RAG, press Enter to skip): " val_google
     echo ""
 
     # If Docker MySQL is available, use Docker config by default
@@ -1037,11 +1421,11 @@ configure_env() {
 
     cat > "$env_file" << EOF
 # =============================================================================
-# LLM API Keys
+# Optional API Keys
 # =============================================================================
-OPENAI_API_KEY="${val_openai}"
+# LLM providers are configured separately via 'Configure' menu or web UI.
+# Config stored at: ~/.nexusagent/llm_config.json
 GOOGLE_API_KEY="${val_google}"
-NETMIND_API_KEY="${val_netmind}"
 
 # =============================================================================
 # Database (MySQL)
@@ -1064,6 +1448,8 @@ ADMIN_SECRET_KEY="${val_admin_key}"
 EOF
 
     success ".env generated: ${env_file}"
+    echo ""
+    info "LLM providers are configured separately via [2] Configure or web UI."
 }
 
 # ============================================================================
@@ -1075,11 +1461,11 @@ auto_generate_env() {
     # Auto-generate .env with Docker MySQL defaults, API keys left blank
     cat > "$env_file" << 'EOF'
 # =============================================================================
-# LLM API Keys (please fill in manually after installation)
+# Optional API Keys
 # =============================================================================
-OPENAI_API_KEY=""
+# LLM providers are configured separately via 'Configure' menu or web UI.
+# Config stored at: ~/.nexusagent/llm_config.json
 GOOGLE_API_KEY=""
-NETMIND_API_KEY=""
 
 # =============================================================================
 # Database (MySQL) — Docker default config, no changes needed
@@ -1101,28 +1487,418 @@ ADMIN_SECRET_KEY="nexus-admin-secret"
 # BASE_WORKING_PATH="./agent_workspace"
 EOF
 
-    success ".env auto-generated (Docker MySQL default config)"
+    success ".env generated (Docker defaults)"
+}
 
-    # Ask whether to fill in API keys now
-    echo ""
-    read -rp "    Configure API keys now? [y/N] " fill_keys
-    if [[ "$fill_keys" == "y" || "$fill_keys" == "Y" ]]; then
-        read -rp "    OPENAI_API_KEY: " val_openai
-        read -rp "    GOOGLE_API_KEY: " val_google
-        read -rp "    NETMIND_API_KEY (optional, for EverMemOS, press Enter to skip): " val_netmind
-        if [ -n "$val_openai" ]; then
-            sed_inplace "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=\"${val_openai}\"|" "$env_file"
-        fi
-        if [ -n "$val_google" ]; then
-            sed_inplace "s|^GOOGLE_API_KEY=.*|GOOGLE_API_KEY=\"${val_google}\"|" "$env_file"
-        fi
-        if [ -n "$val_netmind" ]; then
-            sed_inplace "s|^NETMIND_API_KEY=.*|NETMIND_API_KEY=\"${val_netmind}\"|" "$env_file"
-        fi
-        success "API keys updated"
+# ============================================================================
+# LLM Provider Configuration (interactive loop)
+# ============================================================================
+
+# Helper: run the Python CLI tool and capture JSON output
+_provider_cli() {
+    uv run python "${PROJECT_ROOT}/scripts/configure_providers.py" "$@" 2>/dev/null
+}
+
+# Helper: print slot status line
+_print_slot_status() {
+    local slot_name="$1"
+    local label="$2"
+    local protocol="$3"
+    local status_json="$4"
+
+    local configured
+    configured=$(echo "$status_json" | python3 -c "import sys,json; s=json.load(sys.stdin)['slots']['${slot_name}']; print('yes' if s.get('configured') else 'no')" 2>/dev/null)
+
+    if [ "$configured" = "yes" ]; then
+        local prov_name model_display
+        prov_name=$(echo "$status_json" | python3 -c "import sys,json; print(json.load(sys.stdin)['slots']['${slot_name}']['provider_name'])" 2>/dev/null)
+        model_display=$(echo "$status_json" | python3 -c "import sys,json; print(json.load(sys.stdin)['slots']['${slot_name}']['model_display'])" 2>/dev/null)
+        echo -e "    ${GREEN}✓${RESET} ${label}  ${DIM}→ ${prov_name} / ${model_display}${RESET}"
     else
-        info "Skipping API key config. You can edit the .env file later."
+        echo -e "    ${RED}✗${RESET} ${label}  ${DIM}(needs ${protocol} protocol provider)${RESET}"
     fi
+}
+
+configure_llm_providers() {
+    echo ""
+    echo -e "  ${BOLD}${BLUE}╔══════════════════════════════════════════════════╗${RESET}"
+    echo -e "  ${BOLD}${BLUE}║         LLM Provider Configuration              ║${RESET}"
+    echo -e "  ${BOLD}${BLUE}╚══════════════════════════════════════════════════╝${RESET}"
+    echo ""
+    echo -e "    ${DIM}NarraNexus needs 3 LLM slots:${RESET}"
+    echo -e "    ${DIM}  Agent      (Anthropic protocol) — core dialogue${RESET}"
+    echo -e "    ${DIM}  Embedding  (OpenAI protocol)    — vector search${RESET}"
+    echo -e "    ${DIM}  Helper LLM (OpenAI protocol)    — auxiliary tasks${RESET}"
+    echo ""
+    echo -e "    ${DIM}Embedding currently supports OpenAI API and NetMind.AI Power only.${RESET}"
+    echo -e "    ${DIM}A NetMind.AI Power key covers all 3 slots in one step.${RESET}"
+    echo ""
+
+    while true; do
+        # Fetch current status
+        local status_json
+        status_json=$(_provider_cli status)
+
+        # Print providers
+        local provider_count
+        provider_count=$(echo "$status_json" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['providers']))" 2>/dev/null)
+
+        echo -e "  ${BOLD}Providers:${RESET}"
+        if [ "$provider_count" = "0" ]; then
+            echo -e "    ${DIM}(none added yet)${RESET}"
+        else
+            echo "$status_json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for p in data['providers']:
+    print(f'    • {p[\"name\"]}  ({p[\"protocol\"]})  {p[\"key_hint\"]}')
+" 2>/dev/null
+        fi
+        echo ""
+
+        # Print slot status with selectable labels
+        echo -e "  ${BOLD}Slots:${RESET}  ${DIM}(press a/b/c to assign provider + model)${RESET}"
+        _print_slot_status "agent" "Agent     " "Anthropic" "$status_json"
+        _print_slot_status "embedding" "Embedding " "OpenAI" "$status_json"
+        _print_slot_status "helper_llm" "Helper LLM" "OpenAI" "$status_json"
+        echo ""
+
+        # Check if all configured
+        local all_valid
+        all_valid=$(echo "$status_json" | python3 -c "
+import sys, json
+slots = json.load(sys.stdin)['slots']
+print('yes' if all(s.get('configured') for s in slots.values()) else 'no')
+" 2>/dev/null)
+
+        if [ "$all_valid" = "yes" ]; then
+            echo -e "    ${GREEN}All 3 slots configured ✓${RESET}"
+            echo ""
+        else
+            echo -e "    ${YELLOW}⚠ All 3 slots must be configured before running.${RESET}"
+            echo ""
+        fi
+
+        # Gemini status
+        local gemini_key=""
+        if [ -f "${PROJECT_ROOT}/.env" ]; then
+            gemini_key=$(grep -oP '^GOOGLE_API_KEY="\K[^"]*' "${PROJECT_ROOT}/.env" 2>/dev/null || true)
+        fi
+        echo -e "  ${BOLD}Optional:${RESET}"
+        if [ -n "$gemini_key" ]; then
+            echo -e "    ${GREEN}✓${RESET} Gemini RAG  ${DIM}→ ***${gemini_key: -4}${RESET}"
+        else
+            echo -e "    ${DIM}✗ Gemini RAG  (not configured)${RESET}"
+        fi
+        echo ""
+
+        # Actions
+        echo -e "  ${BOLD}Add provider:${RESET}"
+        echo -e "    ${G1}[1]${RESET}  NetMind.AI Power  ${DIM}(one key → all 3 slots)${RESET}"
+        echo -e "    ${G3}[2]${RESET}  Claude Code Login  ${DIM}(→ Agent slot)${RESET}"
+        echo -e "    ${G5}[3]${RESET}  Anthropic API Key  ${DIM}(→ Agent slot)${RESET}"
+        echo -e "    ${BLUE}[4]${RESET}  OpenAI API Key     ${DIM}(→ Embedding + Helper LLM)${RESET}"
+        echo -e "    ${CYAN}[5]${RESET}  Custom endpoint"
+        echo ""
+        echo -e "  ${BOLD}Assign slot:${RESET}"
+        echo -e "    ${BOLD}[a]${RESET}  Agent      ${BOLD}[b]${RESET}  Embedding      ${BOLD}[c]${RESET}  Helper LLM"
+        echo ""
+        echo -e "  ${BOLD}Optional API:${RESET}"
+        echo -e "    ${BOLD}[g]${RESET}  Gemini API Key  ${DIM}(for RAG knowledge base)${RESET}"
+        echo ""
+        echo -e "    ──────────────────────────────"
+        if [ "$all_valid" = "yes" ]; then
+            echo -e "    ${GREEN}[d]${RESET}  ${GREEN}${BOLD}Done${RESET} — all slots ready, continue"
+        else
+            echo -e "    ${DIM}[d]  Done (all slots must be configured first)${RESET}"
+        fi
+        echo -e "    ${DIM}[s]  Skip — configure later in web UI${RESET}"
+        echo ""
+
+        read -rp "    Choice: " llm_choice
+        echo ""
+
+        case "$llm_choice" in
+            1)  # NetMind.AI Power
+                read -rsp "    NetMind API Key: " nm_key
+                echo ""
+                if [ -z "$nm_key" ]; then
+                    warn "No key entered"
+                    continue
+                fi
+                local add_result
+                add_result=$(_provider_cli add netmind --api-key "$nm_key")
+                if echo "$add_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
+                    success "Added NetMind.AI Power (Anthropic + OpenAI protocols)"
+                else
+                    fail "Failed to add provider"
+                fi
+                ;;
+
+            2)  # Claude Code Login
+                local cc_status
+                cc_status=$(_provider_cli claude-status)
+                local cc_installed cc_logged_in
+                cc_installed=$(echo "$cc_status" | python3 -c "import sys,json; print(json.load(sys.stdin)['installed'])" 2>/dev/null)
+                cc_logged_in=$(echo "$cc_status" | python3 -c "import sys,json; print(json.load(sys.stdin)['logged_in'])" 2>/dev/null)
+
+                if [ "$cc_installed" != "True" ]; then
+                    warn "Claude Code CLI not found."
+                    info "Install with: npm install -g @anthropic-ai/claude-code"
+                    continue
+                fi
+
+                if [ "$cc_logged_in" != "True" ]; then
+                    info "Claude Code CLI installed but not logged in."
+                    echo -e "    ${DIM}Please run 'claude login' in another terminal window.${RESET}"
+                    read -rp "    Press Enter when done, or [b] to go back: " cc_wait
+                    if [ "$cc_wait" = "b" ] || [ "$cc_wait" = "B" ]; then
+                        continue
+                    fi
+                    cc_status=$(_provider_cli claude-status)
+                    cc_logged_in=$(echo "$cc_status" | python3 -c "import sys,json; print(json.load(sys.stdin)['logged_in'])" 2>/dev/null)
+                    if [ "$cc_logged_in" != "True" ]; then
+                        warn "Still not logged in. Please complete 'claude login' first."
+                        continue
+                    fi
+                fi
+
+                local add_result
+                add_result=$(_provider_cli add claude_oauth)
+                if echo "$add_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
+                    success "Added Claude Code (OAuth) — Anthropic protocol"
+                else
+                    fail "Failed to add provider"
+                fi
+                ;;
+
+            3)  # Anthropic API Key
+                read -rp "    Provider name [Anthropic]: " anth_name
+                anth_name="${anth_name:-Anthropic}"
+                read -rp "    Base URL [https://api.anthropic.com]: " anth_url
+                anth_url="${anth_url:-https://api.anthropic.com}"
+                read -rsp "    API Key: " anth_key
+                echo ""
+                if [ -z "$anth_key" ]; then warn "No key entered"; continue; fi
+                local add_result
+                add_result=$(_provider_cli add anthropic --name "$anth_name" --api-key "$anth_key" --base-url "$anth_url")
+                if echo "$add_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
+                    success "Added ${anth_name} (Anthropic protocol)"
+                else fail "Failed to add provider"; fi
+                ;;
+
+            4)  # OpenAI API Key
+                read -rp "    Provider name [OpenAI]: " oai_name
+                oai_name="${oai_name:-OpenAI}"
+                read -rp "    Base URL [https://api.openai.com/v1]: " oai_url
+                oai_url="${oai_url:-https://api.openai.com/v1}"
+                read -rsp "    API Key: " oai_key
+                echo ""
+                if [ -z "$oai_key" ]; then warn "No key entered"; continue; fi
+                local add_result
+                add_result=$(_provider_cli add openai --name "$oai_name" --api-key "$oai_key" --base-url "$oai_url")
+                if echo "$add_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
+                    success "Added ${oai_name} (OpenAI protocol)"
+                else fail "Failed to add provider"; fi
+                ;;
+
+            5)  # Custom endpoint
+                echo -e "    ${DIM}Protocol:${RESET}"
+                echo -e "    [1] Anthropic   [2] OpenAI"
+                read -rp "    : " custom_proto_choice
+                local custom_proto="openai"
+                [ "$custom_proto_choice" = "1" ] && custom_proto="anthropic"
+                read -rp "    Provider name: " custom_name
+                read -rp "    Base URL: " custom_url
+                read -rsp "    API Key: " custom_key
+                echo ""
+                if [ -z "$custom_key" ] || [ -z "$custom_url" ]; then warn "Key and URL are required"; continue; fi
+                local add_result
+                add_result=$(_provider_cli add "$custom_proto" --name "${custom_name:-Custom}" --api-key "$custom_key" --base-url "$custom_url")
+                if echo "$add_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
+                    success "Added ${custom_name:-Custom} (${custom_proto} protocol)"
+                else fail "Failed to add provider"; fi
+                ;;
+
+            a|A)  _assign_slot_interactive "$status_json" "agent" "anthropic" ;;
+            b|B)  _assign_slot_interactive "$status_json" "embedding" "openai" ;;
+            c|C)  _assign_slot_interactive "$status_json" "helper_llm" "openai" ;;
+
+            g|G)  # Gemini API Key (optional, for RAG)
+                echo -e "    ${DIM}Gemini RAG uses Google Gemini File Search to index and retrieve documents.${RESET}"
+                echo -e "    ${DIM}Without this key, RAG is unavailable but everything else works.${RESET}"
+                echo -e "    ${DIM}Get key at: https://aistudio.google.com/apikey${RESET}"
+                echo ""
+                # Ensure .env exists
+                if [ ! -f "${PROJECT_ROOT}/.env" ]; then
+                    warn ".env not found. Run Configure first to generate it."
+                    continue
+                fi
+                if [ -n "$gemini_key" ]; then
+                    echo -e "    ${DIM}Current: ***${gemini_key: -4}${RESET}"
+                fi
+                read -rp "    Google Gemini API Key (Enter to skip): " new_gemini
+                if [ -n "$new_gemini" ]; then
+                    sed_inplace "s|^GOOGLE_API_KEY=.*|GOOGLE_API_KEY=\"${new_gemini}\"|" "${PROJECT_ROOT}/.env"
+                    success "Gemini API Key saved"
+                else
+                    info "Skipped"
+                fi
+                ;;
+
+            d|D)  # Done
+                if [ "$all_valid" = "yes" ]; then
+                    success "LLM provider configuration complete"
+                    return 0
+                else
+                    warn "Not all slots are configured yet."
+                fi
+                ;;
+
+            s|S)  # Skip
+                warn "Skipping LLM configuration. Configure later in web UI (CPU icon in header)."
+                return 0
+                ;;
+
+            *)  warn "Invalid option: $llm_choice" ;;
+        esac
+        echo ""
+    done
+}
+
+# Helper: interactive slot assignment (provider → model)
+_assign_slot_interactive() {
+    local status_json="$1"
+    local slot_name="$2"
+    local slot_protocol="$3"
+
+    local label="$slot_name"
+    [ "$slot_name" = "helper_llm" ] && label="Helper LLM"
+
+    # List matching providers
+    local matching_providers
+    matching_providers=$(echo "$status_json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+matches = [p for p in data['providers'] if p['protocol'] == '${slot_protocol}']
+if not matches:
+    print('NONE')
+else:
+    for i, p in enumerate(matches, 1):
+        print(f'    [{i}] {p[\"name\"]}  ({p[\"key_hint\"]})')
+" 2>/dev/null)
+
+    if [ "$matching_providers" = "NONE" ]; then
+        warn "No ${slot_protocol} protocol providers available. Add one first."
+        return
+    fi
+
+    echo -e "    ${BOLD}${label} — select provider:${RESET}"
+    echo "$matching_providers"
+    read -rp "    #: " prov_idx
+
+    # Get provider ID
+    local selected_pid
+    selected_pid=$(echo "$status_json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+matches = [p for p in data['providers'] if p['protocol'] == '${slot_protocol}']
+idx = int('${prov_idx}') - 1
+if 0 <= idx < len(matches):
+    print(matches[idx]['id'])
+else:
+    print('INVALID')
+" 2>/dev/null)
+
+    if [ "$selected_pid" = "INVALID" ] || [ -z "$selected_pid" ]; then
+        warn "Invalid selection"
+        return
+    fi
+
+    # List models (filtered by slot type)
+    local models_json
+    models_json=$(_provider_cli list-models "$selected_pid" --slot "$slot_name")
+    local model_count
+    model_count=$(echo "$models_json" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['models']))" 2>/dev/null)
+
+    local selected_model=""
+    if [ "$model_count" = "0" ]; then
+        echo -e "    ${DIM}No preset models for this slot. Enter model name:${RESET}"
+        read -rp "    Model: " selected_model
+        if [ -z "$selected_model" ]; then
+            warn "No model entered"
+            return
+        fi
+    else
+        echo ""
+        echo -e "    ${BOLD}Select model:${RESET}"
+        echo "$models_json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for i, m in enumerate(data['models'], 1):
+    print(f'    [{i}] {m[\"display\"]}  ({m[\"id\"]})')
+" 2>/dev/null
+        read -rp "    #: " model_idx
+
+        selected_model=$(echo "$models_json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+idx = int('${model_idx}') - 1
+if 0 <= idx < len(data['models']):
+    print(data['models'][idx]['id'])
+else:
+    print('INVALID')
+" 2>/dev/null)
+
+        if [ "$selected_model" = "INVALID" ] || [ -z "$selected_model" ]; then
+            warn "Invalid selection"
+            return
+        fi
+    fi
+
+    # Assign
+    local assign_result
+    assign_result=$(_provider_cli assign "$slot_name" "$selected_pid" "$selected_model")
+    if echo "$assign_result" | python3 -c "import sys,json; assert json.load(sys.stdin).get('success')" 2>/dev/null; then
+        success "${label} → ${selected_model}"
+    else
+        local err_msg
+        err_msg=$(echo "$assign_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','Unknown error'))" 2>/dev/null)
+        fail "Assignment failed: ${err_msg}"
+    fi
+}
+
+# ============================================================================
+# do_configure — Configure menu entry point
+# ============================================================================
+do_configure() {
+    echo -e "  ${BOLD}${BLUE}╔══════════════════════════════════════════════════╗${RESET}"
+    echo -e "  ${BOLD}${BLUE}║              Configuration                      ║${RESET}"
+    echo -e "  ${BOLD}${BLUE}╚══════════════════════════════════════════════════╝${RESET}"
+    echo ""
+
+    # Check uv is available
+    if ! command -v uv &>/dev/null; then
+        fail "uv is not installed. Please run Install first."
+        show_menu
+        return
+    fi
+
+    # Ensure .env exists (silent, Docker defaults)
+    if [ ! -f "${PROJECT_ROOT}/.env" ]; then
+        auto_generate_env
+        echo ""
+    fi
+
+    # LLM Providers + Gemini (interactive loop)
+    step "" "LLM Providers & API Keys"
+    configure_llm_providers
+
+    echo ""
+    echo -e "  ${BOLD}${GREEN}Configuration complete.${RESET}"
+    echo -e "    ${DIM}Select [3] Run to start all services.${RESET}"
+    echo ""
+    show_menu
 }
 
 # ============================================================================
@@ -1408,12 +2184,16 @@ do_run() {
     fi
     if ! command -v claude &>/dev/null; then
         fail "Claude CLI is not installed — core Agent runtime missing, cannot process user messages"
-        info "  Install: npm install -g @anthropic-ai/claude-code"
+        info "  Install: curl -fsSL https://claude.ai/install.sh | sh"
         has_error=true
     fi
     if [ ! -f "${PROJECT_ROOT}/.env" ]; then
         fail ".env does not exist (please run Install first)"
         has_error=true
+    fi
+    if [ ! -d "${NEXUSMATRIX_DIR}" ]; then
+        warn "NexusMatrix not found at ${NEXUSMATRIX_DIR} (NexusMatrix Server will not start)"
+        info "  Run Install to clone and set up NexusMatrix automatically"
     fi
 
     # Docker health check
@@ -1424,10 +2204,10 @@ do_run() {
         local docker_health=$?
         if [ $docker_health -eq 2 ]; then
             warn "Docker has critical issues. Docker-dependent services will not start."
-            warn "You can continue, but MySQL and EverMemOS will be unavailable."
+            warn "You can continue, but MySQL, Synapse, and EverMemOS will be unavailable."
         fi
     else
-        warn "Docker is not installed. MySQL and EverMemOS infrastructure will be unavailable."
+        warn "Docker is not installed. MySQL, Synapse, and EverMemOS infrastructure will be unavailable."
     fi
 
     if [ "$has_error" = true ]; then
@@ -1440,6 +2220,26 @@ do_run() {
     fi
     success "Pre-flight checks passed"
 
+    # --- LLM Provider config check ---
+    if command -v uv &>/dev/null; then
+        local validate_result
+        validate_result=$(uv run python "${PROJECT_ROOT}/scripts/configure_providers.py" validate 2>/dev/null || echo '{"valid":false}')
+        local llm_valid
+        llm_valid=$(echo "$validate_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('valid',False))" 2>/dev/null)
+        if [ "$llm_valid" != "True" ]; then
+            warn "LLM providers not fully configured."
+            echo -e "    ${DIM}Some features may not work. Run [2] Configure to set up providers.${RESET}"
+            read -rp "    Continue anyway? [y/N] " continue_anyway
+            if [[ "$continue_anyway" != "y" && "$continue_anyway" != "Y" ]]; then
+                show_banner
+                show_menu
+                return
+            fi
+        else
+            success "LLM providers configured"
+        fi
+    fi
+
     # --- Port conflict pre-check ---
     step "0.3" "Checking for port conflicts"
     local port_warnings=false
@@ -1447,10 +2247,20 @@ do_run() {
     if ! check_port_conflicts \
         "8000:FastAPI Backend" \
         "5173:Frontend Dev" \
-        "7801:MCP Server"; then
+        "7801:MCP Server" \
+        "7802:MCP Server (SocialNetwork)" \
+        "7803:MCP Server (BasicInfo)" \
+        "7804:MCP Server (GeminiRAG)" \
+        "7805:MCP Server (Job)" \
+        "7806:MCP Server (Skill)" \
+        "7810:MCP Server (Matrix)" \
+        "8953:NexusMatrix Server"; then
         port_warnings=true
         # Collect conflicting port PIDs for potential kill
-        for pair in "8000:FastAPI Backend" "5173:Frontend Dev" "7801:MCP Server"; do
+        for pair in "8000:FastAPI Backend" "5173:Frontend Dev" \
+            "7801:MCP Server" "7802:MCP Server" "7803:MCP Server" \
+            "7804:MCP Server" "7805:MCP Server" "7806:MCP Server" \
+            "7810:MCP Server" "8953:NexusMatrix Server"; do
             local _port="${pair%%:*}"
             if is_port_up "$_port"; then
                 conflict_ports+=("$_port")
@@ -1468,6 +2278,9 @@ do_run() {
         case "$port_choice" in
             1)
                 # Step 1: Kill known project processes by pattern (handles most cases)
+                # Note: module_runner spawns MCP servers as child processes via
+                # multiprocessing. Killing the runner alone orphans the children,
+                # so we also kill by MCP port below.
                 local kill_patterns=(
                     "uvicorn.*backend.main"
                     "module_runner.py.*mcp"
@@ -1475,6 +2288,8 @@ do_run() {
                     "job_trigger.py"
                     "node.*vite"
                     "vite.*5173"
+                    "nexus_matrix.main"
+                    "matrix_trigger"
                 )
                 for pat in "${kill_patterns[@]}"; do
                     pkill -f "$pat" 2>/dev/null || true
@@ -1527,67 +2342,44 @@ do_run() {
                 ;;
         esac
     else
-        success "No port conflicts detected (8000, 5173, 7801)"
+        success "No port conflicts detected (8000, 5173, 7801, 8953)"
     fi
 
-    # --- Step 0.5: MySQL Docker ---
+    # --- Step 0.5: Docker services (MySQL + Synapse) ---
     detect_compose_cmd
     if [ -n "${COMPOSE_CMD:-}" ] && command -v docker &>/dev/null; then
-        step "0.5" "Starting MySQL database (Docker)"
-        ensure_mysql
+        step "0.5" "Starting Docker services (MySQL + Synapse)"
+        ensure_docker_services
 
-        # Create database tables (if they don't exist)
+        # Create database tables (if they don't exist), retry up to 5 times
         step "0.6" "Initializing database tables"
         if command -v uv &>/dev/null && [ -f "${PROJECT_ROOT}/.env" ]; then
             cd "$PROJECT_ROOT"
-            uv run python src/xyz_agent_context/utils/database_table_management/create_all_tables.py 2>&1 | tail -5
-            success "Database tables initialized"
-
-            # Check for schema changes (new version may have added/removed columns)
-            step "0.7" "Checking for database schema updates"
-            local schema_diff
-            schema_diff=$(cd "$PROJECT_ROOT" && uv run python src/xyz_agent_context/utils/database_table_management/sync_all_tables.py --check 2>/dev/null)
-            if [ $? -eq 0 ]; then
-                warn "Database schema changes detected after update:"
-                echo ""
-                echo "$schema_diff" | grep -E "^\s+([\+\-]|[a-z_]+:)" | while IFS= read -r line; do
-                    echo -e "      ${line}"
-                done
-                echo ""
-                echo -e "    ${BOLD}${WHITE}Apply schema changes?${RESET}"
-                echo -e "    ${DIM}Your data will be preserved. Only table structure (columns) will be updated.${RESET}"
-                echo ""
-                echo -e "    ${G1}[1]${RESET}  ${BOLD}Yes, apply changes${RESET}  ${DIM}(Recommended)${RESET}"
-                echo -e "    ${G3}[2]${RESET}  ${BOLD}Preview changes first (dry-run)${RESET}"
-                echo -e "    ${YELLOW}[3]${RESET}  ${BOLD}Skip for now${RESET}"
-                echo ""
-                read -rp "    > " schema_choice
-                echo ""
-                case "$schema_choice" in
-                    1)
-                        info "Applying schema changes..."
-                        cd "$PROJECT_ROOT"
-                        echo "yes" | uv run python src/xyz_agent_context/utils/database_table_management/sync_all_tables.py 2>&1 | tail -20
-                        success "Database schema updated"
-                        ;;
-                    2)
-                        cd "$PROJECT_ROOT"
-                        uv run python src/xyz_agent_context/utils/database_table_management/sync_all_tables.py --dry-run 2>&1 | tail -40
-                        echo ""
-                        read -rp "    Apply these changes? [y/N] " apply_confirm
-                        if [[ "$apply_confirm" == "y" || "$apply_confirm" == "Y" ]]; then
-                            echo "yes" | uv run python src/xyz_agent_context/utils/database_table_management/sync_all_tables.py 2>&1 | tail -20
-                            success "Database schema updated"
-                        else
-                            warn "Schema changes skipped. Services may encounter errors."
-                        fi
-                        ;;
-                    *)
-                        warn "Schema changes skipped. Services may encounter errors if columns are missing."
-                        ;;
-                esac
+            local table_created=false
+            for attempt in 1 2 3 4 5; do
+                if uv run python src/xyz_agent_context/utils/database_table_management/create_all_tables.py 2>&1 | tail -5; then
+                    table_created=true
+                    break
+                fi
+                if [ $attempt -lt 5 ]; then
+                    warn "Table creation failed (attempt ${attempt}/5), retrying in 5s..."
+                    sleep 5
+                fi
+            done
+            if [ "$table_created" = true ]; then
+                success "Database tables initialized"
             else
-                success "Database schema is up-to-date"
+                fail "Table creation failed after 5 attempts. Check database connection."
+            fi
+
+            # Auto-apply safe schema changes (ENUM expansion, VARCHAR growth, new columns)
+            # Dangerous changes (type narrowing, column removal) are skipped silently.
+            step "0.7" "Syncing database schema (auto-safe)"
+            cd "$PROJECT_ROOT"
+            if uv run python -m xyz_agent_context.utils.database_table_management.sync_all_tables --auto-safe 2>&1 | tail -20; then
+                success "Database schema synced"
+            else
+                warn "Schema sync encountered errors (non-fatal). Check logs for details."
             fi
         else
             warn "Skipping database table initialization (uv or .env not available)"
@@ -1709,31 +2501,49 @@ do_run() {
     tmux new-session -d -s "$TMUX_SESSION" -n control -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":control "bash start/control.sh" C-m
     info "Control Panel     → tmux window 0 [control]     Press q to exit"
+    sleep 0.5
 
     # Window 1: Frontend
     tmux new-window -t "$TMUX_SESSION" -n frontend -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":frontend "bash start/frontend.sh" C-m
     info "Frontend          → tmux window 1 [frontend]    Port 5173"
+    sleep 0.5
 
     # Window 2: FastAPI
     tmux new-window -t "$TMUX_SESSION" -n backend -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":backend "bash start/backend.sh" C-m
     info "FastAPI Backend   → tmux window 2 [backend]     Port 8000"
+    sleep 0.5
 
     # Window 3: JobTrigger
     tmux new-window -t "$TMUX_SESSION" -n job-trigger -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":job-trigger "bash start/job-trigger.sh" C-m
     info "Job Trigger       → tmux window 3 [job-trigger]"
+    sleep 0.5
 
     # Window 4: ModulePoller
     tmux new-window -t "$TMUX_SESSION" -n poller -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":poller "bash start/poller.sh" C-m
     info "Module Poller     → tmux window 4 [poller]"
+    sleep 0.5
 
     # Window 5: MCP
     tmux new-window -t "$TMUX_SESSION" -n mcp -c "$PROJECT_ROOT"
     tmux send-keys -t "$TMUX_SESSION":mcp "bash start/mcp.sh" C-m
-    info "MCP Server        → tmux window 5 [mcp]         Ports 7801-7805"
+    info "MCP Server        → tmux window 5 [mcp]         Ports 7801-7810"
+
+    sleep 0.5
+
+    # Window 6: NexusMatrix Server
+    tmux new-window -t "$TMUX_SESSION" -n nexus-matrix -c "$PROJECT_ROOT"
+    tmux send-keys -t "$TMUX_SESSION":nexus-matrix "bash start/nexus-matrix.sh" C-m
+    info "NexusMatrix       → tmux window 6 [nexus-matrix] Port 8953"
+    sleep 0.5
+
+    # Window 7: MatrixTrigger (Matrix message polling)
+    tmux new-window -t "$TMUX_SESSION" -n matrix-trigger -c "$PROJECT_ROOT"
+    tmux send-keys -t "$TMUX_SESSION":matrix-trigger "bash start/matrix-trigger.sh" C-m
+    info "Matrix Trigger    → tmux window 7 [matrix-trigger]"
 
     tmux select-window -t "$TMUX_SESSION":control
 
@@ -1743,12 +2553,13 @@ do_run() {
     local max_svc_wait=45
     printf "    Waiting for service ports "
     while [ $svc_elapsed -lt $max_svc_wait ]; do
-        # Check key ports: MCP(7801) + FastAPI(8000) + Frontend(5173)
+        # Check key ports: MCP(7801) + FastAPI(8000) + Frontend(5173) + NexusMatrix(8953)
         local ready=0
         is_port_up 7801 && ready=$((ready + 1))
         is_port_up 8000 && ready=$((ready + 1))
         is_port_up 5173 && ready=$((ready + 1))
-        if [ $ready -ge 3 ]; then
+        is_port_up 8953 && ready=$((ready + 1))
+        if [ $ready -ge 4 ]; then
             break
         fi
         printf "."
@@ -1854,6 +2665,7 @@ show_status_panel() {
     check_port "Redis"             "6379"
     check_port "Milvus"            "19530"
     check_port "MCP Server"        "7801"
+    check_port "NexusMatrix"       "8953"  "http://localhost:8953"
     check_port "FastAPI Backend"   "8000"  "http://localhost:8000"
     check_port "Frontend Dev"      "5173"  "http://localhost:5173"
 
@@ -1865,19 +2677,15 @@ show_status_panel() {
 # ============================================================================
 do_update() {
     echo -e "  ${BOLD}${CYAN}╔══════════════════════════════════════════════════╗${RESET}"
-    echo -e "  ${BOLD}${CYAN}║           Update & Reinstall                     ║${RESET}"
+    echo -e "  ${BOLD}${CYAN}║           Update                                 ║${RESET}"
     echo -e "  ${BOLD}${CYAN}╚══════════════════════════════════════════════════╝${RESET}"
     echo ""
-    echo -e "    ${DIM}This will pull the latest code and update dependencies.${RESET}"
+    echo -e "    ${DIM}This will pull the latest code from the remote repository.${RESET}"
     echo -e "    ${DIM}Database, .env, and Docker volumes will NOT be touched.${RESET}"
     echo ""
 
-    local total_steps=5
-    local current=0
-
     # --- Step 1: Stop running services ---
-    current=$((current + 1))
-    step "${current}/${total_steps}" "Stopping running services"
+    step "1/2" "Stopping running services"
 
     local services_were_running=false
 
@@ -1895,8 +2703,7 @@ do_update() {
     fi
 
     # --- Step 2: Pull latest code ---
-    current=$((current + 1))
-    step "${current}/${total_steps}" "Pulling latest code (git pull)"
+    step "2/2" "Pulling latest code (git pull)"
     cd "$PROJECT_ROOT"
 
     # Check for uncommitted changes
@@ -1905,7 +2712,7 @@ do_update() {
         echo ""
         echo -e "    ${G1}[1]${RESET}  ${BOLD}Stash changes and pull${RESET}  ${DIM}(git stash → pull → stash pop)${RESET}"
         echo -e "    ${G3}[2]${RESET}  ${BOLD}Pull anyway${RESET}             ${DIM}(may cause merge conflicts)${RESET}"
-        echo -e "    ${YELLOW}[3]${RESET}  ${BOLD}Skip git pull${RESET}          ${DIM}(only update dependencies)${RESET}"
+        echo -e "    ${YELLOW}[3]${RESET}  ${BOLD}Cancel update${RESET}"
         echo ""
         read -rp "    > " git_choice
         echo ""
@@ -1936,11 +2743,12 @@ do_update() {
                     fail "git pull failed (likely merge conflicts). Please resolve manually."
                 fi
                 ;;
-            3)
-                info "Skipping git pull"
-                ;;
             *)
-                info "Skipping git pull"
+                info "Update cancelled"
+                read -rp "    Press Enter to return to menu..."
+                show_banner
+                show_menu
+                return
                 ;;
         esac
     else
@@ -1951,51 +2759,16 @@ do_update() {
         fi
     fi
 
-    # --- Step 3: Update Python dependencies ---
-    current=$((current + 1))
-    step "${current}/${total_steps}" "Updating Python dependencies (uv sync)"
-    if command -v uv &>/dev/null; then
-        cd "$PROJECT_ROOT"
-        if uv sync; then
-            success "Python dependencies updated"
-        else
-            fail "uv sync failed. Check pyproject.toml for errors."
-        fi
-    else
-        fail "uv is not installed. Run Install first."
-    fi
-
-    # --- Step 4: Update frontend dependencies ---
-    current=$((current + 1))
-    step "${current}/${total_steps}" "Updating frontend dependencies (npm install)"
-    if [ -d "${PROJECT_ROOT}/frontend" ] && command -v npm &>/dev/null; then
-        cd "${PROJECT_ROOT}/frontend"
-        if npm install --silent; then
-            success "Frontend dependencies updated"
-        else
-            fail "npm install failed. Check frontend/package.json for errors."
-        fi
-        cd "$PROJECT_ROOT"
-    else
-        warn "Frontend directory not found or npm not available, skipping"
-    fi
-
-    # --- Step 5: Update EverMemOS (if initialized) ---
-    current=$((current + 1))
-    step "${current}/${total_steps}" "Updating EverMemOS"
-    if [ -d "${EVERMEMOS_DIR}" ]; then
+    # Also pull sub-projects if they exist
+    if [ -d "${EVERMEMOS_DIR}" ] && [ -d "${EVERMEMOS_DIR}/.git" ]; then
         cd "${EVERMEMOS_DIR}"
-        if git pull 2>/dev/null; then
-            success "EverMemOS code updated"
-        else
-            warn "EverMemOS git pull failed (may not be a git repo or has conflicts)"
-        fi
-        if command -v uv &>/dev/null && [ -f "${EVERMEMOS_DIR}/pyproject.toml" ]; then
-            uv sync 2>/dev/null && success "EverMemOS dependencies updated" || warn "EverMemOS uv sync failed"
-        fi
+        git pull 2>/dev/null && success "EverMemOS code updated" || warn "EverMemOS git pull failed"
         cd "$PROJECT_ROOT"
-    else
-        info "EverMemOS not initialized, skipping"
+    fi
+    if [ -d "${NEXUSMATRIX_DIR}" ] && [ -d "${NEXUSMATRIX_DIR}/.git" ]; then
+        cd "${NEXUSMATRIX_DIR}"
+        git pull 2>/dev/null && success "NexusMatrix code updated" || warn "NexusMatrix git pull failed"
+        cd "$PROJECT_ROOT"
     fi
 
     # --- Done ---
@@ -2004,19 +2777,7 @@ do_update() {
     echo -e "  ${BOLD}${GREEN}║           Update Complete!                        ║${RESET}"
     echo -e "  ${BOLD}${GREEN}╚══════════════════════════════════════════════════╝${RESET}"
     echo ""
-    echo -e "    ${DIM}Database and .env were not modified.${RESET}"
-
-    if [ "$services_were_running" = true ]; then
-        echo ""
-        read -rp "    Services were running before update. Restart now? [Y/n] " restart_choice
-        if [[ "$restart_choice" != "n" && "$restart_choice" != "N" ]]; then
-            do_run
-            return
-        fi
-    fi
-
-    echo ""
-    echo -e "    ${DIM}Next step: Select [2] Run to start all services${RESET}"
+    echo -e "    ${YELLOW}⚠  Please run [1] Install to update dependencies and rebuild.${RESET}"
     echo ""
 
     read -rp "    Press Enter to return to menu..."
@@ -2038,16 +2799,52 @@ do_stop() {
     local stop_patterns=(
         "uvicorn.*backend.main"      # FastAPI backend (port 8000)
         "uvicorn.*1995"              # EverMemOS Web
-        "module_runner.py.*mcp"      # MCP server (port 7801)
+        "module_runner.py.*mcp"      # MCP server runner
         "module_poller"              # ModulePoller
         "job_trigger.py"             # Job trigger
         "npm.*dev.*5173"             # Frontend dev server
         "vite.*5173"                 # Vite (frontend actual process)
         "node.*vite"                 # Vite node process
+        "nexus_matrix.main"          # NexusMatrix Server (port 8953)
+        "matrix_trigger"             # MatrixTrigger (message polling)
     )
     for pat in "${stop_patterns[@]}"; do
+        pkill -f "$pat" 2>/dev/null
+    done
+
+    # Kill orphaned MCP child processes by port.
+    # module_runner spawns MCP servers via multiprocessing.Process;
+    # killing the runner alone orphans the children on ports 7801-7810.
+    local mcp_ports=(7801 7802 7803 7804 7805 7806 7810)
+    for _port in "${mcp_ports[@]}"; do
+        local _pid=""
+        if [ "$(uname)" = "Darwin" ]; then
+            _pid=$(lsof -iTCP:"$_port" -sTCP:LISTEN -P -n 2>/dev/null | awk 'NR==2{print $2}')
+        else
+            _pid=$(fuser "${_port}/tcp" 2>/dev/null | awk '{print $1}')
+        fi
+        if [ -n "$_pid" ]; then
+            kill "$_pid" 2>/dev/null || true
+        fi
+    done
+
+    # Wait for graceful shutdown, then SIGKILL any survivors
+    sleep 2
+    for pat in "${stop_patterns[@]}"; do
         if pgrep -f "$pat" &>/dev/null; then
-            pkill -f "$pat" 2>/dev/null
+            pkill -9 -f "$pat" 2>/dev/null
+        fi
+    done
+    # SIGKILL any MCP children still alive
+    for _port in "${mcp_ports[@]}"; do
+        local _pid=""
+        if [ "$(uname)" = "Darwin" ]; then
+            _pid=$(lsof -iTCP:"$_port" -sTCP:LISTEN -P -n 2>/dev/null | awk 'NR==2{print $2}')
+        else
+            _pid=$(fuser "${_port}/tcp" 2>/dev/null | awk '{print $1}')
+        fi
+        if [ -n "$_pid" ]; then
+            kill -9 "$_pid" 2>/dev/null || true
         fi
     done
     success "Application processes stopped"
@@ -2065,11 +2862,11 @@ do_stop() {
     step "3" "Stopping Docker containers"
     detect_compose_cmd
     if [ -n "${COMPOSE_CMD:-}" ]; then
-        # Stop project MySQL
+        # Stop project Docker services (MySQL + Synapse)
         if [ -f "${PROJECT_ROOT}/docker-compose.yaml" ]; then
             cd "${PROJECT_ROOT}"
             $COMPOSE_CMD down 2>/dev/null
-            success "MySQL Docker stopped"
+            success "Docker services stopped (MySQL + Synapse)"
         fi
         # Stop EverMemOS infrastructure
         if [ -d "${EVERMEMOS_DIR}" ]; then
@@ -2097,25 +2894,27 @@ do_stop() {
 main() {
     # Support direct command-line arguments
     case "${1:-}" in
-        install)  show_banner; do_install ;;
-        run)      show_banner; do_run ;;
-        status)   show_banner; do_status ;;
-        stop)     show_banner; do_stop ;;
-        update)   show_banner; do_update ;;
+        install)    show_banner; do_install ;;
+        configure)  show_banner; do_configure ;;
+        run)        show_banner; do_run ;;
+        status)     show_banner; do_status ;;
+        stop)       show_banner; do_stop ;;
+        update)     show_banner; do_update ;;
         -h|--help)
-            echo "Usage: bash run.sh [install|run|status|stop|update]"
+            echo "Usage: bash run.sh [install|configure|run|status|stop|update]"
             echo ""
-            echo "  install   Install all dependencies and environment"
-            echo "  run       Start all services"
-            echo "  status    View service status"
-            echo "  stop      Stop all services"
-            echo "  update    Pull latest code and update dependencies (DB untouched)"
+            echo "  install     Install all dependencies and environment"
+            echo "  configure   Configure LLM providers and API keys"
+            echo "  run         Start all services"
+            echo "  status      View service status"
+            echo "  stop        Stop all services"
+            echo "  update      Pull latest code (run Install after to apply changes)"
             echo ""
             echo "Run without arguments for an interactive menu."
             exit 0
             ;;
         "")       show_banner; show_menu ;;
-        *)        echo "Unknown command: $1"; echo "Usage: bash run.sh [install|run|status|stop|update]"; exit 1 ;;
+        *)        echo "Unknown command: $1"; echo "Usage: bash run.sh [install|configure|run|status|stop|update]"; exit 1 ;;
     esac
 }
 
