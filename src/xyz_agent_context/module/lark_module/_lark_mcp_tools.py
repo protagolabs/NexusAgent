@@ -387,41 +387,7 @@ def register_lark_mcp_tools(mcp: Any) -> None:
 
         return result
 
-    @mcp.tool()
-    async def lark_auth_login(agent_id: str) -> dict:
-        """
-        Initiate OAuth login for the bound Lark bot.
-        Returns an authorization URL that the user must open in a browser.
-
-        Args:
-            agent_id: The agent whose bot to log in.
-        """
-        cred = await _get_credential(agent_id)
-        if not cred:
-            return {"success": False, "error": "No Lark bot bound to this agent. Use lark_bind_bot first."}
-        return await _cli.auth_login(cred.profile_name)
-
-    @mcp.tool()
-    async def lark_auth_status(agent_id: str) -> dict:
-        """
-        Check the authentication status of the bound Lark bot.
-
-        Args:
-            agent_id: The agent to check.
-        """
-        cred = await _get_credential(agent_id)
-        if not cred:
-            return {"success": False, "error": "No Lark bot bound to this agent."}
-        result = await _cli.auth_status(cred.profile_name)
-
-        # Sync auth status to DB using shared logic
-        if result.get("success"):
-            from ._lark_service import determine_auth_status
-            data = result.get("data", {})
-            new_status = determine_auth_status(data)
-            if new_status != cred.auth_status:
-                db = await XYZBaseModule.get_mcp_db_client()
-                mgr = LarkCredentialManager(db)
-                await mgr.update_auth_status(agent_id, new_status)
-
-        return result
+    # NOTE: lark_auth_login and lark_auth_status are intentionally NOT exposed
+    # as MCP tools. OAuth login should be managed via the frontend UI / backend
+    # API, not initiated by the Agent. Exposing them causes the Agent to
+    # repeatedly trigger OAuth flows which confuses users.

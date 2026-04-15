@@ -79,10 +79,17 @@ check_deps() {
     exit 1
   fi
 
-  # Install lark-cli if not present (needed for Lark/Feishu integration)
+  # Install or update lark-cli (needed for Lark/Feishu integration, requires >= 1.0.8)
   if ! command -v lark-cli &>/dev/null; then
     echo -e "${Y}Installing lark-cli...${R}"
     npm install -g @larksuite/cli 2>&1 | tail -1
+  else
+    # Check version and update if too old (--name flag requires >= 1.0.8)
+    _lark_ver=$(lark-cli --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "0.0.0")
+    if [ "$(printf '%s\n' "1.0.8" "$_lark_ver" | sort -V | head -1)" != "1.0.8" ]; then
+      echo -e "${Y}Updating lark-cli (${_lark_ver} -> latest)...${R}"
+      npm install -g @larksuite/cli 2>&1 | tail -1
+    fi
   fi
 
   # Check Python version (>=3.13 required)
