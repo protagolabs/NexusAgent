@@ -69,12 +69,22 @@ jobs:
           CI: true
           APPLE_SIGNING_IDENTITY: '-'
 
+      - name: Normalize artifact filenames (stable name across versions)
+        run: |
+          set -euo pipefail
+          DMG_DIR="tauri/src-tauri/target/release/bundle/dmg"
+          APP_DIR="tauri/src-tauri/target/release/bundle/macos"
+          mkdir -p dist
+          cp "$DMG_DIR"/*.dmg   dist/NarraNexus.dmg
+          cp "$APP_DIR"/*.app.tar.gz dist/NarraNexus.app.tar.gz
+          ls -la dist
+
       - name: Upload DMG to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            tauri/src-tauri/target/release/bundle/dmg/*.dmg
-            tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz
+            dist/NarraNexus.dmg
+            dist/NarraNexus.app.tar.gz
           tag_name: ${{ github.ref_name }}
           name: 'NarraNexus ${{ github.ref_name }}'
           body: 'Unsigned development build. On macOS, right-click the app → Open to bypass Gatekeeper.'
