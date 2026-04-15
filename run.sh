@@ -79,6 +79,12 @@ check_deps() {
     exit 1
   fi
 
+  # Install lark-cli if not present (needed for Lark/Feishu integration)
+  if ! command -v lark-cli &>/dev/null; then
+    echo -e "${Y}Installing lark-cli...${R}"
+    npm install -g @larksuite/cli 2>&1 | tail -1
+  fi
+
   # Check Python version (>=3.13 required)
   local py_version
   py_version=$(uv python find 2>/dev/null | xargs -I{} {} -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "")
