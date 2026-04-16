@@ -249,6 +249,25 @@ class ClaudeAgentSDK:
                 # 检测 AssistantMessage 的 error 字段（认证失败、额度不足等）
                 if msg_type == "AssistantMessage" and hasattr(message, 'error') and message.error:
                     logger.error(f"[ClaudeAgentSDK] Claude API 返回错误: {message.error}")
+                    # Dump CLI stderr + full message repr so we can see which
+                    # field the upstream rejected. Without this the 'error' is
+                    # just 'invalid_request' with no way to diagnose.
+                    if cli_stderr_lines:
+                        logger.error(
+                            "[ClaudeAgentSDK] CLI stderr (last 30 lines):\n"
+                            + "\n".join(cli_stderr_lines[-30:])
+                        )
+                    else:
+                        logger.error(
+                            "[ClaudeAgentSDK] CLI stderr: empty (error came "
+                            "inline via AssistantMessage, not via CLI stderr)"
+                        )
+                    try:
+                        logger.error(
+                            f"[ClaudeAgentSDK] Full message repr: {message!r}"
+                        )
+                    except Exception:
+                        pass
 
                 # output_transfer 返回事件列表（一条消息可能产生多个事件）
                 events = output_transfer(message, transfer_type="claude_agent_sdk", streaming=streaming)
