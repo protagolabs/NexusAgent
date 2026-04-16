@@ -16,6 +16,7 @@ along with its sole consumer, the `contact_agent` MCP tool.
 """
 
 from .channel_context_builder_base import ChannelContextBuilderBase, ChannelHistoryConfig
+from .channel_sender_registry import ChannelSenderRegistry
 from .channel_contact_utils import (
     get_channel_info,
     set_channel_info,
@@ -29,6 +30,7 @@ from .channel_contact_utils import (
 __all__ = [
     "ChannelContextBuilderBase",
     "ChannelHistoryConfig",
+    "ChannelSenderRegistry",
     "get_channel_info",
     "set_channel_info",
     "get_preferred_channel",

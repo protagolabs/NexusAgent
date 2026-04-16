@@ -644,3 +644,43 @@ export type AgentStatus = OwnedAgentStatus | PublicAgentStatus;
 export interface DashboardResponse extends ApiResponse {
   agents: AgentStatus[];
 }
+
+// Lark / Feishu Integration types
+export interface LarkCredentialData {
+  agent_id: string;
+  app_id: string;
+  brand: string;
+  bot_name: string;
+  owner_open_id: string;
+  owner_name: string;
+  auth_status: string;
+  is_active: boolean;
+}
+
+export interface LarkCredentialResponse extends ApiResponse {
+  data: LarkCredentialData | null;
+}
+
+export interface LarkBindResponse extends ApiResponse {
+  data?: {
+    profile_name: string;
+    brand: string;
+    app_id: string;
+    auth_status: string;
+    owner_open_id: string;
+    owner_name: string;
+  };
+}
+
+export interface LarkAuthLoginResponse extends ApiResponse {
+  data?: {
+    verification_url?: string;
+    verification_uri?: string;
+    device_code?: string;
+    user_code?: string;
+  };
+}
+
+export interface LarkAuthCompleteResponse extends ApiResponse {
+  data?: Record<string, unknown>;
+}

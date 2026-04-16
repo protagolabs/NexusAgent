@@ -37,7 +37,8 @@ pkill -f "module_runner.py mcp" 2>/dev/null || true
 pkill -f "module_poller" 2>/dev/null || true
 pkill -f "job_trigger" 2>/dev/null || true
 pkill -f "message_bus_trigger" 2>/dev/null || true
-for port in 8100 8000 5173 5174 7801 7802 7803 7804 7805; do
+pkill -f "run_lark_trigger" 2>/dev/null || true
+for port in 8100 8000 5173 5174 7801 7802 7803 7804 7805 7830; do
   lsof -ti:"$port" 2>/dev/null | xargs kill -9 2>/dev/null || true
 done
 sleep 1
@@ -92,10 +93,11 @@ draw_panel() {
   status_line "Module Poller"       "pgrep -f 'module_poller' >/dev/null"
   status_line "Job Trigger"         "pgrep -f 'job_trigger' >/dev/null"
   status_line "Bus Trigger"         "pgrep -f 'message_bus_trigger' >/dev/null"
+  status_line "Lark Trigger"        "pgrep -f 'run_lark_trigger' >/dev/null"
   echo ""
   echo -e "  ${Y}Navigation${R}"
   echo ""
-  echo -e "  ${C}Ctrl+B N${R}  Next window       ${C}Ctrl+B 1-7${R}  Jump to service"
+  echo -e "  ${C}Ctrl+B N${R}  Next window       ${C}Ctrl+B 1-8${R}  Jump to service"
   echo -e "  ${C}Ctrl+B P${R}  Previous window   ${C}Ctrl+B D${R}    Detach"
   echo ""
   echo -e "  Press ${RED}q${R} to stop all services and exit"
@@ -116,13 +118,14 @@ while true; do
       pkill -f "module_poller" 2>/dev/null || true
       pkill -f "job_trigger" 2>/dev/null || true
       pkill -f "message_bus_trigger" 2>/dev/null || true
+      pkill -f "run_lark_trigger" 2>/dev/null || true
       # Kill processes on known ports
-      for port in 8100 8000 5173 5174 7801 7802 7803 7804 7805; do
+      for port in 8100 8000 5173 5174 7801 7802 7803 7804 7805 7830; do
         lsof -ti:"$port" 2>/dev/null | xargs kill 2>/dev/null || true
       done
       sleep 1
       # Force-kill any stragglers
-      for port in 8100 8000 5173 5174 7801; do
+      for port in 8100 8000 5173 5174 7801 7830; do
         lsof -ti:"$port" 2>/dev/null | xargs kill -9 2>/dev/null || true
       done
       echo -e "  ${G}All services stopped.${R}"
@@ -145,7 +148,16 @@ tmux new-window -t "$SESSION" -n "DB Proxy" \
   "$ENV_CMD; export SQLITE_PROXY_PORT='$SQLITE_PROXY_PORT'; echo '=== SQLite Proxy :$SQLITE_PROXY_PORT ==='; uv run python -m xyz_agent_context.utils.sqlite_proxy_server; echo 'DB Proxy stopped. Press Enter to close.'; read"
 
 # Wait for proxy to be ready before starting other services
-sleep 3
+echo -n "Waiting for DB Proxy..."
+for _i in $(seq 1 20); do
+  if curl -sf "http://localhost:${SQLITE_PROXY_PORT}/health" >/dev/null 2>&1 || \
+     lsof -iTCP:"${SQLITE_PROXY_PORT}" -sTCP:LISTEN -P -n >/dev/null 2>&1; then
+    echo " ready"
+    break
+  fi
+  echo -n "."
+  sleep 1
+done
 
 # --- Backend ---
 tmux new-window -t "$SESSION" -n "Backend" \
@@ -166,6 +178,10 @@ tmux new-window -t "$SESSION" -n "Jobs" \
 # --- Bus Trigger ---
 tmux new-window -t "$SESSION" -n "BusTrigger" \
   "$ENV_CMD; echo '=== Bus Trigger ==='; uv run python -m xyz_agent_context.message_bus.message_bus_trigger; echo 'Bus Trigger stopped. Press Enter to close.'; read"
+
+# --- Lark Trigger ---
+tmux new-window -t "$SESSION" -n "LarkTrigger" \
+  "$ENV_CMD; echo '=== Lark Trigger ==='; uv run python -m xyz_agent_context.module.lark_module.run_lark_trigger; echo 'Lark Trigger stopped. Press Enter to close.'; read"
 
 # --- Frontend ---
 tmux new-window -t "$SESSION" -n "Frontend" \

@@ -145,6 +145,7 @@ from backend.routes.skills import router as skills_router
 from backend.routes.providers import router as providers_router
 from backend.routes.inbox import router as inbox_router
 from backend.routes.dashboard import router as dashboard_router
+from backend.routes.lark import router as lark_router
 
 app.include_router(websocket_router, tags=["WebSocket"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
@@ -154,6 +155,7 @@ app.include_router(skills_router, prefix="/api/skills", tags=["Skills"])
 app.include_router(providers_router, prefix="/api/providers", tags=["Providers"])
 app.include_router(inbox_router, prefix="/api/agent-inbox", tags=["Inbox"])
 app.include_router(dashboard_router, prefix="/api/dashboard", tags=["Dashboard"])
+app.include_router(lark_router, prefix="/api/lark", tags=["Lark"])
 
 
 @app.get("/health")
