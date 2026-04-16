@@ -53,11 +53,12 @@ function Bar({
 
 export function QuotaPanel() {
   const mode = useRuntimeStore((s) => s.mode)
+  const isCloud = mode === 'cloud-app' || mode === 'cloud-web'
   const [data, setData] = useState<QuotaMeResponse | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    if (mode !== 'cloud') {
+    if (!isCloud) {
       setLoaded(true)
       return
     }
@@ -76,10 +77,10 @@ export function QuotaPanel() {
     return () => {
       cancelled = true
     }
-  }, [mode])
+  }, [isCloud])
 
   if (!loaded) return null
-  if (mode !== 'cloud') return null
+  if (!isCloud) return null
   if (!data || data.enabled === false) return null
 
   if (data.status === 'uninitialized') {

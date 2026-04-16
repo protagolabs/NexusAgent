@@ -84,9 +84,10 @@ export function RegisterPage() {
 
       // If the backend seeded a free-tier quota for this user, show a
       // brief inline welcome banner before navigating so the user knows
-      // they have starter credits. Cloud-web / cloud modes only; local
-      // never seeds so the flag is always false there.
-      if (mode === 'cloud' && res.has_system_quota) {
+      // they have starter credits. cloud-app / cloud-web modes only;
+      // local never seeds so the flag is always false there.
+      const isCloud = mode === 'cloud-app' || mode === 'cloud-web';
+      if (isCloud && res.has_system_quota) {
         setWelcomeQuota({
           input: res.initial_input_tokens ?? 0,
           output: res.initial_output_tokens ?? 0,
