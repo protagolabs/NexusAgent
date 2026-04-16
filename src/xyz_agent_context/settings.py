@@ -116,6 +116,20 @@ class Settings(BaseSettings):
     # LLM call currently always returns the same 4 modules.
     skip_module_decision_llm: bool = True
 
+    # ===== Module Control =====
+    # Comma-separated list of module class names to disable at runtime.
+    # Example: DISABLED_MODULES="JobModule,MatrixModule,SkillModule"
+    # Disabled modules will not be loaded, their MCP tools will not be available,
+    # and their hooks will not run.
+    disabled_modules: str = ""
+
+    # ===== Tool Access Control =====
+    # Comma-separated list of Claude Code built-in tool names to disable.
+    # Use this during external benchmarks (e.g., tau2-bench) to prevent the agent
+    # from reading test data or answers from the filesystem.
+    # Example: DISALLOWED_TOOLS="Read,Write,Edit,Bash,Glob,Grep,WebFetch,WebSearch"
+    disallowed_tools: str = ""
+
     @model_validator(mode="after")
     def _expand_user_paths(self) -> "Settings":
         """Expand ~ in path settings so callers don't need to handle it."""

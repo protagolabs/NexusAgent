@@ -35,6 +35,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -147,19 +148,33 @@ def cmd_claude_status() -> None:
     if shutil.which("claude"):
         result["installed"] = True
 
-    creds_file = Path.home() / ".claude" / ".credentials.json"
-    if creds_file.is_file():
+    if result["installed"]:
+        # First try: ask the CLI directly (works for Max plan / keychain auth)
         try:
-            data = json.loads(creds_file.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                for key in ("accessToken", "oauthToken", "claudeAiOauth"):
-                    if data.get(key):
-                        result["logged_in"] = True
-                        break
-                if not result["logged_in"] and data.get("oauth"):
-                    result["logged_in"] = True
+            proc = subprocess.run(
+                ["claude", "-p", "ping"],
+                capture_output=True, text=True, timeout=15,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                result["logged_in"] = True
         except Exception:
             pass
+
+    # Fallback: check legacy .credentials.json file
+    if not result["logged_in"]:
+        creds_file = Path.home() / ".claude" / ".credentials.json"
+        if creds_file.is_file():
+            try:
+                data = json.loads(creds_file.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    for key in ("accessToken", "oauthToken", "claudeAiOauth"):
+                        if data.get(key):
+                            result["logged_in"] = True
+                            break
+                    if not result["logged_in"] and data.get("oauth"):
+                        result["logged_in"] = True
+            except Exception:
+                pass
 
     print(json.dumps(result))
 

@@ -106,7 +106,7 @@ async def get_db_client() -> "AsyncDatabaseClient":
 
                 from xyz_agent_context.utils.database import AsyncDatabaseClient
                 logger.info("Creating shared AsyncDatabaseClient instance")
-                _shared_async_client = await AsyncDatabaseClient.create()
+                _shared_async_client = await AsyncDatabaseClient.create(pool_size=30)
                 _client_event_loop = current_loop
                 logger.success("Shared AsyncDatabaseClient created successfully")
 

@@ -555,6 +555,14 @@ class ModuleLoader:
         Returns:
             List of ModuleInstance with bound modules
         """
+        # Filter out disabled modules
+        disabled = {m.strip() for m in settings.disabled_modules.split(",") if m.strip()}
+        if disabled:
+            before = len(instances)
+            instances = [inst for inst in instances if inst.module_class not in disabled]
+            if len(instances) < before:
+                logger.info(f"ModuleLoader: Filtered out disabled modules: {disabled} ({before - len(instances)} removed)")
+
         module_count = 0
         for inst in instances:
             if inst.module_class not in self.module_map:

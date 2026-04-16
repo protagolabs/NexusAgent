@@ -86,9 +86,14 @@ async def step_2_load_modules(
 
     # Add Agent-level modules (not managed through Instance mechanism)
     # MemoryModule: responsible for EverMemOS writing and other memory management tasks
-    memory_module = get_memory_module(ctx.agent_id, ctx.user_id)
-    ctx.module_list.append(memory_module)
-    logger.debug("  📝 Added MemoryModule to module_list")
+    from xyz_agent_context.settings import settings as _settings
+    _disabled = {m.strip() for m in _settings.disabled_modules.split(",") if m.strip()}
+    if "MemoryModule" not in _disabled:
+        memory_module = get_memory_module(ctx.agent_id, ctx.user_id)
+        ctx.module_list.append(memory_module)
+        logger.debug("  📝 Added MemoryModule to module_list")
+    else:
+        logger.debug("  📝 MemoryModule disabled, skipping")
 
     logger.success(
         f"✅ Instances loaded: count={len(active_instances)}, "

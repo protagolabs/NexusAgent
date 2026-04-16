@@ -164,6 +164,7 @@ def _convert_assistant_to_stream_events(message: Any) -> List[Dict[str, Any]]:
             "billing_error": "Claude API billing error. Please check your account credits.",
             "invalid_request": "Claude API received an invalid request.",
             "server_error": "Claude API server error. Please try again later.",
+            "unknown": "Claude API unknown error. This is usually transient — please retry.",
         }
         error_message = error_messages.get(error_type, f"Claude API error: {error_type}")
 

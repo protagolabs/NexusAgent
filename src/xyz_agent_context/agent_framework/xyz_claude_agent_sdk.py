@@ -161,6 +161,15 @@ class ClaudeAgentSDK:
         )
         if claude_config.model:
             options_kwargs["model"] = claude_config.model
+
+        # Apply tool access restrictions (e.g., during benchmarks to prevent data leakage)
+        from xyz_agent_context.settings import settings as _settings
+        if _settings.disallowed_tools:
+            disallowed = [t.strip() for t in _settings.disallowed_tools.split(",") if t.strip()]
+            if disallowed:
+                options_kwargs["disallowed_tools"] = disallowed
+                logger.warning(f"[ClaudeAgentSDK] Tool access restricted — disallowed: {disallowed}")
+
         options = ClaudeAgentOptions(**options_kwargs)
 
 
