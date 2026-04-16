@@ -92,6 +92,23 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      // System free-tier quota exhausted: dispatch a global event so
+      // any listener (App shell, dedicated toast, etc.) can surface it.
+      // Using CustomEvent keeps api.ts UI-framework-agnostic.
+      if (response.status === 402) {
+        try {
+          const body = await response.clone().json();
+          if (body?.error_code === 'QUOTA_EXCEEDED_NO_USER_PROVIDER') {
+            window.dispatchEvent(
+              new CustomEvent('narranexus:quota-exceeded', {
+                detail: body,
+              })
+            );
+          }
+        } catch {
+          // ignore parse errors; still throw below
+        }
+      }
       throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
 

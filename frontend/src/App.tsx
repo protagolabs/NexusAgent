@@ -152,8 +152,33 @@ function App() {
     document.documentElement.classList.toggle('dark', effectiveTheme === 'dark');
   }, [effectiveTheme]);
 
+  // Surface "quota exhausted" globally. api.ts dispatches a CustomEvent
+  // on HTTP 402 + error_code=QUOTA_EXCEEDED_NO_USER_PROVIDER; we show a
+  // dismissible top banner prompting the user to configure their own
+  // provider. Auto-dismisses after 8s so it doesn't stick forever.
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  useEffect(() => {
+    const handler = () => {
+      setQuotaExceeded(true);
+      window.setTimeout(() => setQuotaExceeded(false), 8000);
+    };
+    window.addEventListener('narranexus:quota-exceeded', handler);
+    return () => window.removeEventListener('narranexus:quota-exceeded', handler);
+  }, []);
+
   return (
-    <Suspense fallback={<PageFallback />}>
+    <>
+      {quotaExceeded && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 bg-[var(--accent-error)] text-white px-4 py-2 text-sm text-center cursor-pointer"
+          onClick={() => setQuotaExceeded(false)}
+          role="alert"
+        >
+          Free-tier quota exhausted. Open Settings → Providers to add
+          your own API key. (click to dismiss)
+        </div>
+      )}
+      <Suspense fallback={<PageFallback />}>
       <Routes>
         {/* Public routes — /mode-select is blocked when the deploy pipeline
             has forced a mode (cloud-web server, or locked-down kiosk build). */}
@@ -197,6 +222,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </>
   );
 }
 
