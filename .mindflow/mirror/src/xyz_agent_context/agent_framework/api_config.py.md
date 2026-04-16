@@ -1,8 +1,28 @@
 ---
 code_file: src/xyz_agent_context/agent_framework/api_config.py
-last_verified: 2026-04-10
+last_verified: 2026-04-16
 stub: false
 ---
+
+## 2026-04-16 addition — provider_source + current_user_id ContextVars
+
+Two new auxiliary ContextVars were added alongside the existing
+claude/openai/embedding ones, supporting the system-default free-tier
+quota feature:
+
+- `provider_source` ("user" | "system" | None) — set by ProviderResolver
+  to signal which config branch produced the active user_config, so
+  cost_tracker can decide whether to deduct the system quota after an
+  LLM call.
+- `current_user_id` — set by auth_middleware once the JWT is parsed, so
+  cost_tracker can attribute usage without threading `user_id` through
+  every layer of the LLM call stack.
+
+Both default to None. Local mode / tests / any path that does not hit
+auth_middleware simply sees None, making the quota hook a silent no-op.
+Claim: these additions do NOT alter existing behaviour of `set_user_config`,
+`_ConfigProxy`, or any proxy object — they are strictly additive.
+
 # api_config.py — Centralized LLM config with per-task isolation
 
 ## 为什么存在

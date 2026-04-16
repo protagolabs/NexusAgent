@@ -398,6 +398,49 @@ def set_user_config(claude: ClaudeConfig, openai: OpenAIConfig, embedding: Embed
 
 
 # =============================================================================
+# Quota-routing ContextVars (system-default free-tier feature)
+# =============================================================================
+#
+# Two auxiliary ContextVars set by auth_middleware and read by cost_tracker:
+#
+# - provider_source: "user" | "system" | None
+#     Tagged by ProviderResolver to indicate which branch produced the
+#     active user_config. cost_tracker reads this to decide whether to
+#     deduct the system-default quota after an LLM call.
+#
+# - current_user_id:
+#     Tagged by auth_middleware once the JWT is parsed. cost_tracker uses
+#     it to attribute token usage without having to thread user_id through
+#     every layer of the LLM call stack.
+#
+# Both default to None so existing code paths (and local mode) are
+# unaffected — cost_tracker's quota hook is a no-op when either is unset.
+
+_provider_source_ctx: ContextVar[Optional[str]] = ContextVar(
+    "provider_source", default=None
+)
+_current_user_id_ctx: ContextVar[Optional[str]] = ContextVar(
+    "current_user_id", default=None
+)
+
+
+def set_provider_source(src: Optional[str]) -> None:
+    _provider_source_ctx.set(src)
+
+
+def get_provider_source() -> Optional[str]:
+    return _provider_source_ctx.get()
+
+
+def set_current_user_id(uid: Optional[str]) -> None:
+    _current_user_id_ctx.set(uid)
+
+
+def get_current_user_id() -> Optional[str]:
+    return _current_user_id_ctx.get()
+
+
+# =============================================================================
 # Per-user config loading (for cloud multi-tenant mode)
 # =============================================================================
 
