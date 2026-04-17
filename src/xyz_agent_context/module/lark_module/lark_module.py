@@ -207,13 +207,17 @@ class LarkModule(XYZBaseModule):
 
         status_matrix = (
             "### Configuration Status (check every turn before acting)\n\n"
-            "| # | Step                                  | State |\n"
-            "|---|---------------------------------------|-------|\n"
-            f"| 1 | App created                           | {_tick(app_created)} |\n"
-            f"| 2 | User OAuth (`auth login --domain all`) | {oauth_cell} |\n"
-            f"| 3 | Bot scopes enabled in dev console      | {_tick(bot_scopes_ok)} |\n"
-            f"| 4 | Availability = all staff *(optional)* | {availability_cell} |\n"
-            f"| 5 | Real-time receive (App Secret in DB)   | {_tick(receive_ok)} |\n\n"
+            "| # | Step                                         | State |\n"
+            "|---|----------------------------------------------|-------|\n"
+            f"| 1 | App created                                  | {_tick(app_created)} |\n"
+            f"| 2 | OAuth grant (auto-publishes scopes + version) | {oauth_cell} |\n"
+            f"| 3 | Bot scopes in app permission list            | {_tick(bot_scopes_ok)} |\n"
+            f"| 4 | Availability = all staff *(optional)*        | {availability_cell} |\n"
+            f"| 5 | Real-time receive (App Secret in DB)         | {_tick(receive_ok)} |\n\n"
+            "Note: Steps 2 and 3 usually flip together — clicking the OAuth "
+            "URL with `--recommend` makes Lark auto-grant the scopes to the "
+            "app AND auto-publish a new version in one shot. You should not "
+            "need to send the user into the dev console for scopes.\n\n"
         )
 
         # --- Next-step coach -----------------------------------------------
@@ -241,26 +245,36 @@ class LarkModule(XYZBaseModule):
             steps: list[str] = []
             if not user_oauth_ok and not pending_oauth_url:
                 steps.append(
-                    "- Step 2 + 3 (permission bootstrap): call "
-                    "`mcp__lark_module__lark_configure_permissions(agent_id)` "
-                    "to get ONE OAuth URL covering all user scopes plus the "
-                    "console checklist for bot scopes."
+                    "- Step 2 + 3 (one-shot permission bootstrap): call "
+                    "`mcp__lark_module__lark_configure_permissions(agent_id)`. "
+                    "It gives you a single OAuth URL — clicking it grants "
+                    "all recommended scopes AND auto-adds them to the app's "
+                    "permission list AND auto-publishes a new version. "
+                    "No dev-console checklist needed in the happy path."
                 )
             if pending_oauth_url and not user_oauth_ok:
                 steps.append(
-                    f"- Step 2 (OAuth pending): ask the user to click this link: "
-                    f"`{pending_oauth_url}` — when they confirm, call "
-                    f"`mcp__lark_module__lark_auth_complete(agent_id, device_code=\"{pending_device_code}\")`."
+                    f"- Step 2 (OAuth pending): ask the user to click this "
+                    f"link: `{pending_oauth_url}` — when they confirm it went "
+                    f"through, call `mcp__lark_module__lark_auth_complete("
+                    f'agent_id, device_code="{pending_device_code}")`. That '
+                    f"single click covers steps 2 AND 3 on this matrix."
                 )
             if user_oauth_ok and not bot_scopes_ok:
+                # This branch only fires if user OAuth happened but bot
+                # scopes aren't marked confirmed — which should be rare
+                # (the recommend_all flow auto-flips them). Most likely
+                # cause: user did a targeted lark_auth(scopes=...) flow.
                 steps.append(
-                    "- Step 3 (console checklist): remind the user to finish "
-                    "the dev-console task — enable bot scopes and publish a "
-                    "version. Availability (step 4) is optional; mention it "
-                    "only if they want other org members to see the bot. "
-                    "When they confirm scopes are done, call "
-                    "`mcp__lark_module__lark_mark_console_done(agent_id, "
-                    "bot_scopes_ok=True, availability_ok=<True if they set it, else False>)`."
+                    "- Step 3 (rare): OAuth completed but the app's permission "
+                    "list did not auto-sync — probably because a targeted "
+                    "`lark_auth(scopes=...)` call was used instead of the "
+                    "`lark_configure_permissions` bootstrap. Ask the user to "
+                    "re-run `lark_configure_permissions` (it supersedes "
+                    "targeted grants with the full recommended set), or go "
+                    "to the dev-console permission page manually. When done, "
+                    "call `mcp__lark_module__lark_mark_console_done(agent_id, "
+                    "bot_scopes_ok=True)`."
                 )
             if not receive_ok:
                 if lark_info.get("is_agent_assisted"):

@@ -636,12 +636,28 @@ def register_lark_mcp_tools(mcp: Any) -> None:
                 or data.get("user", {}).get("scopes", [])
                 or []
             )
-            await mgr.patch_permission_state(agent_id, {
-                "user_oauth_completed_at": datetime.now(timezone.utc).isoformat(),
+
+            # If this OAuth flow was launched via lark_configure_permissions
+            # (--domain all --recommend), Lark auto-publishes a version with
+            # every auto-approvable scope declared on the app — so the "bot
+            # scopes + version publish" milestone is done automatically. We
+            # flip bot_scopes_confirmed + console_setup_done_at right now so
+            # Agent stops nagging the user about the dev console.
+            now = datetime.now(timezone.utc).isoformat()
+            current_state = (await mgr.get_credential(agent_id)).permission_state or {}
+            was_recommend_all = current_state.get("user_oauth_mode") == "recommend_all"
+
+            patch: dict = {
+                "user_oauth_completed_at": now,
                 "user_scopes_granted": list(granted) if isinstance(granted, (list, tuple)) else [],
                 "user_oauth_url": None,
                 "user_oauth_device_code": None,
-            })
+                "user_oauth_mode": None,
+            }
+            if was_recommend_all:
+                patch["bot_scopes_confirmed"] = True
+                patch["console_setup_done_at"] = now
+            await mgr.patch_permission_state(agent_id, patch)
         return result
 
     # =====================================================================
@@ -714,24 +730,25 @@ def register_lark_mcp_tools(mcp: Any) -> None:
         if not oauth_url or not device_code:
             return {"success": False, "error": "CLI did not return an OAuth URL.", "raw": data}
 
-        # Persist the pending OAuth so get_instructions can reason about it
+        # Persist the pending OAuth so get_instructions can reason about it.
+        # mode="recommend_all" tells lark_auth_complete to also flip
+        # bot_scopes_confirmed on success — Lark auto-publishes a version
+        # with all granted scopes when the user approves the
+        # --recommend OAuth URL, so no separate console trip is needed.
         db = await XYZBaseModule.get_mcp_db_client()
         mgr = LarkCredentialManager(db)
         await mgr.patch_permission_state(agent_id, {
             "user_oauth_url": oauth_url,
             "user_oauth_device_code": device_code,
+            "user_oauth_mode": "recommend_all",
         })
 
         console_url = _dev_console_url(cred.brand, cred.app_id)
-        scopes_hint = ", ".join(_RECOMMENDED_BOT_SCOPES[:6]) + ", ..."
-        checklist_required = [
-            f"1. 「权限管理」→ 勾选 bot scope（推荐: {scopes_hint}，一共 ~18 个）→ 提交申请（若需审批让管理员批，否则即时生效）",
-            "2. 「应用能力」→ 机器人 → 开启机器人能力（若未开启）",
-            "3. 「版本管理」→ 创建新版本 → 发布线上版本（管理员审批后生效）",
-        ]
-        checklist_optional = [
-            "（可选）「可用范围」→ 改成 '全员可用'（或选择 '指定部门' 勾全部部门）— 不设的话，只有你自己能在 Lark 里看到这个 bot；其他人看不见。如果只是你自己用，可以跳过。",
-        ]
+        optional_hint = (
+            "（可选）如果希望组织里其他人也能找到并使用这个 bot，去 "
+            f"{console_url} → 「可用范围」→ 改成 '全员可用'（或勾选指定部门）。"
+            "不设的话 bot 只有你一个人能看到；个人用可以跳过。"
+        )
 
         return {
             "success": True,
@@ -739,19 +756,20 @@ def register_lark_mcp_tools(mcp: Any) -> None:
                 "oauth_url": oauth_url,
                 "oauth_device_code": device_code,
                 "dev_console_url": console_url,
-                "console_checklist": checklist_required,
-                "console_checklist_optional": checklist_optional,
+                "availability_hint": optional_hint,
                 "recommended_bot_scopes": _RECOMMENDED_BOT_SCOPES,
                 "message": (
-                    "Ask the user to do two things in parallel:\n"
-                    f"A. Click this ONE link to grant all user-level Lark scopes:\n   {oauth_url}\n"
-                    f"B. Open the dev console and run through the REQUIRED checklist:\n   {console_url}\n"
-                    "Then mention the OPTIONAL 'availability' step as follows:\n"
-                    "   '如果你希望组织里其他人也能找到并使用这个 bot，再多做一步：\n"
-                    "   在「可用范围」里改成全员可用。不做的话 bot 只有你一个人能用。'\n"
-                    "When they say 'A is done', call lark_auth_complete with the device_code above.\n"
-                    "When they say 'B is done', call lark_mark_console_done (pass "
-                    "availability_ok=True only if they also did the optional step)."
+                    "Send the user ONE action:\n"
+                    f"   点这个链接一键授权所有推荐权限: {oauth_url}\n"
+                    "审批通过后 Lark 会**自动**把 scope 加进应用权限列表并发版，"
+                    "不需要再进开发者后台手动勾选。\n"
+                    f"When they say 'done', call lark_auth_complete(agent_id, "
+                    f'device_code="{device_code}").\n'
+                    "\n"
+                    "After that, OPTIONALLY mention availability:\n"
+                    f"   {optional_hint}\n"
+                    "Call lark_mark_console_done(availability_ok=True) only if "
+                    "the user explicitly confirms they set availability to all staff."
                 ),
             },
         }
