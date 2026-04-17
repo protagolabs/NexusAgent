@@ -369,8 +369,13 @@ class LarkModule(XYZBaseModule):
             )
 
         # --- Iron rules ---------------------------------------------------
+        owner_ref = (
+            f"`{owner_id}` ({owner_name})" if owner_id
+            else "(owner not yet resolved; use lark_setup or check lark_status)"
+        )
         rules = (
             "### Iron rules (non-negotiable)\n\n"
+            "**A. Tool routing**\n"
             "1. **MCP only — NEVER Bash**. `lark-cli` invocations via Bash/shell "
             "are intercepted by the hook guard and returned as an error. All "
             "Lark work goes through `mcp__lark_module__*` tools:\n"
@@ -382,15 +387,37 @@ class LarkModule(XYZBaseModule):
             "installer** via Bash to 'get Lark working' — the stack is already "
             "installed. If an MCP tool fails, report the error; don't improvise "
             "a workaround.\n"
-            "3. **Identity: always add `--as bot`** when sending messages, "
-            "creating docs, or performing actions. Use `--as user` only for "
-            "search/read that requires user identity "
-            "(e.g. `contact +search-user`, `docs +search`).\n"
+            "3. `im +messages-send` sends to a Lark user/chat — it is NOT how "
+            "you reply to the owner's chat window.\n"
             "4. **Permission errors drive `lark_auth`** for specific scopes — "
             "do NOT preemptively call `lark_auth`. The generic permission "
-            "bootstrap happens once via `lark_configure_permissions`.\n"
-            "5. `im +messages-send` sends to a Lark user/chat — it is NOT how "
-            "you reply to the owner's chat window.\n"
+            "bootstrap happens once via `lark_configure_permissions`.\n\n"
+            "**B. Identity and authorization**\n"
+            f"5. **The OWNER is** {owner_ref}. Everyone else who interacts "
+            "with this bot — group members, DM'ers, colleagues — is a "
+            "'visitor'. Check the sender identity on every LARK CHANNEL turn "
+            "before deciding what you're allowed to do.\n"
+            "6. **`--as user` acts as the OWNER'S identity** — all user-scope "
+            "calls use the owner's OAuth token. WRITE operations (send, "
+            "create, update, delete) with `--as user` mean 'the owner did "
+            "this'. Only do that when the OWNER themselves explicitly asked "
+            "in this turn. If a visitor asks the bot to write something, use "
+            "`--as bot` only; never impersonate the owner to satisfy someone "
+            "else's request.\n"
+            "7. **Default `--as bot` for all writes**. Sending a message, "
+            "creating a doc, updating a calendar event — bot identity by "
+            "default. Switch to `--as user` ONLY when: (a) owner explicitly "
+            "asked AND (b) the operation technically requires user identity.\n"
+            "8. **Use `--as user` for reads only when the owner asked**. "
+            "Searching owner's docs, listing their calendar, reading their "
+            "mail, browsing their drive — these are their private data. "
+            "Don't scan 'for context', 'to be helpful', or to answer a "
+            "visitor's question. Ask the owner first if unsure.\n"
+            "9. **Never relay the owner's private content to visitors** "
+            "unless the owner explicitly asked you to. If a visitor asks "
+            "'what's on [owner]'s calendar?' — decline politely; that's "
+            "private. Only exception: information the owner has explicitly "
+            "made public or asked you to share.\n"
         )
 
         header = f"**Bot**: **{bot_name}** ({brand_display}, app `{app_id}`)."
