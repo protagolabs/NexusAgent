@@ -23,7 +23,7 @@ them on demand (e.g., `lark://skills/lark-im`).
 
 ## Upstream / downstream
 
-- **Upstream**: `_lark_mcp_tools_v2.py` calls `get_available_skills()` and
+- **Upstream**: `_lark_mcp_tools.py` calls `get_available_skills()` and
   `load_skill_content()` to register MCP Resources.
 - **Downstream**: filesystem (reads SKILL.md files).
 

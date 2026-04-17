@@ -24,7 +24,7 @@ reads/writes its `~/.lark-cli/` config and cache.
 
 ## Upstream / downstream
 
-- **Upstream**: `lark_cli_client.py` (`_run_with_home`), `_lark_mcp_tools_v2.py`
+- **Upstream**: `lark_cli_client.py` (`_run_with_home`), `_lark_mcp_tools.py`
   (`lark_setup`), `_lark_service.py` (formerly `do_bind`, now only used for
   Quick Setup).
 - **Downstream**: filesystem only.

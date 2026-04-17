@@ -7,13 +7,13 @@ last_verified: 2026-04-16
 ## Why it exists
 
 Unified async wrapper around all `lark-cli` subprocess calls.
-Provides two runners (`_run` with `--profile`, `_run_v2` which resolves
+Provides two runners (`_run` with `--profile`, `_run_with_agent_id` which resolves
 the profile from agent_id) plus a small set of typed business methods
 still used by internal callers.
 
 ## Design decisions
 
-- **`--profile` as primary isolation** — `_run_v2(args, agent_id)` maps
+- **`--profile` as primary isolation** — `_run_with_agent_id(args, agent_id)` maps
   agent_id to `agent_{agent_id}` and delegates to `_run()`.
 - **HOME isolation only for `config init --new`** — `_run_with_home` sets
   HOME to the agent workspace. Used exclusively for the interactive new-app
@@ -28,11 +28,11 @@ still used by internal callers.
 
 ## Upstream / downstream
 
-- **Upstream**: `_lark_mcp_tools_v2.py` (via `_run_v2`),
+- **Upstream**: `_lark_mcp_tools.py` (via `_run_with_agent_id`),
   `_lark_service.py` (`config_init`), `lark_trigger.py` (`get_user`),
   `lark_context_builder.py` (`list_chat_messages`),
   `lark_module.py` (`send_message`), `backend/routes/lark.py`
-  (`_run_v2`, `profile_remove`).
+  (`_run_with_agent_id`, `profile_remove`).
 - **Downstream**: `lark-cli` binary, `_lark_workspace.py` (for HOME env).
 
 ## Gotchas

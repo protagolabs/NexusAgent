@@ -28,7 +28,7 @@ logout`, or inject shell metacharacters.
 
 ## Upstream / downstream
 
-- **Upstream**: `_lark_mcp_tools_v2.py` calls `validate_command()` and
+- **Upstream**: `_lark_mcp_tools.py` calls `validate_command()` and
   `sanitize_command()` before every `lark_cli` invocation.
 - **Downstream**: none (leaf module).
 

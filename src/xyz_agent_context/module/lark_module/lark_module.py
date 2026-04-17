@@ -103,8 +103,8 @@ class LarkModule(XYZBaseModule):
             mcp = FastMCP("LarkModule MCP")
             mcp.settings.port = LARK_MCP_PORT
 
-            from ._lark_mcp_tools_v2 import register_lark_mcp_tools_v2
-            register_lark_mcp_tools_v2(mcp)
+            from ._lark_mcp_tools import register_lark_mcp_tools
+            register_lark_mcp_tools(mcp)
 
             logger.info(f"LarkModule MCP server created on port {LARK_MCP_PORT}")
             return mcp

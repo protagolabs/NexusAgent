@@ -79,8 +79,8 @@ async def do_bind(
     )
     await mgr.save_credential(cred)
 
-    # Try to get bot name (use V2 runner)
-    bot_info = await _cli._run_v2(["contact", "+get-user", "--as", "bot"], agent_id)
+    # Try to get bot name
+    bot_info = await _cli._run_with_agent_id(["contact", "+get-user", "--as", "bot"], agent_id)
     if bot_info.get("success"):
         data = bot_info.get("data", {})
         name = data.get("name", data.get("en_name", ""))
@@ -111,7 +111,7 @@ async def do_bind(
 async def resolve_owner(agent_id: str, owner_email: str) -> tuple[str, str]:
     """Resolve owner Lark identity from email. Returns (open_id, name).
 
-    Uses V2 runner (HOME isolation) with fallback to --profile.
+    Uses the agent-scoped runner (HOME isolation) with fallback to --profile.
     """
     if not owner_email:
         return "", ""
@@ -119,7 +119,7 @@ async def resolve_owner(agent_id: str, owner_email: str) -> tuple[str, str]:
     owner_open_id = ""
     owner_name = ""
 
-    lookup = await _cli._run_v2(
+    lookup = await _cli._run_with_agent_id(
         ["api", "POST", "/open-apis/contact/v3/users/batch_get_id",
          "--data", json.dumps({"emails": [owner_email]})],
         agent_id=agent_id,
@@ -130,7 +130,7 @@ async def resolve_owner(agent_id: str, owner_email: str) -> tuple[str, str]:
             owner_open_id = user_list[0].get("user_id", "")
 
     if owner_open_id:
-        user_info = await _cli._run_v2(
+        user_info = await _cli._run_with_agent_id(
             ["contact", "+get-user", "--as", "bot", "--user-id", owner_open_id],
             agent_id=agent_id,
         )

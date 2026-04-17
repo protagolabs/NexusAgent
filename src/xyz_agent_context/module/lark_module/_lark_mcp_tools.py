@@ -1,9 +1,9 @@
 """
-@file_name: _lark_mcp_tools_v2.py
+@file_name: _lark_mcp_tools.py
 @date: 2026-04-16
-@description: V2 MCP tools — single generic lark_cli tool + lifecycle tools.
+@description: Lark MCP tools — single generic lark_cli tool + lifecycle tools.
 
-Replaces 19 individual MCP tools with:
+Tools exposed:
   - lark_cli(agent_id, command)      — Run any lark-cli command (whitelist enforced)
   - lark_setup(agent_id)             — Create new Lark app via config init --new
   - lark_auth(agent_id)              — Initiate OAuth login
@@ -40,8 +40,8 @@ async def _get_credential(agent_id: str):
     return await mgr.get_credential(agent_id)
 
 
-def register_lark_mcp_tools_v2(mcp: Any) -> None:
-    """Register V2 Lark MCP tools and resources on the given FastMCP server."""
+def register_lark_mcp_tools(mcp: Any) -> None:
+    """Register Lark MCP tools and resources on the given FastMCP server."""
 
     # =====================================================================
     # Core Tool: lark_cli
@@ -87,7 +87,7 @@ def register_lark_mcp_tools_v2(mcp: Any) -> None:
             return {"success": False, "error": str(e)}
 
         # Execute with HOME isolation
-        return await _cli._run_v2(args, agent_id)
+        return await _cli._run_with_agent_id(args, agent_id)
 
     # =====================================================================
     # Lifecycle: lark_setup
@@ -264,7 +264,7 @@ def register_lark_mcp_tools_v2(mcp: Any) -> None:
         else:
             args = ["auth", "login", "--recommend", "--json", "--no-wait"]
 
-        result = await _cli._run_v2(
+        result = await _cli._run_with_agent_id(
             args,
             agent_id,
             timeout=60.0,
@@ -293,7 +293,7 @@ def register_lark_mcp_tools_v2(mcp: Any) -> None:
         if not cred:
             return {"success": False, "error": "No Lark bot bound."}
 
-        result = await _cli._run_v2(
+        result = await _cli._run_with_agent_id(
             ["auth", "login", "--device-code", device_code, "--json"],
             agent_id,
             timeout=60.0,
@@ -321,8 +321,8 @@ def register_lark_mcp_tools_v2(mcp: Any) -> None:
         if not cred:
             return {"success": False, "error": "No Lark bot bound."}
 
-        auth = await _cli._run_v2(["auth", "status"], agent_id)
-        doctor = await _cli._run_v2(["doctor"], agent_id)
+        auth = await _cli._run_with_agent_id(["auth", "status"], agent_id)
+        doctor = await _cli._run_with_agent_id(["doctor"], agent_id)
 
         return {
             "success": True,

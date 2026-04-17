@@ -5,12 +5,12 @@
 
 Two runners:
   - _run(args, profile)        — appends --profile, used for all regular commands
-  - _run_v2(args, agent_id)    — resolves profile from agent_id, delegates to _run()
+  - _run_with_agent_id(args, agent_id)    — resolves profile from agent_id, delegates to _run()
   - _run_with_home(args, ...)  — HOME isolation, only for `config init --new`
 
 Kept business methods: config_init, profile_remove, get_user, send_message,
 list_chat_messages. All other Lark operations go through the generic
-lark_cli MCP tool (V2).
+lark_cli MCP tool.
 """
 
 from __future__ import annotations
@@ -91,10 +91,10 @@ class LarkCLIClient:
         return {"success": True, "data": data}
 
     # =========================================================================
-    # V2 Core runner (--profile primary, HOME only for config init --new)
+    # Core runner (--profile primary, HOME only for config init --new)
     # =========================================================================
 
-    async def _run_v2(
+    async def _run_with_agent_id(
         self,
         args: list[str],
         agent_id: str,

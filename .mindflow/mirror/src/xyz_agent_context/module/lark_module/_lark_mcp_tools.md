@@ -1,21 +1,21 @@
 ---
-code_file: src/xyz_agent_context/module/lark_module/_lark_mcp_tools_v2.py
+code_file: src/xyz_agent_context/module/lark_module/_lark_mcp_tools.py
 stub: false
 last_verified: 2026-04-16
 ---
 
 ## Why it exists
 
-Registers V2 Lark MCP tools on the FastMCP server. Replaces the V1 file
-(`_lark_mcp_tools.py`, deleted) which had 19 individual tools. V2 exposes
-5 tools + MCP Resources for Lark CLI Skill docs.
+Registers Lark MCP tools on the FastMCP server. Exposes 5 tools
+(`lark_cli`, `lark_setup`, `lark_auth`, `lark_auth_complete`, `lark_status`)
+plus MCP Resources for Lark CLI Skill docs.
 
 ## Design decisions
 
-- **Single `lark_cli` tool** replaces 19 purpose-specific tools. The Agent
-  learns CLI commands from instructions + Skill docs rather than having a
-  dedicated tool per operation. This scales to all CLI capabilities without
-  code changes.
+- **Single `lark_cli` tool** for all domain operations. The Agent learns CLI
+  commands from instructions + Skill docs rather than having a dedicated
+  tool per operation. This scales to all CLI capabilities without code
+  changes.
 - **Security via `_lark_command_security`** — `validate_command` +
   `sanitize_command` are called before every `lark_cli` invocation.
 - **Lifecycle tools** (`lark_setup`, `lark_auth`, `lark_auth_complete`,
@@ -30,10 +30,10 @@ Registers V2 Lark MCP tools on the FastMCP server. Replaces the V1 file
 
 ## Upstream / downstream
 
-- **Upstream**: `lark_module.py` calls `register_lark_mcp_tools_v2(mcp)`.
+- **Upstream**: `lark_module.py` calls `register_lark_mcp_tools(mcp)`.
 - **Downstream**: `_lark_command_security.py` (validation),
   `_lark_credential_manager.py` (credential lookup), `lark_cli_client.py`
-  (`_run_v2`), `_lark_workspace.py` (for `lark_setup`),
+  (`_run_with_agent_id`), `_lark_workspace.py` (for `lark_setup`),
   `_lark_skill_loader.py` (MCP Resources).
 
 ## Gotchas

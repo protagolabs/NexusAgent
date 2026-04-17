@@ -537,10 +537,10 @@ class LarkTrigger:
 
     @staticmethod
     def _extract_lark_reply(item: dict) -> str:
-        """Extract sent text from a tool call item (supports V1 and V2 tools).
+        """Extract sent text from a lark_cli tool call item.
 
-        V1: tool_name="lark_send_message", arguments={"text": "...", "markdown": "..."}
-        V2: tool_name="lark_cli", arguments={"command": "im +messages-send ... --text ..."}
+        Expects tool_name="lark_cli" with command containing +messages-send
+        or +messages-reply. Returns the value of --text or --markdown.
         """
         tool_name = item.get("tool_name", "")
         args = item.get("arguments", {})
@@ -552,29 +552,25 @@ class LarkTrigger:
         if not isinstance(args, dict):
             return ""
 
-        # V1 pattern: direct lark_send_message tool
-        if "lark_send_message" in tool_name:
-            return args.get("text", "") or args.get("markdown", "")
+        if "lark_cli" not in tool_name:
+            return ""
 
-        # V2 pattern: lark_cli with a messaging command
-        if "lark_cli" in tool_name:
-            command = args.get("command", "")
-            if "+messages-send" in command or "+messages-reply" in command:
-                # Extract --text value from command string
-                import shlex
-                try:
-                    parts = shlex.split(command)
-                except ValueError:
-                    parts = command.split()
-                for i, part in enumerate(parts):
-                    if part == "--text" and i + 1 < len(parts):
-                        return parts[i + 1]
-                    if part == "--markdown" and i + 1 < len(parts):
-                        return parts[i + 1]
-                # Couldn't parse text but it IS a send command
-                return "(sent via lark_cli)"
+        command = args.get("command", "")
+        if "+messages-send" not in command and "+messages-reply" not in command:
+            return ""
 
-        return ""
+        import shlex
+        try:
+            parts = shlex.split(command)
+        except ValueError:
+            parts = command.split()
+        for i, part in enumerate(parts):
+            if part == "--text" and i + 1 < len(parts):
+                return parts[i + 1]
+            if part == "--markdown" and i + 1 < len(parts):
+                return parts[i + 1]
+        # Couldn't parse text but it IS a send command
+        return "(sent via lark_cli)"
 
     # ------------------------------------------------------------------
     # Inbox writing
