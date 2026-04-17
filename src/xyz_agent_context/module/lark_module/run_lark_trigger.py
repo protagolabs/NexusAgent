@@ -15,9 +15,6 @@ from loguru import logger
 async def main():
     from xyz_agent_context.utils.db_factory import get_db_client
     from xyz_agent_context.utils.schema_registry import auto_migrate
-    from xyz_agent_context.agent_framework.quota_service import (
-        bootstrap_quota_subsystem,
-    )
     from xyz_agent_context.module.lark_module.lark_trigger import LarkTrigger
 
     db = await get_db_client()
@@ -25,10 +22,10 @@ async def main():
     # Ensure tables exist
     await auto_migrate(db._backend)
 
-    # Initialise the system-default quota subsystem in this standalone
-    # process so AgentRuntime's fallback to the free-tier config works
-    # for agents whose owners have not configured their own provider.
-    await bootstrap_quota_subsystem(db)
+    # Migrate legacy auth_status="logged_in" → "bot_ready" (one-time, idempotent)
+    from xyz_agent_context.module.lark_module._lark_credential_manager import LarkCredentialManager
+    mgr = LarkCredentialManager(db)
+    await mgr.migrate_legacy_auth_status()
 
     trigger = LarkTrigger(max_workers=3)
     await trigger.start(db)

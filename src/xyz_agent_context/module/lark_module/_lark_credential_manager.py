@@ -44,6 +44,15 @@ def _decode_secret(encoded: str) -> str:
 _decrypt_secret = _decode_secret
 
 
+# ── Auth status constants ────────────────────────────────────────────
+AUTH_STATUS_NOT_LOGGED_IN = "not_logged_in"
+AUTH_STATUS_BOT_READY = "bot_ready"            # Bot identity works, user OAuth not done
+AUTH_STATUS_USER_LOGGED_IN = "user_logged_in"  # User completed OAuth, all features available
+AUTH_STATUS_EXPIRED = "expired"                # Credential validation failed
+# Statuses that mean "bot identity works, safe to start WebSocket trigger"
+AUTH_STATUSES_BOT_ACTIVE = {AUTH_STATUS_BOT_READY, AUTH_STATUS_USER_LOGGED_IN}
+
+
 @dataclass
 class LarkCredential:
     """One agent's Lark bot binding."""
@@ -53,11 +62,12 @@ class LarkCredential:
     app_secret_ref: str  # Keychain reference, e.g. "appsecret:cli_xxx"
     brand: str  # "feishu" or "lark"
     profile_name: str  # CLI profile name, e.g. "agent_{agent_id}"
+    workspace_path: str = ""  # V2: HOME-based workspace directory
     bot_name: str = ""
     app_secret_encoded: str = ""  # Base64-encoded secret for SDK use (NOT encrypted)
     owner_open_id: str = ""  # Lark open_id of the agent's owner
     owner_name: str = ""  # Display name of the owner
-    auth_status: str = "not_logged_in"  # not_logged_in / logged_in / expired
+    auth_status: str = AUTH_STATUS_NOT_LOGGED_IN  # not_logged_in / bot_ready / user_logged_in / expired
     is_active: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -82,6 +92,7 @@ class LarkCredentialManager:
             app_secret_ref=row.get("app_secret_ref", ""),
             brand=row.get("brand", "feishu"),
             profile_name=row.get("profile_name", ""),
+            workspace_path=row.get("workspace_path", ""),
             bot_name=row.get("bot_name", ""),
             app_secret_encoded=row.get("app_secret_encrypted", ""),
             owner_open_id=row.get("owner_open_id", ""),
@@ -105,12 +116,36 @@ class LarkCredentialManager:
         return [self._row_to_credential(r) for r in rows]
 
     async def get_active_credentials(self) -> List[LarkCredential]:
-        """Get all active and logged-in credentials (for trigger startup)."""
-        rows = await self.db.get(
-            self.TABLE,
-            {"is_active": 1, "auth_status": "logged_in"},
-        )
-        return [self._row_to_credential(r) for r in rows]
+        """Get all active credentials with working bot identity (for trigger).
+
+        Returns credentials with auth_status in {bot_ready, user_logged_in}.
+        """
+        rows = await self.db.get(self.TABLE, {"is_active": 1})
+        return [
+            self._row_to_credential(r) for r in rows
+            if r.get("auth_status") in AUTH_STATUSES_BOT_ACTIVE
+        ]
+
+    async def migrate_legacy_auth_status(self) -> int:
+        """Migrate old 'logged_in' rows to 'bot_ready'.
+
+        Called on startup to handle DB rows created before the 4-state model.
+        Conservative: we cannot know if user OAuth was completed, so downgrade
+        to bot_ready. Users will need to re-do OAuth (one-time inconvenience).
+        Returns number of rows migrated.
+        """
+        rows = await self.db.get(self.TABLE, {"auth_status": "logged_in"})
+        count = 0
+        for row in rows:
+            await self.db.update(
+                self.TABLE,
+                {"agent_id": row["agent_id"]},
+                {"auth_status": AUTH_STATUS_BOT_READY},
+            )
+            count += 1
+        if count:
+            logger.info(f"Migrated {count} lark_credentials from 'logged_in' to 'bot_ready'")
+        return count
 
     async def save_credential(self, cred: LarkCredential) -> None:
         """Insert or update a credential."""
@@ -121,6 +156,7 @@ class LarkCredentialManager:
             "app_secret_encrypted": cred.app_secret_encoded,
             "brand": cred.brand,
             "profile_name": cred.profile_name,
+            "workspace_path": cred.workspace_path,
             "bot_name": cred.bot_name,
             "owner_open_id": cred.owner_open_id,
             "owner_name": cred.owner_name,
