@@ -232,21 +232,32 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
     }
 
     // 2. Add current session messages (from chatStore)
-    // Dedup: a session message is considered "already persisted" only if it
-    // matches a history message in (role + content) AND is older than the
-    // freshness window. Recent session messages (< 30s) are always kept —
-    // this prevents a coincidentally-identical old history message from
-    // swallowing the user's just-sent message (happens in error-retry flows).
-    const SESSION_FRESHNESS_MS = 30_000;
-    const now = Date.now();
-    const historyContentKeys = new Set(
-      items.slice(-30).map((item) => `${item.role}:${item.content}`)
-    );
+    // Dedup by (role + content) AND timestamp proximity: if a history entry
+    // with identical role+content exists within SAME_MESSAGE_WINDOW_MS of the
+    // session message's timestamp, they are the same message (already
+    // persisted) — drop the session copy. A coincidentally-identical old
+    // history message (e.g. "ok" from weeks ago) won't match because the
+    // timestamps differ by more than the window, so the user's just-sent
+    // message is preserved even before it's persisted.
+    const SAME_MESSAGE_WINDOW_MS = 60_000;
+    const historyByKey = new Map<string, number[]>();
+    for (const item of items) {
+      const key = `${item.role}:${item.content}`;
+      const list = historyByKey.get(key);
+      if (list) {
+        list.push(item.timestamp);
+      } else {
+        historyByKey.set(key, [item.timestamp]);
+      }
+    }
 
     for (const msg of messages) {
       const key = `${msg.role}:${msg.content}`;
-      const isStale = (now - msg.timestamp) > SESSION_FRESHNESS_MS;
-      if (isStale && historyContentKeys.has(key)) continue;
+      const historyTimestamps = historyByKey.get(key);
+      const hasNearMatch = historyTimestamps
+        ? historyTimestamps.some((ts) => Math.abs(msg.timestamp - ts) < SAME_MESSAGE_WINDOW_MS)
+        : false;
+      if (hasNearMatch) continue;
 
       items.push({
         id: msg.id,
