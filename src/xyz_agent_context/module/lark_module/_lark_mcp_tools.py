@@ -919,17 +919,26 @@ def register_lark_mcp_tools(mcp: Any) -> None:
                 "availability_hint": optional_hint,
                 "recommended_bot_scopes": _RECOMMENDED_BOT_SCOPES,
                 "message": (
-                    "Send the user ONE action:\n"
-                    f"   点这个链接一键授权所有推荐权限: {oauth_url}\n"
-                    "审批通过后 Lark 会**自动**把 scope 加进应用权限列表并发版，"
-                    "不需要再进开发者后台手动勾选。\n"
-                    f"When they say 'done', call lark_auth_complete(agent_id, "
-                    f'device_code="{device_code}").\n'
-                    "\n"
-                    "After that, OPTIONALLY mention availability:\n"
+                    "Tell the user TWO things:\n\n"
+                    "**1. Permission request (REQUIRED)**:\n"
+                    f"   点这个链接提交权限申请: {oauth_url}\n"
+                    "   ⚠️ IMPORTANT: Tell the user clearly that clicking this "
+                    "link ONLY submits the permission request. The enterprise "
+                    "admin must approve it before it takes effect. If the user "
+                    "is the admin, they should go to Lark Admin Console to "
+                    "approve. After admin approval, the user must come back "
+                    "for a SECOND authorization click (Step 2b).\n"
+                    f"   When they confirm admin approval is done, call "
+                    f"lark_auth(agent_id) to generate a new OAuth link for "
+                    f"the actual user authorization.\n\n"
+                    "**2. Visibility / availability (ALWAYS mention)**:\n"
                     f"   {optional_hint}\n"
-                    "Call lark_mark_console_done(availability_ok=True) only if "
-                    "the user explicitly confirms they set availability to all staff."
+                    "   Tell the user: right now ONLY they can see this bot. "
+                    "If they want colleagues to also interact with it, they "
+                    "need to do the above steps. This is optional but the "
+                    "user should know about it upfront.\n"
+                    "   Call lark_mark_console_done(availability_ok=True) "
+                    "when the user confirms they set availability."
                 ),
             },
         }
