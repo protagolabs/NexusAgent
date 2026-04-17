@@ -37,6 +37,7 @@ Known limitations
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
@@ -52,6 +53,20 @@ _PATH_ARG_NAMES = ("file_path", "path")
 # Anthropic server-side tools — require the provider endpoint to
 # implement the server tool spec. Extend as new ones ship.
 _SERVER_TOOLS = frozenset({"WebSearch"})
+
+# Patterns in a Bash command that indicate an agent is trying to bypass
+# the Lark MCP layer (shelling directly to lark-cli, or installing Lark
+# packages via third-party managers). The MCP tools handle workspace
+# isolation + credential hydration — direct shell-outs skip both.
+_LARK_SHELL_PATTERNS = (
+    # Match `lark-cli` invoked as a program: at start of line, after any
+    # whitespace/shell separator, or as the last path segment of an
+    # absolute/relative path (e.g. `/usr/bin/lark-cli`).
+    re.compile(r"(?:^|[\s;&|`$(/])lark-cli(?:\s|$)"),
+    re.compile(r"(?:^|\s)npm\s+(?:install|i)\s+.*@larksuite/cli"),
+    re.compile(r"(?:^|\s)clawhub\s+install\s+lark[-\w]*"),
+    re.compile(r"(?:^|\s)npx\s+skills\s+add\s+larksuite/cli"),
+)
 
 
 PreToolUseHook = Callable[
@@ -111,6 +126,33 @@ def build_tool_policy_guard(
                 f"Use WebFetch on a specific URL instead, or ask the user "
                 f"to provide the URL you need."
             )
+
+        # --- Bash + lark-cli gate -----------------------------------------
+        # Shelling directly to lark-cli (or using package managers to
+        # "install" Lark integration) skips workspace isolation and
+        # credential hydration. Redirect the agent to the MCP surface.
+        if tool_name == "Bash":
+            command = (input_data.get("tool_input") or {}).get("command", "") or ""
+            if isinstance(command, str) and any(p.search(command) for p in _LARK_SHELL_PATTERNS):
+                logger.info(
+                    f"[tool_policy_guard] blocked Bash Lark shell-out: {command[:200]!r}"
+                )
+                return _deny(
+                    "Shell-outs to `lark-cli`, `npm install @larksuite/cli`, "
+                    "`clawhub install lark-*`, or `npx skills add larksuite/cli` "
+                    "are blocked. Lark work goes through MCP tools:\n"
+                    "  • Any CLI command → `mcp__lark_module__lark_cli(agent_id, command=\"...\")`\n"
+                    "  • Create new app → `mcp__lark_module__lark_setup(agent_id, brand, owner_email)`\n"
+                    "  • Grant all permissions → `mcp__lark_module__lark_configure_permissions(agent_id)`\n"
+                    "  • Finish OAuth → `mcp__lark_module__lark_auth_complete(agent_id, device_code)`\n"
+                    "  • Confirm console done → `mcp__lark_module__lark_mark_console_done(agent_id)`\n"
+                    "  • Enable real-time receive → `mcp__lark_module__lark_enable_receive(agent_id, app_secret)`\n"
+                    "  • Health check → `mcp__lark_module__lark_status(agent_id)`\n"
+                    "  • Load domain docs → `mcp__lark_module__lark_skill(agent_id, name=\"lark-im\"|\"lark-contact\"|...)`\n"
+                    "lark-cli is already installed — do not try to reinstall it. "
+                    "If an MCP tool fails, report the error verbatim to the user "
+                    "instead of shelling out as a workaround."
+                )
 
         # --- Workspace-scoped read gate -----------------------------------
         if tool_name not in _READ_TOOLS:

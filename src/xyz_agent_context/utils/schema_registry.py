@@ -735,6 +735,7 @@ _register(
             Column("owner_name", "TEXT", "VARCHAR(255)"),
             Column("auth_status", "TEXT", "VARCHAR(32)", nullable=False, default="'not_logged_in'"),
             Column("is_active", "INTEGER", "TINYINT(1)", nullable=False, default="1"),
+            Column("permission_state", "TEXT", "MEDIUMTEXT"),
             Column("created_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
             Column("updated_at", "TEXT", "DATETIME(6)", nullable=False, default="(datetime('now'))"),
         ],

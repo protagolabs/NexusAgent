@@ -10,9 +10,10 @@ both in lark-cli Keychain (for CLI tools) and encrypted in DB (for SDK trigger).
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from loguru import logger
 
@@ -69,12 +70,33 @@ class LarkCredential:
     owner_name: str = ""  # Display name of the owner
     auth_status: str = AUTH_STATUS_NOT_LOGGED_IN  # not_logged_in / bot_ready / user_logged_in / expired
     is_active: bool = True
+    # Free-form setup/permission progress blob. Kept in DB as JSON so new
+    # phases can be added without schema migrations. Current keys:
+    #   user_oauth_url, user_oauth_device_code   — pending OAuth flow
+    #   user_oauth_completed_at                  — ISO timestamp (success)
+    #   user_scopes_granted                      — list[str]
+    #   bot_scopes_confirmed                     — bool (user said "done")
+    #   availability_confirmed                   — bool (user said "done")
+    #   console_setup_done_at                    — ISO timestamp
+    permission_state: dict = field(default_factory=dict)
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     def get_app_secret(self) -> str:
         """Decode and return the app secret."""
         return _decode_secret(self.app_secret_encoded)
+
+    def receive_enabled(self) -> bool:
+        """Can the LarkTrigger SDK subscriber start for this credential?"""
+        return bool(self.app_secret_encoded)
+
+    def user_oauth_ok(self) -> bool:
+        """Has the user completed `auth login --domain all --recommend`?"""
+        return bool(self.permission_state.get("user_oauth_completed_at"))
+
+    def console_setup_ok(self) -> bool:
+        """Has the user confirmed the dev-console manual steps?"""
+        return bool(self.permission_state.get("console_setup_done_at"))
 
 
 class LarkCredentialManager:
@@ -86,6 +108,17 @@ class LarkCredentialManager:
         self.db = db
 
     def _row_to_credential(self, row: dict) -> LarkCredential:
+        raw_state = row.get("permission_state") or "{}"
+        if isinstance(raw_state, str):
+            try:
+                state = json.loads(raw_state) if raw_state.strip() else {}
+            except json.JSONDecodeError:
+                state = {}
+        elif isinstance(raw_state, dict):
+            state = raw_state
+        else:
+            state = {}
+
         return LarkCredential(
             agent_id=row["agent_id"],
             app_id=row["app_id"],
@@ -99,6 +132,7 @@ class LarkCredentialManager:
             owner_name=row.get("owner_name", ""),
             auth_status=row.get("auth_status", "not_logged_in"),
             is_active=bool(row.get("is_active", True)),
+            permission_state=state,
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),
         )
@@ -162,6 +196,7 @@ class LarkCredentialManager:
             "owner_name": cred.owner_name,
             "auth_status": cred.auth_status,
             "is_active": 1 if cred.is_active else 0,
+            "permission_state": json.dumps(cred.permission_state or {}),
         }
         existing = await self.get_credential(cred.agent_id)
         if existing:
@@ -169,6 +204,22 @@ class LarkCredentialManager:
         else:
             await self.db.insert(self.TABLE, data)
         logger.info(f"Saved Lark credential for agent {cred.agent_id} (app_id={cred.app_id})")
+
+    async def patch_permission_state(self, agent_id: str, updates: dict[str, Any]) -> dict:
+        """Merge `updates` into the stored JSON permission_state and save.
+
+        Read-modify-write by design — the same agent rarely has concurrent
+        permission-config writers. Returns the merged state.
+        """
+        cred = await self.get_credential(agent_id)
+        current = dict(cred.permission_state) if cred else {}
+        current.update(updates)
+        await self.db.update(
+            self.TABLE,
+            {"agent_id": agent_id},
+            {"permission_state": json.dumps(current)},
+        )
+        return current
 
     async def update_auth_status(self, agent_id: str, status: str) -> None:
         """Update authentication status."""

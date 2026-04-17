@@ -4,13 +4,15 @@
 @description: Lark MCP tools — single generic lark_cli tool + lifecycle tools.
 
 Tools exposed:
-  - lark_cli(agent_id, command)              — Run any lark-cli command
-  - lark_setup(agent_id, brand, email)       — Create new Lark app (agent-assisted)
-  - lark_auth(agent_id, scopes)              — Initiate OAuth login
-  - lark_auth_complete(agent_id, dc)         — Complete OAuth device flow
-  - lark_status(agent_id)                    — Auth + connectivity + receive_enabled
-  - lark_enable_receive(agent_id, secret)    — Enable real-time auto-reply
-  - lark_skill(agent_id, name)               — Load SKILL.md for a Lark domain
+  - lark_cli(agent_id, command)                    — Run any lark-cli command
+  - lark_setup(agent_id, brand, email)             — Create new Lark app (agent-assisted)
+  - lark_configure_permissions(agent_id)           — One-shot permission bootstrap
+  - lark_auth(agent_id, scopes)                    — Targeted OAuth (by scope)
+  - lark_auth_complete(agent_id, dc)               — Complete OAuth device flow
+  - lark_mark_console_done(agent_id, flags)        — Confirm console manual steps
+  - lark_status(agent_id)                          — Auth + connectivity + state
+  - lark_enable_receive(agent_id, secret)          — Enable real-time auto-reply
+  - lark_skill(agent_id, name)                     — Load SKILL.md for a Lark domain
 """
 
 from __future__ import annotations
@@ -62,6 +64,34 @@ def _dev_console_url(brand: str, app_id: str) -> str:
     if brand == "feishu":
         return f"https://open.feishu.cn/app/{app_id}"
     return f"https://open.larksuite.com/app/{app_id}"
+
+
+# Recommended bot scopes the user should enable in the dev console during
+# the one-time manual setup. Covers every domain the SDK subscriber + the
+# lark_cli MCP tool need for daily agent work.
+_RECOMMENDED_BOT_SCOPES = [
+    # Messaging (core — required for send + receive)
+    "im:message",
+    "im:message:send_as_bot",
+    "im:resource",
+    "im:chat",
+    "im:chat:readonly",
+    # Contact (needed for lookup, sender resolution, owner binding)
+    "contact:user.base:readonly",
+    "contact:user.email:readonly",
+    "contact:contact:readonly",
+    # Docs / Calendar / Drive (everyday agent work)
+    "docs:document",
+    "docs:document:readonly",
+    "calendar:calendar",
+    "calendar:calendar:readonly",
+    "drive:drive",
+    "drive:drive:readonly",
+    "sheets:spreadsheet",
+    "sheets:spreadsheet:readonly",
+    "wiki:wiki:readonly",
+    "task:task",
+]
 
 
 async def _finalize_setup(
@@ -593,10 +623,178 @@ def register_lark_mcp_tools(mcp: Any) -> None:
             timeout=60.0,
         )
         if result.get("success"):
+            from datetime import datetime, timezone
             db = await XYZBaseModule.get_mcp_db_client()
             mgr = LarkCredentialManager(db)
             await mgr.update_auth_status(agent_id, AUTH_STATUS_USER_LOGGED_IN)
+            data = result.get("data", {})
+            # The CLI returns the resolved scopes under various keys depending
+            # on version — try the common ones, fall back to empty list.
+            granted = (
+                data.get("scopes")
+                or data.get("granted_scopes")
+                or data.get("user", {}).get("scopes", [])
+                or []
+            )
+            await mgr.patch_permission_state(agent_id, {
+                "user_oauth_completed_at": datetime.now(timezone.utc).isoformat(),
+                "user_scopes_granted": list(granted) if isinstance(granted, (list, tuple)) else [],
+                "user_oauth_url": None,
+                "user_oauth_device_code": None,
+            })
         return result
+
+    # =====================================================================
+    # Lifecycle: lark_configure_permissions + lark_mark_console_done
+    # =====================================================================
+
+    @mcp.tool()
+    async def lark_configure_permissions(agent_id: str) -> dict:
+        """
+        Kick off the one-time "grant all recommended permissions" flow for
+        this agent's bound Lark bot. Returns BOTH the user-OAuth URL (one
+        click → all user scopes across every domain) AND the dev-console
+        checklist the user must finish manually (bot scopes + availability
+        + version publish — these are Lark admin-console operations that
+        have no public API).
+
+        **WHEN TO CALL**: exactly ONCE, right after `lark_setup` succeeds
+        and the user confirms Phase 1 is done. Skipping this step leaves
+        the bot able to send/read only its own resources — most real
+        agent work (calendar, docs, contact lookup, etc.) will hit
+        permission_denied.
+
+        **WORKFLOW YOU DRIVE WITH THE USER**:
+          1. Call this tool. Receive `oauth_url`, `oauth_device_code`,
+             `dev_console_url`, and `console_checklist`.
+          2. Send the user a single message:
+             "Two quick things:
+                A. Click this to grant all user-level Lark access in one go:
+                   <oauth_url>
+                B. Open <dev_console_url> and finish three clicks:
+                   {console_checklist}
+              Tell me when both are done."
+          3. When user confirms the OAuth click:
+             → call `lark_auth_complete(agent_id, device_code=<oauth_device_code>)`
+          4. When user confirms the dev-console checklist:
+             → call `lark_mark_console_done(agent_id)`
+          5. Finally ask for App Secret → call `lark_enable_receive` so
+             the trigger subscriber can start.
+
+        **IDEMPOTENT** — re-calling rotates the OAuth URL (useful if the
+        first one expired). State in DB is overwritten.
+
+        Args:
+            agent_id: The agent whose bot to configure.
+
+        Returns:
+            {"success": True, "data": {
+                "oauth_url": "...", "oauth_device_code": "...",
+                "dev_console_url": "...", "console_checklist": [...],
+                "recommended_bot_scopes": [...],
+                "message": "<instructions to pass to the user>"
+            }}
+        """
+        cred = await _get_credential(agent_id)
+        if not cred:
+            return {"success": False, "error": "No Lark bot bound. Run lark_setup first."}
+
+        # Launch the "all domains, recommended scopes" OAuth flow.
+        result = await _cli._run_with_agent_id(
+            ["auth", "login", "--domain", "all", "--recommend", "--json", "--no-wait"],
+            agent_id,
+            timeout=60.0,
+        )
+        if not result.get("success"):
+            return result
+
+        data = result.get("data", {})
+        oauth_url = data.get("verification_url", "")
+        device_code = data.get("device_code", "")
+        if not oauth_url or not device_code:
+            return {"success": False, "error": "CLI did not return an OAuth URL.", "raw": data}
+
+        # Persist the pending OAuth so get_instructions can reason about it
+        db = await XYZBaseModule.get_mcp_db_client()
+        mgr = LarkCredentialManager(db)
+        await mgr.patch_permission_state(agent_id, {
+            "user_oauth_url": oauth_url,
+            "user_oauth_device_code": device_code,
+        })
+
+        console_url = _dev_console_url(cred.brand, cred.app_id)
+        scopes_hint = ", ".join(_RECOMMENDED_BOT_SCOPES[:6]) + ", ..."
+        checklist = [
+            f"1. 「权限管理」→ 勾选 bot scope（推荐: {scopes_hint}，一共 ~18 个）→ 提交申请（若需审批让管理员批，否则即时生效）",
+            "2. 「应用能力」→ 机器人 → 开启机器人能力（若未开启）",
+            "3. 「可用范围」→ 改成 '全员可用'（或选择 '指定部门' 勾全部部门）",
+            "4. 「版本管理」→ 创建新版本 → 发布线上版本（管理员审批后生效）",
+        ]
+
+        return {
+            "success": True,
+            "data": {
+                "oauth_url": oauth_url,
+                "oauth_device_code": device_code,
+                "dev_console_url": console_url,
+                "console_checklist": checklist,
+                "recommended_bot_scopes": _RECOMMENDED_BOT_SCOPES,
+                "message": (
+                    "Ask the user to do two things in parallel:\n"
+                    f"A. Click this ONE link to grant all user-level Lark scopes:\n   {oauth_url}\n"
+                    f"B. Open the dev console and run through the checklist:\n   {console_url}\n"
+                    "When they say 'A is done', call lark_auth_complete with the device_code above.\n"
+                    "When they say 'B is done', call lark_mark_console_done."
+                ),
+            },
+        }
+
+    @mcp.tool()
+    async def lark_mark_console_done(
+        agent_id: str,
+        bot_scopes_ok: bool = True,
+        availability_ok: bool = True,
+    ) -> dict:
+        """
+        Record that the user has completed the dev-console manual steps
+        (bot scopes enabled + version published + availability set to all
+        staff). Flips the tracked state so subsequent `get_instructions`
+        renders a "fully configured" status and stops nagging.
+
+        **WHEN TO CALL**: when the user explicitly confirms they finished
+        the checklist returned by `lark_configure_permissions`. Do NOT
+        assume — always get verbal confirmation first.
+
+        **PARTIAL CONFIRMATION**: if the user only did some of the
+        checklist (e.g. "I set scopes but haven't published yet"), pass
+        the corresponding flags as False so the status stays accurate.
+
+        Args:
+            agent_id: The agent.
+            bot_scopes_ok: User says scopes are enabled and version published.
+            availability_ok: User says availability is set to all staff.
+
+        Returns:
+            {"success": True, "data": {"console_setup_done_at": "..."}} or
+            {"success": True, "data": {"console_setup_done_at": null, ...}}
+            when the user hasn't actually finished everything.
+        """
+        cred = await _get_credential(agent_id)
+        if not cred:
+            return {"success": False, "error": "No Lark bot bound."}
+
+        from datetime import datetime, timezone
+        db = await XYZBaseModule.get_mcp_db_client()
+        mgr = LarkCredentialManager(db)
+
+        now = datetime.now(timezone.utc).isoformat()
+        all_done = bool(bot_scopes_ok and availability_ok)
+        patched = await mgr.patch_permission_state(agent_id, {
+            "bot_scopes_confirmed": bool(bot_scopes_ok),
+            "availability_confirmed": bool(availability_ok),
+            "console_setup_done_at": now if all_done else None,
+        })
+        return {"success": True, "data": patched}
 
     # =====================================================================
     # Lifecycle: lark_status
@@ -644,16 +842,16 @@ def register_lark_mcp_tools(mcp: Any) -> None:
         auth = await _cli._run_with_agent_id(["auth", "status"], agent_id)
         doctor = await _cli._run_with_agent_id(["doctor"], agent_id)
 
-        receive_enabled = bool(cred.app_secret_encoded)
-        dev_console_url = _dev_console_url(cred.brand, cred.app_id)
-
         return {
             "success": True,
             "data": {
                 "auth": auth.get("data", {}),
                 "doctor": doctor.get("data", {}),
-                "receive_enabled": receive_enabled,
-                "dev_console_url": dev_console_url,
+                "receive_enabled": cred.receive_enabled(),
+                "user_oauth_ok": cred.user_oauth_ok(),
+                "console_setup_ok": cred.console_setup_ok(),
+                "permission_state": cred.permission_state,
+                "dev_console_url": _dev_console_url(cred.brand, cred.app_id),
                 "profile_name": cred.profile_name,
                 "app_id": cred.app_id,
                 "brand": cred.brand,

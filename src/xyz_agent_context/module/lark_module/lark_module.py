@@ -122,19 +122,35 @@ class LarkModule(XYZBaseModule):
     # =========================================================================
 
     async def get_instructions(self, ctx_data: ContextData) -> str:
-        """Dynamic instructions based on whether a Lark bot is bound."""
+        """Dynamic instructions with Configuration Status matrix every turn.
+
+        The Agent always sees:
+          1. Mode (LARK CHANNEL vs OWNER CHAT)
+          2. Configuration Status matrix — 5 binary checks
+          3. Explicit "next step" instruction pointing at the right MCP tool
+             whenever any check is ❌
+          4. How to learn lark-cli syntax (lark_skill MCP tool)
+          5. Iron rules (MCP-only, never Bash)
+        """
         lark_info = ctx_data.extra_data.get("lark_info")
 
         if not lark_info:
             return (
                 "## Lark/Feishu Integration\n\n"
-                "No Lark bot is bound to this agent. If the user asks how to "
-                "setup or connect Lark, call `lark_setup` to create a new app — "
-                "the user just needs to click a link.\n"
+                "**No Lark bot bound to this agent.**\n\n"
+                "If the user wants to connect Lark/Feishu, call "
+                "`mcp__lark_module__lark_setup(agent_id, brand, owner_email)`. "
+                "Always ASK the user whether they use Feishu (飞书) or Lark "
+                "International before calling — do not silently default.\n\n"
+                "**IMPORTANT**: never use Bash to run `lark-cli`, `npm install`, "
+                "or `clawhub install` — all Lark functionality goes through "
+                "`mcp__lark_module__*` tools. The hook guard will block shell "
+                "calls containing `lark-cli` and tell you which MCP tool to use.\n"
             )
 
         brand_display = "Feishu" if lark_info.get("brand") == "feishu" else "Lark"
-        bot_name = lark_info.get("bot_name", "Unknown Bot")
+        bot_name = lark_info.get("bot_name") or "(name pending)"
+        app_id = lark_info.get("app_id", "")
         auth = lark_info.get("auth_status", "not_logged_in")
 
         if auth in ("not_logged_in", "expired"):
@@ -142,10 +158,11 @@ class LarkModule(XYZBaseModule):
                 f"## Lark/Feishu Integration\n\n"
                 f"Bot **{bot_name}** ({brand_display}) is bound but credentials are "
                 f"{'expired' if auth == 'expired' else 'not active'}. "
-                f"The user may need to re-bind via frontend Config panel or `lark_setup`."
+                f"Ask the user to re-bind via the frontend LarkConfig panel, "
+                f"or call `mcp__lark_module__lark_setup` to create a fresh app."
             )
 
-        # Determine if this execution is from a Lark channel message
+        # --- Mode indicator ------------------------------------------------
         ws = ctx_data.working_source
         is_lark_channel = (
             ws == WorkingSource.LARK
@@ -153,29 +170,104 @@ class LarkModule(XYZBaseModule):
         )
         logger.info(f"LarkModule.get_instructions: working_source={ws!r}, is_lark_channel={is_lark_channel}")
 
-        # Mode indicator — this is the FIRST thing the Agent sees
         if is_lark_channel:
             mode_section = (
-                "**Mode: LARK CHANNEL** — You are handling an incoming Lark message. "
-                "Reply using `lark_cli im +messages-send`.\n\n"
+                "**Mode: LARK CHANNEL** — you are handling an incoming Lark message. "
+                "Reply via `mcp__lark_module__lark_cli(agent_id, command=\"im +messages-send ...\")`.\n\n"
             )
         else:
             mode_section = (
-                "**Mode: OWNER CHAT** — You are in the owner's direct chat window. "
-                "Reply normally as text. Do NOT use `im +messages-send` — that sends "
+                "**Mode: OWNER CHAT** — you are in the owner's direct chat window. "
+                "Reply as normal text. Do NOT call `im +messages-send` — that goes "
                 "to Lark users, not to the owner's chat.\n\n"
             )
 
-        owner_section = ""
-        owner_id = lark_info.get("owner_open_id", "")
-        owner_name = lark_info.get("owner_name", "")
-        if owner_id:
-            owner_section = (
-                f"\n**Owner**: {owner_name} (open_id: `{owner_id}`)\n"
-                f"When user says \"me/my/I\" in Lark context → this person.\n"
+        # --- Configuration Status matrix ----------------------------------
+        app_created = bool(app_id) and app_id != "pending_setup"
+        user_oauth_ok = bool(lark_info.get("user_oauth_ok"))
+        bot_scopes_ok = bool(lark_info.get("bot_scopes_confirmed"))
+        availability_ok = bool(lark_info.get("availability_confirmed"))
+        receive_ok = bool(lark_info.get("receive_enabled"))
+        pending_oauth_url = lark_info.get("pending_oauth_url", "")
+        pending_device_code = lark_info.get("pending_oauth_device_code", "")
+
+        def _tick(ok: bool) -> str:
+            return "✅" if ok else "❌"
+
+        # OAuth cell uses ⏳ when a URL is outstanding
+        oauth_cell = (
+            "✅" if user_oauth_ok
+            else ("⏳ awaiting user click" if pending_oauth_url else "❌")
+        )
+
+        status_matrix = (
+            "### Configuration Status (check every turn before acting)\n\n"
+            "| # | Step                                  | State |\n"
+            "|---|---------------------------------------|-------|\n"
+            f"| 1 | App created                           | {_tick(app_created)} |\n"
+            f"| 2 | User OAuth (`auth login --domain all`) | {oauth_cell} |\n"
+            f"| 3 | Bot scopes enabled in dev console      | {_tick(bot_scopes_ok)} |\n"
+            f"| 4 | Availability = all staff (org-visible) | {_tick(availability_ok)} |\n"
+            f"| 5 | Real-time receive (App Secret in DB)   | {_tick(receive_ok)} |\n\n"
+        )
+
+        # --- Next-step coach -----------------------------------------------
+        all_done = app_created and user_oauth_ok and bot_scopes_ok and availability_ok and receive_ok
+        if all_done:
+            coach = (
+                "**All configured.** You can send, receive, and hit every "
+                "standard API on behalf of the bot or owner.\n\n"
+            )
+        else:
+            steps: list[str] = []
+            if not user_oauth_ok and not pending_oauth_url:
+                steps.append(
+                    "- Step 2 + 3 + 4 (permission bootstrap): call "
+                    "`mcp__lark_module__lark_configure_permissions(agent_id)` "
+                    "to get ONE OAuth URL covering all user scopes plus the "
+                    "console checklist for bot scopes + availability."
+                )
+            if pending_oauth_url and not user_oauth_ok:
+                steps.append(
+                    f"- Step 2 (OAuth pending): ask the user to click this link: "
+                    f"`{pending_oauth_url}` — when they confirm, call "
+                    f"`mcp__lark_module__lark_auth_complete(agent_id, device_code=\"{pending_device_code}\")`."
+                )
+            if user_oauth_ok and not (bot_scopes_ok and availability_ok):
+                steps.append(
+                    "- Step 3 + 4 (console checklist): remind the user to "
+                    "finish the dev-console three-click task (bot scopes + "
+                    "availability + version publish). When they say it's done, "
+                    "call `mcp__lark_module__lark_mark_console_done(agent_id)`."
+                )
+            if not receive_ok:
+                if lark_info.get("is_agent_assisted"):
+                    brand_key = lark_info.get("brand", "lark")
+                    console = (
+                        f"https://open.feishu.cn/app/{app_id}" if brand_key == "feishu"
+                        else f"https://open.larksuite.com/app/{app_id}"
+                    )
+                    steps.append(
+                        f"- Step 5 (real-time receive): this bot can SEND but "
+                        f"can't auto-reply. Ask the user to open {console} → "
+                        f"'Credentials & Basic Info' → copy App Secret → paste "
+                        f"it back. Call "
+                        f"`mcp__lark_module__lark_enable_receive(agent_id, app_secret=\"...\")`."
+                    )
+                else:
+                    steps.append(
+                        "- Step 5 (real-time receive): App Secret missing in DB. "
+                        "Re-bind via the frontend LarkConfig panel."
+                    )
+            coach = (
+                "**Not fully configured yet.** Next actions (in order):\n"
+                + "\n".join(steps)
+                + "\n\n**Do these proactively** when the user asks about Lark "
+                "setup OR when a command hits a permission error. Don't wait "
+                "for the user to guess what's missing.\n\n"
             )
 
-        # Skill resources — list available skills for self-learning
+        # --- How to use lark_cli + skill discovery ------------------------
         try:
             from ._lark_skill_loader import get_available_skills
             available = get_available_skills()
@@ -185,109 +277,75 @@ class LarkModule(XYZBaseModule):
         if available:
             skill_list = ", ".join(f"`{s}`" for s in available)
             skill_section = (
-                f"### How to use `lark_cli`\n\n"
-                f"All commands run via `lark_cli(agent_id, command=\"...\")`. "
-                f"Do NOT add `--profile` or `--format json`.\n\n"
-                f"**Before using a Lark domain you haven't used this session**, "
-                f"call `lark_skill(agent_id, name=\"<domain>\")` to load that "
-                f"domain's SKILL.md — it teaches syntax, identity rules, and "
-                f"gotchas. Skipping this step wastes turns on trial-and-error.\n"
-                f"- Recommended FIRST call: `lark_skill(agent_id, \"lark-shared\")` "
-                f"(auth + permissions + --as rules that apply everywhere).\n"
-                f"- Available skills: {skill_list}\n"
+                "### How to drive `lark_cli`\n\n"
+                "All Lark operations route through `mcp__lark_module__lark_cli(agent_id, command=\"...\")`. "
+                "Do NOT add `--profile` or `--format json` (isolation is automatic, `+` "
+                "commands reject `--format`).\n\n"
+                "**Before using any Lark domain you haven't used this session**, call "
+                "`mcp__lark_module__lark_skill(agent_id, name=\"<domain>\")` to load its "
+                "SKILL.md. The SKILL.md teaches correct syntax, identity rules (`--as user` "
+                "vs `--as bot`), and gotchas — skipping it wastes turns on trial-and-error.\n"
+                f"- **Recommended FIRST call** each session: `lark_skill(agent_id, \"lark-shared\")` "
+                f"(auth + permission handling + `--as` rules that apply everywhere).\n"
+                f"- Available domain skills: {skill_list}\n"
                 f"- Example: `lark_skill(agent_id, \"lark-im\")` before any `im +...`.\n"
-                f"- Quick runtime help: `<domain> +<command> --help` via `lark_cli`.\n"
-                f"- API field lookup: `schema <resource>` via `lark_cli` "
-                f"(e.g. `schema im.messages.create`).\n\n"
+                "- Quick runtime help inside `lark_cli`: `<domain> +<command> --help`.\n"
+                "- API field lookup inside `lark_cli`: `schema <resource>` "
+                "(e.g. `schema im.messages.create`).\n\n"
             )
         else:
             skill_section = (
-                "### How to use `lark_cli`\n\n"
-                "All commands run via `lark_cli(agent_id, command=\"...\")`. "
-                "Do NOT add `--profile` or `--format json`.\n\n"
-                "Run `<domain> +<command> --help` via `lark_cli` to discover "
-                "commands (e.g. `im +messages-send --help`).\n"
-                "Use `schema <resource>` via `lark_cli` to check API parameters.\n\n"
+                "### How to drive `lark_cli`\n\n"
+                "All Lark operations route through `mcp__lark_module__lark_cli(agent_id, "
+                "command=\"...\")`. Do NOT add `--profile` or `--format json`.\n\n"
+                "No SKILL docs are installed locally. Use `<domain> +<command> --help` "
+                "and `schema <resource>` inside `lark_cli` for reference.\n\n"
             )
 
-        # OAuth section
-        if auth == "bot_ready":
-            oauth_section = (
-                "### OAuth Status: NOT completed\n"
-                "Some commands that require user identity won't work yet.\n"
-                "Only call `lark_auth` when a command fails with permission errors "
-                "or the user explicitly asks for OAuth.\n\n"
-            )
-        else:
-            oauth_section = (
-                "### OAuth Status: Completed\n"
-                "All commands including user-identity features are available.\n\n"
+        # --- Owner identity -----------------------------------------------
+        owner_section = ""
+        owner_id = lark_info.get("owner_open_id", "")
+        owner_name = lark_info.get("owner_name", "")
+        if owner_id:
+            owner_section = (
+                f"\n**Owner**: {owner_name} (open_id: `{owner_id}`). "
+                f"When the user says \"me/my/I\" in Lark context → this person.\n\n"
             )
 
-        # Real-time receive section — only relevant for agent-assisted setups.
-        # Manual binds always have app_secret so receive_enabled is True by
-        # construction; agent-assisted setups need the user to paste secret.
-        receive_enabled = lark_info.get("receive_enabled", True)
-        is_agent_assisted = lark_info.get("is_agent_assisted", False)
-        if is_agent_assisted and not receive_enabled:
-            brand_key = lark_info.get("brand", "lark")
-            app_id = lark_info.get("app_id", "")
-            if brand_key == "feishu":
-                console_url = f"https://open.feishu.cn/app/{app_id}"
-            else:
-                console_url = f"https://open.larksuite.com/app/{app_id}"
-            receive_section = (
-                "### Real-time Receive: NOT enabled\n"
-                "This bot can SEND Lark messages, but **cannot auto-reply** to "
-                "incoming messages yet — the Lark SDK subscriber needs the App "
-                "Secret (which the CLI stored in the system keychain, out of my "
-                "reach).\n\n"
-                "**If the user wants auto-reply** (or just mentions it):\n"
-                f"1. Send them this link: {console_url}\n"
-                '2. Say: "Open it → \'Credentials & Basic Info\' → copy App '
-                'Secret → paste it here. Until then, I can send Lark messages '
-                'but won\'t hear incoming ones."\n'
-                "3. When they paste, call "
-                "`lark_enable_receive(agent_id, app_secret=\"...\")`.\n"
-                "4. Tell them real-time reply goes live within ~10s.\n\n"
-                "**If the user only needs outbound** (announcements, etc.),\n"
-                "skip this — no nagging.\n\n"
-            )
-        else:
-            receive_section = ""
-
+        # --- Iron rules ---------------------------------------------------
         rules = (
-            "### Rules\n\n"
-            "**Permission error handling:**\n"
-            "1. Extract the missing scope(s) from the error (e.g. `im:chat:create`)\n"
-            "2. Call `lark_auth(agent_id, scopes=\"im:chat im:chat:create\")` with the specific scopes\n"
-            "3. Send the verification URL to the user and explain:\n"
-            "   - 'Authorize' button → click it, done\n"
-            "   - 'Submit for approval' → click to request, wait for admin, then come back\n"
-            "4. When user confirms → call `lark_auth_complete` with the device_code\n\n"
-            "**Identity:**\n"
-            "- ALWAYS add `--as bot` when sending messages, creating docs, or performing actions.\n"
-            "  The CLI defaults to user identity when OAuth is completed — you must NOT impersonate the user.\n"
-            "  Example: `im +messages-send --as bot --user-id ou_xxx --text \"hello\"`\n"
-            "- Only use `--as user` for search/read operations that explicitly require user identity "
-            "(e.g. `contact +search-user`, `im +messages-search`, `docs +search`).\n\n"
-            "**General:**\n"
-            "- Do NOT use Bash for lark-cli. Use `lark_cli` MCP tool only.\n"
-            "- Do NOT add `--format json` to Shortcut commands (commands with `+`)\n"
-            "- Only call `lark_auth` when commands fail or user asks — not preemptively.\n"
-            "- `im +messages-send` sends a message to a Lark user/chat. It is NOT how you\n"
-            "  reply to the owner. Only use it when the owner asks to send something to someone.\n"
+            "### Iron rules (non-negotiable)\n\n"
+            "1. **MCP only — NEVER Bash**. `lark-cli` invocations via Bash/shell "
+            "are intercepted by the hook guard and returned as an error. All "
+            "Lark work goes through `mcp__lark_module__*` tools:\n"
+            "   - `lark_cli` for any CLI-backed operation\n"
+            "   - `lark_setup`, `lark_configure_permissions`, `lark_auth_complete`, "
+            "`lark_mark_console_done`, `lark_enable_receive` for lifecycle\n"
+            "   - `lark_status` for health checks, `lark_skill` for docs\n"
+            "2. **Never run `npm install`, `clawhub install`, or any package "
+            "installer** via Bash to 'get Lark working' — the stack is already "
+            "installed. If an MCP tool fails, report the error; don't improvise "
+            "a workaround.\n"
+            "3. **Identity: always add `--as bot`** when sending messages, "
+            "creating docs, or performing actions. Use `--as user` only for "
+            "search/read that requires user identity "
+            "(e.g. `contact +search-user`, `docs +search`).\n"
+            "4. **Permission errors drive `lark_auth`** for specific scopes — "
+            "do NOT preemptively call `lark_auth`. The generic permission "
+            "bootstrap happens once via `lark_configure_permissions`.\n"
+            "5. `im +messages-send` sends to a Lark user/chat — it is NOT how "
+            "you reply to the owner's chat window.\n"
         )
 
-        status_label = "Bot Connected" if auth == "bot_ready" else "Fully Connected"
+        header = f"**Bot**: **{bot_name}** ({brand_display}, app `{app_id}`)."
         return (
-            f"## Lark/Feishu Integration\n\n"
+            "## Lark/Feishu Integration\n\n"
             f"{mode_section}"
-            f"**{status_label}** as **{bot_name}** ({brand_display}).\n"
-            f"{owner_section}\n"
+            f"{header}\n"
+            f"{owner_section}"
+            f"{status_matrix}"
+            f"{coach}"
             f"{skill_section}"
-            f"{oauth_section}"
-            f"{receive_section}"
             f"{rules}"
         )
 
@@ -296,24 +354,31 @@ class LarkModule(XYZBaseModule):
     # =========================================================================
 
     async def hook_data_gathering(self, ctx_data: ContextData) -> ContextData:
-        """Inject Lark bot info into context if bound."""
+        """Inject Lark bot info + permission_state so get_instructions can
+        render a complete Configuration Status matrix every turn."""
         try:
             mgr = LarkCredentialManager(self.db)
             cred = await mgr.get_credential(self.agent_id)
             if cred and cred.is_active:
-                # Agent-assisted setups leave workspace_path set but
-                # app_secret_encoded empty — the bot can SEND but the SDK
-                # subscriber won't start until the user pastes the secret
-                # via lark_enable_receive.
-                receive_enabled = bool(cred.app_secret_encoded)
+                ps = cred.permission_state or {}
                 lark_info = {
                     "app_id": cred.app_id,
                     "brand": cred.brand,
                     "bot_name": cred.bot_name,
                     "auth_status": cred.auth_status,
                     "profile_name": cred.profile_name,
-                    "receive_enabled": receive_enabled,
                     "is_agent_assisted": bool(cred.workspace_path),
+                    # Derived booleans — get_instructions renders these as
+                    # ticks/crosses in the status matrix.
+                    "receive_enabled": cred.receive_enabled(),
+                    "user_oauth_ok": cred.user_oauth_ok(),
+                    "console_setup_ok": cred.console_setup_ok(),
+                    "bot_scopes_confirmed": bool(ps.get("bot_scopes_confirmed")),
+                    "availability_confirmed": bool(ps.get("availability_confirmed")),
+                    # Pending OAuth kept around so instructions can prompt
+                    # the user to finish clicking the URL if one is live.
+                    "pending_oauth_url": ps.get("user_oauth_url") or "",
+                    "pending_oauth_device_code": ps.get("user_oauth_device_code") or "",
                 }
                 if cred.owner_open_id:
                     lark_info["owner_open_id"] = cred.owner_open_id
