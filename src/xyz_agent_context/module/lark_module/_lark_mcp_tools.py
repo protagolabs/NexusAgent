@@ -570,55 +570,88 @@ def register_lark_mcp_tools(mcp: Any) -> None:
         if result.get("success"):
             data = result.get("data", {})
             device_code = data.get("device_code", "")
-            if device_code:
+            verification_url = data.get("verification_url", "")
+            if device_code and verification_url:
+                # Persist pending OAuth state so lark_auth_complete can read
+                # the device_code from DB — the Agent should never have to
+                # hand-copy this long random string across turns.
+                db = await XYZBaseModule.get_mcp_db_client()
+                await LarkCredentialManager(db).patch_permission_state(agent_id, {
+                    "user_oauth_url": verification_url,
+                    "user_oauth_device_code": device_code,
+                    # mode="targeted" so lark_auth_complete knows NOT to
+                    # auto-flip bot_scopes_confirmed (which would be wrong
+                    # for a single-scope incremental grant).
+                    "user_oauth_mode": "targeted",
+                })
                 result["data"]["next_step"] = (
-                    "Send the verification_url to the user. "
-                    "After they authorize, call lark_auth_complete with this device_code."
+                    "Send the verification_url to the user. After they "
+                    "authorize, call `lark_auth_complete(agent_id)` — "
+                    "DO NOT pass device_code, it's stored in DB."
                 )
         return result
 
     @mcp.tool()
-    async def lark_auth_complete(agent_id: str, device_code: str) -> dict:
+    async def lark_auth_complete(agent_id: str, device_code: str = "") -> dict:
         """
         Finalize an OAuth login flow after the user has clicked the
-        authorization URL. Exchanges the device_code for tokens and flips
-        `auth_status` to `user_logged_in`.
+        authorization URL. Exchanges the pending device_code for tokens
+        and flips `auth_status` to `user_logged_in`.
 
         **WHEN TO CALL**: the user confirms they clicked "Authorize" on the
-        URL you got from `lark_auth`. Typical cues: "done", "authorized",
-        "I clicked it", "完成了", etc. Call immediately — don't wait or poll.
+        URL you sent them. Typical cues: "done", "authorized", "I clicked
+        it", "点好了", "完成了", etc. Call immediately — don't wait or poll.
+
+        **NEVER PASS device_code YOURSELF**. Leave it empty and this tool
+        reads the pending code from DB. Hand-copying long random strings
+        across turns is lossy — we've seen them truncated at punctuation
+        boundaries, causing "device_code is invalid" loops that waste
+        many rounds. The device_code is generated and stored atomically
+        by `lark_configure_permissions` / `lark_auth`; trust the DB.
 
         **DO NOT POLL OR PREEMPT**: only call this once, in direct response
-        to user confirmation. Do not loop or retry unless explicitly told.
-
-        **BEFORE CALLING — COLLECT FROM USER**:
-          - Just verbal confirmation that they clicked "Authorize" (not
-            "Submit for approval"). You already have `device_code` from
-            your earlier `lark_auth` call; NEVER ask the user for it.
+        to user confirmation. Do not loop unless explicitly told.
 
         **AFTER RETURN**:
-          - `success=True` → retry the original command that triggered the
-            auth flow. Tell the user briefly: "Authorized, retrying..."
-          - `success=False` → most likely the user clicked "Submit for
-            approval" (admin pending) rather than "Authorize" directly.
-            Tell them: "Looks like the grant isn't active yet — once your
-            admin approves or you finish the Authorize click, let me know
-            and I'll retry."
+          - `success=True` → retry the original command. Tell the user:
+            "Authorized, retrying..."
+          - `success=False` with `data.fresh_oauth_url`: the previous code
+            expired or authorization was still pending. Send the fresh URL
+            to the user and call this tool again after they re-click.
+          - `success=False` without a fresh URL: propagate the error text.
 
         Args:
             agent_id: The agent whose bot is being authorized.
-            device_code: The device_code returned by the preceding
-                         `lark_auth` call in THIS session.
+            device_code: Optional. If empty (recommended), the tool reads
+                         the pending device_code from DB. Only pass a value
+                         if you have a specific non-pending code to finalize.
 
         Returns:
-            {"success": True, "data": {...}} or error.
+            {"success": True, "data": {...}} on success, or
+            {"success": False, "error": "...", "data": {"fresh_oauth_url": "...", "fresh_device_code": "..."}}
+            when the previous code was stale and we auto-regenerated.
         """
         cred = await _get_credential(agent_id)
         if not cred:
             return {"success": False, "error": "No Lark bot bound."}
 
+        # Prefer the DB-stored device_code over whatever the caller passed.
+        # LLMs sometimes hand-copy the long device_code and truncate it at
+        # punctuation boundaries — never trust the parameter unless the DB
+        # has none.
+        stored_code = (cred.permission_state or {}).get("user_oauth_device_code") or ""
+        effective_code = stored_code or device_code
+        if not effective_code:
+            return {
+                "success": False,
+                "error": (
+                    "No pending OAuth to complete. Call "
+                    "`lark_configure_permissions` first to start a new flow."
+                ),
+            }
+
         result = await _cli._run_with_agent_id(
-            ["auth", "login", "--device-code", device_code, "--json"],
+            ["auth", "login", "--device-code", effective_code, "--json"],
             agent_id,
             timeout=60.0,
         )

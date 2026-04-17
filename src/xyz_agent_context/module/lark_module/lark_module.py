@@ -266,9 +266,10 @@ class LarkModule(XYZBaseModule):
                 steps.append(
                     f"- Step 2 (OAuth pending): ask the user to click this "
                     f"link: `{pending_oauth_url}` — when they confirm it went "
-                    f"through, call `mcp__lark_module__lark_auth_complete("
-                    f'agent_id, device_code="{pending_device_code}")`. That '
-                    f"single click covers steps 2 AND 3 on this matrix."
+                    f"through, call `mcp__lark_module__lark_auth_complete(agent_id)` "
+                    f"with NO device_code argument. The device_code is already "
+                    f"in DB; passing it manually risks truncation. That single "
+                    f"click covers steps 2 AND 3 on this matrix."
                 )
             if user_oauth_ok and not bot_scopes_ok:
                 # This branch only fires if user OAuth happened but bot
