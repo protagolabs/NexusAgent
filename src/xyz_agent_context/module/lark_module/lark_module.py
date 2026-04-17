@@ -219,6 +219,38 @@ class LarkModule(XYZBaseModule):
                 "All commands including user-identity features are available.\n\n"
             )
 
+        # Real-time receive section — only relevant for agent-assisted setups.
+        # Manual binds always have app_secret so receive_enabled is True by
+        # construction; agent-assisted setups need the user to paste secret.
+        receive_enabled = lark_info.get("receive_enabled", True)
+        is_agent_assisted = lark_info.get("is_agent_assisted", False)
+        if is_agent_assisted and not receive_enabled:
+            brand_key = lark_info.get("brand", "lark")
+            app_id = lark_info.get("app_id", "")
+            if brand_key == "feishu":
+                console_url = f"https://open.feishu.cn/app/{app_id}"
+            else:
+                console_url = f"https://open.larksuite.com/app/{app_id}"
+            receive_section = (
+                "### Real-time Receive: NOT enabled\n"
+                "This bot can SEND Lark messages, but **cannot auto-reply** to "
+                "incoming messages yet — the Lark SDK subscriber needs the App "
+                "Secret (which the CLI stored in the system keychain, out of my "
+                "reach).\n\n"
+                "**If the user wants auto-reply** (or just mentions it):\n"
+                f"1. Send them this link: {console_url}\n"
+                '2. Say: "Open it → \'Credentials & Basic Info\' → copy App '
+                'Secret → paste it here. Until then, I can send Lark messages '
+                'but won\'t hear incoming ones."\n'
+                "3. When they paste, call "
+                "`lark_enable_receive(agent_id, app_secret=\"...\")`.\n"
+                "4. Tell them real-time reply goes live within ~10s.\n\n"
+                "**If the user only needs outbound** (announcements, etc.),\n"
+                "skip this — no nagging.\n\n"
+            )
+        else:
+            receive_section = ""
+
         rules = (
             "### Rules\n\n"
             "**Permission error handling:**\n"
@@ -250,6 +282,7 @@ class LarkModule(XYZBaseModule):
             f"{owner_section}\n"
             f"{skill_section}"
             f"{oauth_section}"
+            f"{receive_section}"
             f"{rules}"
         )
 
@@ -263,12 +296,19 @@ class LarkModule(XYZBaseModule):
             mgr = LarkCredentialManager(self.db)
             cred = await mgr.get_credential(self.agent_id)
             if cred and cred.is_active:
+                # Agent-assisted setups leave workspace_path set but
+                # app_secret_encoded empty — the bot can SEND but the SDK
+                # subscriber won't start until the user pastes the secret
+                # via lark_enable_receive.
+                receive_enabled = bool(cred.app_secret_encoded)
                 lark_info = {
                     "app_id": cred.app_id,
                     "brand": cred.brand,
                     "bot_name": cred.bot_name,
                     "auth_status": cred.auth_status,
                     "profile_name": cred.profile_name,
+                    "receive_enabled": receive_enabled,
+                    "is_agent_assisted": bool(cred.workspace_path),
                 }
                 if cred.owner_open_id:
                     lark_info["owner_open_id"] = cred.owner_open_id

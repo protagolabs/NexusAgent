@@ -4,17 +4,18 @@
 @description: Lark MCP tools — single generic lark_cli tool + lifecycle tools.
 
 Tools exposed:
-  - lark_cli(agent_id, command)      — Run any lark-cli command (whitelist enforced)
-  - lark_setup(agent_id)             — Create new Lark app via config init --new
-  - lark_auth(agent_id)              — Initiate OAuth login
-  - lark_auth_complete(agent_id, dc) — Complete OAuth device flow
-  - lark_status(agent_id)            — Check auth + connectivity
-
-Plus MCP Resources for Skill docs (on-demand Agent knowledge).
+  - lark_cli(agent_id, command)              — Run any lark-cli command
+  - lark_setup(agent_id, brand, email)       — Create new Lark app (agent-assisted)
+  - lark_auth(agent_id, scopes)              — Initiate OAuth login
+  - lark_auth_complete(agent_id, dc)         — Complete OAuth device flow
+  - lark_status(agent_id)                    — Auth + connectivity + receive_enabled
+  - lark_enable_receive(agent_id, secret)    — Enable real-time auto-reply
+  - lark_skill(agent_id, name)               — Load SKILL.md for a Lark domain
 """
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from loguru import logger
@@ -27,10 +28,14 @@ from ._lark_credential_manager import (
 )
 from .lark_cli_client import LarkCLIClient
 from ._lark_command_security import validate_command, sanitize_command
-from ._lark_workspace import ensure_workspace, get_home_env
+from ._lark_workspace import build_profile_name, ensure_workspace, get_home_env
 
 # Shared CLI client instance (stateless)
 _cli = LarkCLIClient()
+
+# Max time we'll wait for the user to finish the browser-side setup flow
+# before we kill the subprocess and delete the pending DB row.
+_SETUP_TIMEOUT_SECONDS = 15 * 60
 
 
 async def _get_credential(agent_id: str):
@@ -38,6 +43,147 @@ async def _get_credential(agent_id: str):
     db = await XYZBaseModule.get_mcp_db_client()
     mgr = LarkCredentialManager(db)
     return await mgr.get_credential(agent_id)
+
+
+async def _get_agent_name(agent_id: str) -> str:
+    """Look up the agent's human-readable name; fall back to agent_id."""
+    db = await XYZBaseModule.get_mcp_db_client()
+    row = await db.get_one("agents", {"agent_id": agent_id})
+    return (row or {}).get("agent_name", "") or agent_id
+
+
+def _dev_console_url(brand: str, app_id: str) -> str:
+    """Build the direct URL to the app's page in the Lark/Feishu dev console.
+
+    Users get the plain App Secret from "Credentials & Basic Info" on this page.
+    """
+    if not app_id or app_id == "pending_setup":
+        return ""
+    if brand == "feishu":
+        return f"https://open.feishu.cn/app/{app_id}"
+    return f"https://open.larksuite.com/app/{app_id}"
+
+
+async def _finalize_setup(
+    agent_id: str,
+    proc,
+    workspace,
+    profile_name: str,
+) -> None:
+    """Wait for `config init --new` to finish, then write the real app_id +
+    keychain reference back to the DB. On timeout or error, clean up.
+
+    Launched as a background task from lark_setup so the Agent's tool call
+    can return the auth URL immediately while the user completes the
+    browser flow.
+    """
+    import json as _json
+    import pathlib
+
+    try:
+        # Step 1: wait for CLI to exit (user finishes browser-side setup)
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=_SETUP_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"lark_setup: {agent_id} timed out waiting for browser "
+                f"authorization ({_SETUP_TIMEOUT_SECONDS}s). Cleaning up."
+            )
+            try:
+                proc.kill()
+                await proc.wait()
+            except (ProcessLookupError, OSError):
+                pass
+            db = await XYZBaseModule.get_mcp_db_client()
+            await LarkCredentialManager(db).delete_credential(agent_id)
+            return
+
+        if proc.returncode != 0:
+            logger.error(
+                f"lark_setup: {agent_id} CLI exited with code {proc.returncode}. "
+                f"Cleaning up pending row."
+            )
+            db = await XYZBaseModule.get_mcp_db_client()
+            await LarkCredentialManager(db).delete_credential(agent_id)
+            return
+
+        # Step 2: read the CLI-written config.json from the isolated workspace
+        config_path = pathlib.Path(workspace) / ".lark-cli" / "config.json"
+        if not config_path.is_file():
+            logger.error(f"lark_setup: {agent_id} CLI config not found at {config_path}")
+            db = await XYZBaseModule.get_mcp_db_client()
+            await LarkCredentialManager(db).delete_credential(agent_id)
+            return
+
+        try:
+            config = _json.loads(config_path.read_text())
+        except _json.JSONDecodeError as e:
+            logger.error(f"lark_setup: {agent_id} malformed config.json: {e}")
+            db = await XYZBaseModule.get_mcp_db_client()
+            await LarkCredentialManager(db).delete_credential(agent_id)
+            return
+
+        # Step 3: find our profile (matched by name) in the apps list
+        apps = config.get("apps", [])
+        our_app = next((a for a in apps if a.get("name") == profile_name), None)
+        if not our_app and len(apps) == 1:
+            # CLI may omit `name` when only a single profile exists; use the first
+            our_app = apps[0]
+        if not our_app:
+            logger.error(
+                f"lark_setup: {agent_id} profile '{profile_name}' not in "
+                f"config.json (found {[a.get('name') for a in apps]})"
+            )
+            db = await XYZBaseModule.get_mcp_db_client()
+            await LarkCredentialManager(db).delete_credential(agent_id)
+            return
+
+        app_id = our_app.get("appId", "")
+        app_secret_ref = (our_app.get("appSecret") or {}).get("id", "")
+        if not app_id or not app_secret_ref:
+            logger.error(
+                f"lark_setup: {agent_id} config.json missing appId or "
+                f"appSecret.id (app_id={app_id!r}, ref={app_secret_ref!r})"
+            )
+            db = await XYZBaseModule.get_mcp_db_client()
+            await LarkCredentialManager(db).delete_credential(agent_id)
+            return
+
+        # Step 4: flip the DB row to ready
+        db = await XYZBaseModule.get_mcp_db_client()
+        mgr = LarkCredentialManager(db)
+        await mgr.update_app_credentials(
+            agent_id=agent_id,
+            app_id=app_id,
+            app_secret_ref=app_secret_ref,
+            is_active=True,
+            auth_status=AUTH_STATUS_BOT_READY,
+        )
+        logger.info(
+            f"lark_setup: {agent_id} finalized — app_id={app_id}, "
+            f"profile={profile_name}"
+        )
+
+        # Step 5: best-effort bot_name + owner resolution (non-blocking failure)
+        try:
+            bot_info = await _cli._run_with_agent_id(
+                ["contact", "+get-user", "--as", "bot"], agent_id
+            )
+            if bot_info.get("success"):
+                data = bot_info.get("data", {})
+                name = data.get("name") or data.get("en_name") or ""
+                if name:
+                    await mgr.update_bot_name(agent_id, name)
+        except Exception as e:
+            logger.warning(f"lark_setup: {agent_id} bot_name lookup failed: {e}")
+
+    except Exception as e:
+        logger.error(f"lark_setup: {agent_id} _finalize_setup unexpected error: {e}")
+        try:
+            db = await XYZBaseModule.get_mcp_db_client()
+            await LarkCredentialManager(db).delete_credential(agent_id)
+        except Exception:
+            pass
 
 
 def register_lark_mcp_tools(mcp: Any) -> None:
@@ -140,15 +286,28 @@ def register_lark_mcp_tools(mcp: Any) -> None:
           2. `owner_email`: their Lark/Feishu email. Used after bind to find
              their `open_id` in the org directory so you know who "me" is.
 
-        **AFTER RETURN**:
+        **AFTER RETURN — TWO-PHASE FLOW**:
+          Phase 1 — create the app in browser:
           - `success=True` with `data.auth_url` → send the URL to the user
-            verbatim (it IS the authorization link). Tell them:
+            verbatim. Tell them:
               "Please open this link in your browser to finish app creation.
                Tell me when you're done."
-            The app is created once the user authorizes in the browser; the
-            bot is then automatically bound to this agent.
-          - After the user confirms they're done → call `lark_status` to
-            verify the binding is healthy.
+          - The app is created once the user authorizes; the bot binding
+            completes in the background.
+
+          Phase 2 — enable real-time receive:
+          - After the user confirms Phase 1 is done → call `lark_status` to
+            verify `auth.status == bot_ready` AND read `dev_console_url`.
+          - Guide the user: "The bot can now SEND messages. To let it
+            auto-reply when someone messages you on Lark, I need your App
+            Secret. Open <dev_console_url>, go to 'Credentials & Basic
+            Info', and paste me the App Secret."
+          - When user pastes, call `lark_enable_receive(agent_id, <secret>)`.
+          - Real-time receive is live within ~10s after that.
+
+          Skipping Phase 2 is fine if the user only needs the bot to send
+          (e.g. outbound notifications). Tell them clearly that without
+          Phase 2 the bot won't hear incoming Lark messages.
 
         **FAILURE**:
           - "Agent already has a Lark bot" → tell the user; offer to unbind
@@ -167,62 +326,73 @@ def register_lark_mcp_tools(mcp: Any) -> None:
         Returns:
             {"success": True, "data": {"auth_url": "...", ...}} or error.
         """
+        import re
+
         if brand not in ("feishu", "lark"):
             return {"success": False, "error": "brand must be 'feishu' or 'lark'."}
 
-        # Check if already bound
-        cred = await _get_credential(agent_id)
-        if cred:
-            return {"success": False, "error": "Agent already has a Lark bot. Unbind first."}
+        # Refuse if this agent is already bound or has a pending setup row
+        existing = await _get_credential(agent_id)
+        if existing:
+            return {
+                "success": False,
+                "error": (
+                    "Agent already has a Lark bot (or a pending setup). "
+                    "Unbind first via frontend LarkConfig or DELETE /api/lark/unbind."
+                ),
+            }
 
-        # Create workspace
+        # Build a stable, human-readable profile name from the agent's name
+        agent_name = await _get_agent_name(agent_id)
+        profile_name = build_profile_name(agent_name, agent_id)
+
+        # Isolated workspace so the CLI writes config to workspace/.lark-cli/
         workspace = ensure_workspace(agent_id)
         env = get_home_env(agent_id)
 
-        # Run config init --new
-        # This command prints a QR code + authorization URL, then blocks
-        # waiting for the user to complete in browser. We need to:
-        # 1. Capture all output until we find the URL
-        # 2. Return the URL immediately (don't wait for user to finish)
-        # 3. Leave the process running in background
-        import asyncio
-        import re
+        # Launch the interactive CLI setup. It prints an auth URL then blocks
+        # until the user completes app creation in the browser. We extract the
+        # URL here and hand off the process to _finalize_setup (background).
         try:
-            # Merge stderr into stdout — some CLI versions may print to either
             proc = await asyncio.create_subprocess_exec(
-                "lark-cli", "config", "init", "--new", "--brand", brand,
+                "lark-cli", "config", "init", "--new",
+                "--brand", brand, "--name", profile_name,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
+                stderr=asyncio.subprocess.STDOUT,  # merge so URL always lands in stdout
                 env=env,
             )
+        except FileNotFoundError:
+            return {"success": False, "error": "lark-cli not found. Install: npm install -g @larksuite/cli"}
 
-            # Read output with a timeout — URL appears within first few seconds
+        try:
+            # Scan stdout for the auth URL (usually within the first few seconds).
             collected = b""
-            try:
-                async def _read_until_url():
-                    nonlocal collected
-                    while True:
-                        chunk = await proc.stdout.read(4096)
-                        if not chunk:
-                            break
-                        collected += chunk
-                        if b"http" in collected.lower():
-                            # Read a bit more to get the full URL line
-                            try:
-                                extra = await asyncio.wait_for(
-                                    proc.stdout.read(4096), timeout=2.0
-                                )
-                                if extra:
-                                    collected += extra
-                            except asyncio.TimeoutError:
-                                pass
-                            return
 
+            async def _read_until_url():
+                nonlocal collected
+                while True:
+                    chunk = await proc.stdout.read(4096)
+                    if not chunk:
+                        return
+                    collected += chunk
+                    if b"http" in collected.lower():
+                        # Read a bit more so the full URL line lands in the buffer.
+                        try:
+                            extra = await asyncio.wait_for(
+                                proc.stdout.read(4096), timeout=2.0
+                            )
+                            if extra:
+                                collected += extra
+                        except asyncio.TimeoutError:
+                            pass
+                        return
+
+            try:
                 await asyncio.wait_for(_read_until_url(), timeout=30.0)
             except asyncio.TimeoutError:
-                # Kill if no URL appeared within 30s
                 try:
                     proc.kill()
+                    await proc.wait()
                 except (ProcessLookupError, OSError):
                     pass
                 return {
@@ -231,12 +401,12 @@ def register_lark_mcp_tools(mcp: Any) -> None:
                     "raw_output": collected.decode(errors="replace")[:2000],
                 }
 
-            # Extract URL from collected output
             output_text = collected.decode(errors="replace")
-            urls = re.findall(r'https?://\S+', output_text)
+            urls = re.findall(r"https?://\S+", output_text)
             if not urls:
                 try:
                     proc.kill()
+                    await proc.wait()
                 except (ProcessLookupError, OSError):
                     pass
                 return {
@@ -246,40 +416,59 @@ def register_lark_mcp_tools(mcp: Any) -> None:
                 }
             auth_url = urls[0]
 
-            # Process continues running in background — it will complete
-            # when the user finishes browser authorization.
-            # We don't wait for it; credential_watcher will detect completion.
+            # Persist a placeholder credential so concurrent lark_setup calls
+            # fail fast. is_active=False keeps the trigger watcher from trying
+            # to start a subscriber before finalize writes the real app_id.
+            from ._lark_credential_manager import LarkCredential
 
-            # Save initial credential
             db = await XYZBaseModule.get_mcp_db_client()
             mgr = LarkCredentialManager(db)
-            from ._lark_credential_manager import LarkCredential
-            cred = LarkCredential(
+            await mgr.save_credential(LarkCredential(
                 agent_id=agent_id,
                 app_id="pending_setup",
                 app_secret_ref="",
                 brand=brand,
-                profile_name=f"agent_{agent_id}",
+                profile_name=profile_name,
                 workspace_path=str(workspace),
                 auth_status="not_logged_in",
+                is_active=False,
+            ))
+
+            # Hand the subprocess off to a background finalizer. When the
+            # user finishes in the browser (or we time out after 15 min),
+            # it reads the CLI-written config.json and flips the DB row
+            # to bot_ready with the real app_id + keychain reference.
+            asyncio.create_task(
+                _finalize_setup(agent_id, proc, workspace, profile_name)
             )
-            await mgr.save_credential(cred)
 
             return {
                 "success": True,
                 "data": {
                     "auth_url": auth_url,
+                    "profile_name": profile_name,
                     "workspace": str(workspace),
                     "message": (
-                        "Open the URL in a browser to create your Lark app. "
-                        "After completing setup, come back and tell me."
+                        "Step 1/2 — Open the URL in a browser to create your Lark "
+                        "app. When you see a success page, tell me.\n\n"
+                        "Step 2/2 (later) — I'll then need you to paste the App "
+                        "Secret so I can auto-reply to incoming Lark messages. "
+                        "Without that step, I can send to Lark but can't listen."
+                    ),
+                    "next_step": (
+                        "After browser auth, call lark_status(agent_id) to get "
+                        "dev_console_url, then guide the user through "
+                        "lark_enable_receive."
                     ),
                 },
             }
 
-        except FileNotFoundError:
-            return {"success": False, "error": "lark-cli not found. Install: npm install -g @larksuite/cli"}
         except Exception as e:
+            try:
+                proc.kill()
+                await proc.wait()
+            except (ProcessLookupError, OSError, UnboundLocalError):
+                pass
             return {"success": False, "error": f"Setup failed: {e}"}
 
     # =====================================================================
@@ -437,12 +626,16 @@ def register_lark_mcp_tools(mcp: Any) -> None:
           - `doctor` fields show network / CLI / config issues. Surface
             any problems to the user in plain language — don't silently
             retry on network errors.
+          - `receive_enabled=false` → the bot can SEND messages but WON'T
+            auto-reply to incoming Lark messages. Guide the user through
+            `lark_enable_receive` (paste App Secret from `dev_console_url`).
 
         Args:
             agent_id: The agent to check.
 
         Returns:
-            {"success": True, "data": {"auth": {...}, "doctor": {...}}}.
+            {"success": True, "data": {"auth": {...}, "doctor": {...},
+             "receive_enabled": bool, "dev_console_url": "..."}}.
         """
         cred = await _get_credential(agent_id)
         if not cred:
@@ -451,11 +644,93 @@ def register_lark_mcp_tools(mcp: Any) -> None:
         auth = await _cli._run_with_agent_id(["auth", "status"], agent_id)
         doctor = await _cli._run_with_agent_id(["doctor"], agent_id)
 
+        receive_enabled = bool(cred.app_secret_encoded)
+        dev_console_url = _dev_console_url(cred.brand, cred.app_id)
+
         return {
             "success": True,
             "data": {
                 "auth": auth.get("data", {}),
                 "doctor": doctor.get("data", {}),
+                "receive_enabled": receive_enabled,
+                "dev_console_url": dev_console_url,
+                "profile_name": cred.profile_name,
+                "app_id": cred.app_id,
+                "brand": cred.brand,
+            },
+        }
+
+    # =====================================================================
+    # Lifecycle: lark_enable_receive
+    # =====================================================================
+
+    @mcp.tool()
+    async def lark_enable_receive(agent_id: str, app_secret: str) -> dict:
+        """
+        Enable real-time message RECEIVING by storing the bot's App Secret.
+
+        Without this step, the bot can still SEND messages (via `lark_cli`)
+        but **will not automatically reply** to incoming Lark messages —
+        the backend subscriber needs the plain App Secret to initialize the
+        Lark SDK WebSocket client (which cannot read from the keychain).
+
+        **WHEN TO CALL**: after `lark_setup` completes AND the user pastes
+        you the App Secret from the Lark developer console. Agent-assisted
+        setups leave `receive_enabled=false` in `lark_status` until this
+        runs.
+
+        **BEFORE CALLING — GUIDE THE USER**:
+          1. Call `lark_status(agent_id)` to get `dev_console_url`.
+          2. Send the URL to the user and say exactly:
+              "Open this link, go to 'Credentials & Basic Info', and
+               copy the App Secret back to me. Without this I can't
+               auto-reply when you receive Lark messages — I can only
+               send when you ask."
+          3. Wait for the user to paste the secret.
+          4. Call this tool with the pasted value.
+
+        **AFTER RETURN**:
+          - `success=True` → tell the user "Real-time replies will be live
+            within ~10 seconds." (The watcher polls every 10s.)
+          - Call `lark_status` again after 15s if the user wants confirmation.
+
+        **FAILURE**:
+          - "No Lark bot bound" → they need `lark_setup` first.
+          - Empty / whitespace secret → tell user to re-copy.
+
+        Args:
+            agent_id: The agent whose bot to enable receive for.
+            app_secret: The plain App Secret the user pasted from the Lark
+                        developer console. Stored base64-encoded in DB (not
+                        encrypted — treat DB access as trusted).
+
+        Returns:
+            {"success": True, "data": {"message": "..."}} or error.
+        """
+        cred = await _get_credential(agent_id)
+        if not cred:
+            return {"success": False, "error": "No Lark bot bound. Run lark_setup first."}
+
+        secret = (app_secret or "").strip()
+        if not secret:
+            return {
+                "success": False,
+                "error": "app_secret is empty. Re-copy from the dev console and try again.",
+            }
+
+        db = await XYZBaseModule.get_mcp_db_client()
+        mgr = LarkCredentialManager(db)
+        await mgr.set_app_secret_encoded(agent_id, secret)
+
+        return {
+            "success": True,
+            "data": {
+                "message": (
+                    "App Secret stored. The trigger will pick up the bot and "
+                    "start receiving messages within ~10 seconds. Call "
+                    "lark_status after that to verify."
+                ),
+                "profile_name": cred.profile_name,
             },
         }
 

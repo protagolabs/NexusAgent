@@ -6,10 +6,12 @@ last_verified: 2026-04-16
 
 ## Why it exists
 
-Registers Lark MCP tools on the FastMCP server. Exposes 6 tools:
-`lark_cli` (main execution), `lark_setup` / `lark_auth` / `lark_auth_complete`
-(OAuth lifecycle), `lark_status` (health), and `lark_skill` (load SKILL.md
-docs so the Agent learns correct command syntax before first use).
+Registers Lark MCP tools on the FastMCP server. Exposes 7 tools:
+`lark_cli` (main execution), `lark_setup` (agent-assisted app creation) /
+`lark_auth` / `lark_auth_complete` (OAuth lifecycle), `lark_status` (health +
+receive state + dev console URL), `lark_enable_receive` (user pastes App
+Secret to unblock real-time auto-reply for agent-assisted setups), and
+`lark_skill` (load SKILL.md docs).
 
 ## Design decisions
 

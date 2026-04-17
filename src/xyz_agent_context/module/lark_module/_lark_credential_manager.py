@@ -194,6 +194,54 @@ class LarkCredentialManager:
             {"owner_open_id": open_id, "owner_name": name},
         )
 
+    async def set_app_secret_encoded(self, agent_id: str, plain_secret: str) -> None:
+        """Store a base64-encoded copy of the plain app secret.
+
+        Needed for the SDK-based LarkTrigger subscriber, which requires the
+        plain secret at `lark.ws.Client` construction time. For agent-
+        assisted setups, this is populated via `lark_enable_receive` after
+        the user pastes the secret from the Lark developer console.
+        """
+        await self.db.update(
+            self.TABLE,
+            {"agent_id": agent_id},
+            {"app_secret_encrypted": _encode_secret(plain_secret)},
+        )
+        logger.info(
+            f"Stored app_secret_encoded for agent {agent_id} — "
+            f"LarkTrigger subscriber will start on next watcher tick."
+        )
+
+    async def update_app_credentials(
+        self,
+        agent_id: str,
+        app_id: str,
+        app_secret_ref: str,
+        is_active: bool = True,
+        auth_status: str = "bot_ready",
+    ) -> None:
+        """Finalize a pending credential after agent-assisted setup completes.
+
+        Called by _finalize_setup once `config init --new` exits successfully.
+        We can read app_id and the keychain reference (app_secret_ref) from
+        the CLI-written config.json, but the plain secret stays in the
+        system keychain — so app_secret_encoded remains empty for this path.
+        """
+        await self.db.update(
+            self.TABLE,
+            {"agent_id": agent_id},
+            {
+                "app_id": app_id,
+                "app_secret_ref": app_secret_ref,
+                "is_active": 1 if is_active else 0,
+                "auth_status": auth_status,
+            },
+        )
+        logger.info(
+            f"Finalized Lark credential for agent {agent_id} "
+            f"(app_id={app_id}, is_active={is_active})"
+        )
+
     async def delete_credential(self, agent_id: str) -> None:
         """Delete credential for an agent."""
         await self.db.delete(self.TABLE, {"agent_id": agent_id})

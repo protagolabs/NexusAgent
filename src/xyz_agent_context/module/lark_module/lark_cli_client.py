@@ -101,11 +101,15 @@ class LarkCLIClient:
         stdin_data: str = "",
         timeout: float = 60.0,
     ) -> dict:
-        """Execute a lark-cli command with per-agent --profile isolation.
+        """Execute a lark-cli command resolving profile + HOME from the credential.
 
-        Primary strategy: --profile agent_{agent_id} (works on all platforms).
-        Exception: `config init --new` uses HOME-based workspace isolation
-        because --new is an interactive flow that doesn't support --profile.
+        Routing:
+          - `config init --new` → HOME-isolated, no --profile (interactive
+            app creation flow, profile gets created with --name).
+          - Credential has `workspace_path` (agent-assisted setup) → HOME
+            points to that workspace AND --profile is used. The CLI config
+            lives inside the workspace.
+          - Otherwise (manual bind) → only --profile, HOME stays default.
 
         Returns {"success": True, "data": ...} or {"success": False, "error": ...}.
         """
@@ -117,12 +121,106 @@ class LarkCLIClient:
         )
 
         if is_init_new:
-            # HOME isolation only for interactive setup (no --profile support)
             return await self._run_with_home(args, agent_id, stdin_data, timeout)
 
-        # All other commands: use --profile
-        profile_name = f"agent_{agent_id}"
+        # Resolve profile_name + workspace_path from DB credential
+        from xyz_agent_context.module.base import XYZBaseModule
+        from ._lark_credential_manager import LarkCredentialManager
+
+        db = await XYZBaseModule.get_mcp_db_client()
+        cred = await LarkCredentialManager(db).get_credential(agent_id)
+        profile_name = cred.profile_name if cred and cred.profile_name else f"agent_{agent_id}"
+        workspace_path = cred.workspace_path if cred else ""
+
+        if workspace_path:
+            # Agent-assisted bind: profile lives inside workspace/.lark-cli/
+            return await self._run_with_home_and_profile(
+                args, agent_id, profile_name, stdin_data, timeout
+            )
+
         return await self._run(args, profile_name, stdin_data=stdin_data, timeout=timeout)
+
+    async def _run_with_home_and_profile(
+        self,
+        args: list[str],
+        agent_id: str,
+        profile: str,
+        stdin_data: str = "",
+        timeout: float = 60.0,
+    ) -> dict:
+        """Execute lark-cli with both HOME isolation AND --profile.
+
+        Used for agent-assisted credentials where the profile lives inside
+        the agent's workspace config (HOME=workspace/.lark-cli/config.json)
+        and must be selected by name.
+        """
+        from ._lark_workspace import get_home_env
+
+        env = get_home_env(agent_id)
+        cmd = ["lark-cli"] + args + ["--profile", profile]
+
+        logger.debug(f"lark-cli HOME+profile call [{agent_id}/{profile}]: {' '.join(cmd)}")
+
+        return await self._exec_lark_cli(cmd, stdin_data, timeout, env=env)
+
+    async def _exec_lark_cli(
+        self,
+        cmd: list[str],
+        stdin_data: str,
+        timeout: float,
+        env: dict | None = None,
+    ) -> dict:
+        """Shared subprocess invocation + JSON output parsing.
+
+        Wraps the subprocess spawning, timeout/error handling, and JSON
+        response parsing that's common to --profile and HOME-based runners.
+        """
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                stdin=asyncio.subprocess.PIPE if stdin_data else None,
+                env=env,
+            )
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(input=stdin_data.encode() if stdin_data else None),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:
+            try:
+                proc.kill()
+                await proc.wait()
+            except (ProcessLookupError, OSError):
+                pass
+            return {"success": False, "error": f"CLI command timed out after {timeout}s"}
+        except FileNotFoundError:
+            return {"success": False, "error": "lark-cli not found. Install: npm install -g @larksuite/cli"}
+
+        stdout_str = stdout.decode().strip()
+        stderr_str = stderr.decode().strip()
+
+        if proc.returncode != 0:
+            error_msg = stderr_str or stdout_str or f"CLI exited with code {proc.returncode}"
+            error_data: dict = {}
+            try:
+                parsed = json.loads(stdout_str)
+                if isinstance(parsed, dict) and "error" in parsed:
+                    err = parsed["error"]
+                    error_msg = err.get("message", error_msg)
+                    if "console_url" in err:
+                        error_msg += f"\n\nEnable permission here: {err['console_url']}"
+                    error_data = err
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            return {"success": False, "error": error_msg, "error_data": error_data}
+
+        try:
+            data = json.loads(stdout_str) if stdout_str else {}
+        except json.JSONDecodeError:
+            data = {"raw_output": stdout_str}
+
+        return {"success": True, "data": data}
 
     async def _run_with_home(
         self,

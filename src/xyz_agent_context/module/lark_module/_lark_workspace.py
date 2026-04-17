@@ -11,6 +11,7 @@ cache inside the workspace — naturally isolating per agent.
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from loguru import logger
@@ -22,6 +23,25 @@ _DEFAULT_BASE = Path.home() / ".narranexus" / "lark_workspaces"
 def _get_base_dir() -> Path:
     """Return base directory for workspaces (configurable via env var)."""
     return Path(os.environ.get("LARK_WORKSPACE_BASE", str(_DEFAULT_BASE)))
+
+
+def build_profile_name(agent_name: str, agent_id: str) -> str:
+    """Compose a stable, human-readable CLI profile name.
+
+    Slugify agent_name (keep unicode word chars, collapse punctuation to
+    dashes), cap at 40 chars, append first 8 chars of agent_id for
+    uniqueness across same-named agents.
+
+    Examples:
+      ("My Lark Bot", "agent_a1b2c3d4") -> "my-lark-bot-a1b2c3d4"
+      ("每日助手",      "agent_a1b2c3d4") -> "每日助手-a1b2c3d4"
+      ("",             "agent_a1b2c3d4") -> "agent-a1b2c3d4"
+    """
+    slug = re.sub(r"[^\w\-]+", "-", (agent_name or "").strip(), flags=re.UNICODE)
+    slug = slug.strip("-_").lower()
+    slug = slug[:40] or "agent"
+    short_id = agent_id.replace("agent_", "")[:8] or "anon"
+    return f"{slug}-{short_id}"
 
 
 def get_workspace_path(agent_id: str) -> Path:
