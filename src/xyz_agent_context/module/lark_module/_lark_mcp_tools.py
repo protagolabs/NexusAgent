@@ -622,27 +622,19 @@ def register_lark_mcp_tools(mcp: Any) -> None:
             agent_id,
             timeout=60.0,
         )
+
         if result.get("success"):
             from datetime import datetime, timezone
             db = await XYZBaseModule.get_mcp_db_client()
             mgr = LarkCredentialManager(db)
             await mgr.update_auth_status(agent_id, AUTH_STATUS_USER_LOGGED_IN)
             data = result.get("data", {})
-            # The CLI returns the resolved scopes under various keys depending
-            # on version — try the common ones, fall back to empty list.
             granted = (
                 data.get("scopes")
                 or data.get("granted_scopes")
                 or data.get("user", {}).get("scopes", [])
                 or []
             )
-
-            # If this OAuth flow was launched via lark_configure_permissions
-            # (--domain all --recommend), Lark auto-publishes a version with
-            # every auto-approvable scope declared on the app — so the "bot
-            # scopes + version publish" milestone is done automatically. We
-            # flip bot_scopes_confirmed + console_setup_done_at right now so
-            # Agent stops nagging the user about the dev console.
             now = datetime.now(timezone.utc).isoformat()
             current_state = (await mgr.get_credential(agent_id)).permission_state or {}
             was_recommend_all = current_state.get("user_oauth_mode") == "recommend_all"
@@ -654,11 +646,75 @@ def register_lark_mcp_tools(mcp: Any) -> None:
                 "user_oauth_device_code": None,
                 "user_oauth_mode": None,
             }
+            # When recommend_all, Lark auto-publishes a version with every
+            # auto-approvable scope — the "bot scopes + version publish"
+            # milestone is done atomically with OAuth. Flip both flags.
             if was_recommend_all:
                 patch["bot_scopes_confirmed"] = True
                 patch["console_setup_done_at"] = now
             await mgr.patch_permission_state(agent_id, patch)
-        return result
+            return result
+
+        # --- OAuth completion failed ---
+        # Most common causes: device_code expired (>10 min since generated),
+        # user didn't actually click, or user clicked "Submit for approval"
+        # and admin hasn't approved yet. Regenerate a fresh URL so the Agent
+        # has something actionable to tell the user instead of a dead end.
+        err_msg = (result.get("error") or "").lower()
+        is_stale = any(kw in err_msg for kw in (
+            "expired", "invalid_grant", "device_code",
+            "authorization_pending", "slow_down",
+        ))
+
+        if not is_stale:
+            # Some other failure (network, wrong code format) — propagate as-is
+            return result
+
+        # Regenerate URL automatically so the user gets ONE next-step action
+        logger.info(
+            f"lark_auth_complete: device_code stale for {agent_id}, regenerating URL"
+        )
+        regen = await _cli._run_with_agent_id(
+            ["auth", "login", "--domain", "all", "--recommend", "--json", "--no-wait"],
+            agent_id,
+            timeout=60.0,
+        )
+        if not regen.get("success"):
+            return {
+                "success": False,
+                "error": (
+                    f"OAuth completion failed ({result.get('error', 'unknown')}), "
+                    f"and regenerating a fresh URL also failed. Ask the user to "
+                    f"try again in a moment."
+                ),
+                "original_error": result.get("error"),
+            }
+
+        regen_data = regen.get("data", {})
+        new_url = regen_data.get("verification_url", "")
+        new_code = regen_data.get("device_code", "")
+        if new_url and new_code:
+            db = await XYZBaseModule.get_mcp_db_client()
+            await LarkCredentialManager(db).patch_permission_state(agent_id, {
+                "user_oauth_url": new_url,
+                "user_oauth_device_code": new_code,
+                "user_oauth_mode": "recommend_all",
+            })
+
+        return {
+            "success": False,
+            "error": (
+                "Previous OAuth URL expired or authorization was still pending. "
+                "I've generated a fresh link — send it to the user, wait for "
+                "them to click AND confirm, then call this tool again with the "
+                "new device_code."
+            ),
+            "data": {
+                "fresh_oauth_url": new_url,
+                "fresh_device_code": new_code,
+                "original_error": result.get("error"),
+            },
+        }
 
     # =====================================================================
     # Lifecycle: lark_configure_permissions + lark_mark_console_done
@@ -823,6 +879,35 @@ def register_lark_mcp_tools(mcp: Any) -> None:
         from datetime import datetime, timezone
         db = await XYZBaseModule.get_mcp_db_client()
         mgr = LarkCredentialManager(db)
+
+        # Guard: in the recommend_all flow, bot_scopes_confirmed is driven
+        # by lark_auth_complete succeeding — not by user say-so. If the
+        # Agent tries to mark scopes done while there's still a pending
+        # OAuth device_code, refuse and tell it to complete OAuth first.
+        # This prevents the stuck-state bug where Agent parallel-calls
+        # mark_console_done + auth_complete, auth_complete fails (expired
+        # code / pending authz), but mark_console_done succeeds and makes
+        # the status matrix lie.
+        current_state = cred.permission_state or {}
+        has_pending_oauth = bool(
+            current_state.get("user_oauth_url")
+            and current_state.get("user_oauth_device_code")
+            and not current_state.get("user_oauth_completed_at")
+        )
+        if has_pending_oauth and bot_scopes_ok:
+            return {
+                "success": False,
+                "error": (
+                    "Refusing to mark console done while OAuth is still "
+                    "pending. The `--recommend` OAuth auto-grants scopes and "
+                    "auto-publishes — skipping it leaves the app with no "
+                    "declared scopes. Call "
+                    "`lark_auth_complete(agent_id, device_code=...)` first. "
+                    "If that returns 'expired' or 'pending', re-run "
+                    "`lark_configure_permissions(agent_id)` for a fresh URL, "
+                    "wait for the user to click, THEN call auth_complete."
+                ),
+            }
 
         now = datetime.now(timezone.utc).isoformat()
         # console_setup_done_at tracks the REQUIRED work (bot scopes +
