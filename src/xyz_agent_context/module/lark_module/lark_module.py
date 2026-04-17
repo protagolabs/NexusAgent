@@ -194,49 +194,49 @@ class LarkModule(XYZBaseModule):
             )
         else:
             skill_section = (
-                f"### How to use `lark_cli`\n\n"
-                f"All commands run via `lark_cli(agent_id, command=\"...\")`. "
-                f"Do NOT add `--profile` or `--format json`.\n\n"
-                f"Run `<domain> +<command> --help` to discover available commands "
-                f"(e.g. `im +messages-send --help`).\n"
-                f"Use `schema <resource>` to check API parameters.\n\n"
+                "### How to use `lark_cli`\n\n"
+                "All commands run via `lark_cli(agent_id, command=\"...\")`. "
+                "Do NOT add `--profile` or `--format json`.\n\n"
+                "Run `<domain> +<command> --help` to discover available commands "
+                "(e.g. `im +messages-send --help`).\n"
+                "Use `schema <resource>` to check API parameters.\n\n"
             )
 
         # OAuth section
         if auth == "bot_ready":
             oauth_section = (
-                f"### OAuth Status: NOT completed\n"
-                f"Some commands that require user identity won't work yet.\n"
-                f"Only call `lark_auth` when a command fails with permission errors "
-                f"or the user explicitly asks for OAuth.\n\n"
+                "### OAuth Status: NOT completed\n"
+                "Some commands that require user identity won't work yet.\n"
+                "Only call `lark_auth` when a command fails with permission errors "
+                "or the user explicitly asks for OAuth.\n\n"
             )
         else:
             oauth_section = (
-                f"### OAuth Status: Completed\n"
-                f"All commands including user-identity features are available.\n\n"
+                "### OAuth Status: Completed\n"
+                "All commands including user-identity features are available.\n\n"
             )
 
         rules = (
-            f"### Rules\n\n"
-            f"**Permission error handling:**\n"
-            f"1. Extract the missing scope(s) from the error (e.g. `im:chat:create`)\n"
-            f"2. Call `lark_auth(agent_id, scopes=\"im:chat im:chat:create\")` with the specific scopes\n"
-            f"3. Send the verification URL to the user and explain:\n"
-            f"   - 'Authorize' button → click it, done\n"
-            f"   - 'Submit for approval' → click to request, wait for admin, then come back\n"
-            f"4. When user confirms → call `lark_auth_complete` with the device_code\n\n"
-            f"**Identity:**\n"
-            f"- ALWAYS add `--as bot` when sending messages, creating docs, or performing actions.\n"
-            f"  The CLI defaults to user identity when OAuth is completed — you must NOT impersonate the user.\n"
-            f"  Example: `im +messages-send --as bot --user-id ou_xxx --text \"hello\"`\n"
-            f"- Only use `--as user` for search/read operations that explicitly require user identity "
-            f"(e.g. `contact +search-user`, `im +messages-search`, `docs +search`).\n\n"
-            f"**General:**\n"
-            f"- Do NOT use Bash for lark-cli. Use `lark_cli` MCP tool only.\n"
-            f"- Do NOT add `--format json` to Shortcut commands (commands with `+`)\n"
-            f"- Only call `lark_auth` when commands fail or user asks — not preemptively.\n"
-            f"- `im +messages-send` sends a message to a Lark user/chat. It is NOT how you\n"
-            f"  reply to the owner. Only use it when the owner asks to send something to someone.\n"
+            "### Rules\n\n"
+            "**Permission error handling:**\n"
+            "1. Extract the missing scope(s) from the error (e.g. `im:chat:create`)\n"
+            "2. Call `lark_auth(agent_id, scopes=\"im:chat im:chat:create\")` with the specific scopes\n"
+            "3. Send the verification URL to the user and explain:\n"
+            "   - 'Authorize' button → click it, done\n"
+            "   - 'Submit for approval' → click to request, wait for admin, then come back\n"
+            "4. When user confirms → call `lark_auth_complete` with the device_code\n\n"
+            "**Identity:**\n"
+            "- ALWAYS add `--as bot` when sending messages, creating docs, or performing actions.\n"
+            "  The CLI defaults to user identity when OAuth is completed — you must NOT impersonate the user.\n"
+            "  Example: `im +messages-send --as bot --user-id ou_xxx --text \"hello\"`\n"
+            "- Only use `--as user` for search/read operations that explicitly require user identity "
+            "(e.g. `contact +search-user`, `im +messages-search`, `docs +search`).\n\n"
+            "**General:**\n"
+            "- Do NOT use Bash for lark-cli. Use `lark_cli` MCP tool only.\n"
+            "- Do NOT add `--format json` to Shortcut commands (commands with `+`)\n"
+            "- Only call `lark_auth` when commands fail or user asks — not preemptively.\n"
+            "- `im +messages-send` sends a message to a Lark user/chat. It is NOT how you\n"
+            "  reply to the owner. Only use it when the owner asks to send something to someone.\n"
         )
 
         status_label = "Bot Connected" if auth == "bot_ready" else "Fully Connected"
