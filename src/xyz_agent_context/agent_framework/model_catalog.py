@@ -67,7 +67,7 @@ _register(
 
 # --- Anthropic / Claude models ---
 _register(
-    ModelMeta("claude-opus-4-6", "Claude Opus 4.6", max_output_tokens=115200),
+    ModelMeta("claude-opus-4-7", "Claude Opus 4.7", max_output_tokens=115200),
     ModelMeta("claude-sonnet-4-6", "Claude Sonnet 4.6", max_output_tokens=115200),
 )
 
@@ -105,7 +105,7 @@ _DEFAULT_MODELS: dict[tuple[str, str], list[str]] = {
     # Yunwu Anthropic protocol → Claude models (Yunwu proxies official Claude)
     ("yunwu", "anthropic"): [
         "claude-sonnet-4-6",
-        "claude-opus-4-6",
+        "claude-opus-4-7",
     ],
     # Yunwu OpenAI protocol → OpenAI models (Yunwu proxies official OpenAI)
     ("yunwu", "openai"): [
@@ -116,7 +116,7 @@ _DEFAULT_MODELS: dict[tuple[str, str], list[str]] = {
     # OpenRouter Anthropic protocol → Claude models (OpenRouter proxies official Claude)
     ("openrouter", "anthropic"): [
         "claude-sonnet-4-6",
-        "claude-opus-4-6",
+        "claude-opus-4-7",
     ],
     # OpenRouter OpenAI protocol → OpenAI models (OpenRouter proxies official OpenAI)
     ("openrouter", "openai"): [
@@ -126,7 +126,7 @@ _DEFAULT_MODELS: dict[tuple[str, str], list[str]] = {
     ],
     # Claude OAuth → agent models
     ("claude_oauth", "anthropic"): [
-        "claude-opus-4-6",
+        "claude-opus-4-7",
         "claude-sonnet-4-6",
     ],
 }
@@ -134,7 +134,7 @@ _DEFAULT_MODELS: dict[tuple[str, str], list[str]] = {
 # Suggested models when user adds a generic Anthropic/OpenAI provider
 _SUGGESTED_MODELS: dict[str, list[str]] = {
     "anthropic": [
-        "claude-opus-4-6",
+        "claude-opus-4-7",
         "claude-sonnet-4-6",
     ],
     "openai": [
