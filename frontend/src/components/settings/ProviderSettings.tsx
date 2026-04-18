@@ -199,7 +199,7 @@ export function ProviderSettings() {
   const [embeddingModels, setEmbeddingModels] = useState<EmbeddingModelInfo[]>([])
   const [officialBaseUrls, setOfficialBaseUrls] = useState<Record<string, string[]>>({})
   const [error, setError] = useState('')
-  const [claudeStatus, setClaudeStatus] = useState<{ cli_installed: boolean; logged_in: boolean; expires_at: string | null } | null>(null)
+  const [claudeStatus, setClaudeStatus] = useState<{ cli_installed: boolean; logged_in: boolean; expires_at: string | null; allowed?: boolean } | null>(null)
 
   // Quick Add (preset provider)
   const [selectedPreset, setSelectedPreset] = useState<string>(PRESET_PROVIDERS[0].id)
@@ -594,39 +594,54 @@ export function ProviderSettings() {
           </div>
 
           {/* ---- Claude Code Login Card ---- */}
-          <div className="p-4 rounded-xl border border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="text-sm font-medium text-[var(--text-primary)]">Claude Code Login</h4>
-              {hasClaude && <span className="text-[var(--color-success)] text-sm ml-auto">{'\u2713'} Added</span>}
-            </div>
-            <p className="text-sm text-[var(--text-tertiary)] mb-2">OAuth login via Claude Code CLI. No API key needed.</p>
-            {!hasClaude && claudeStatus && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className={cn('inline-block w-2 h-2 rounded-full',
-                    claudeStatus.logged_in ? 'bg-[var(--color-success)]' :
-                    claudeStatus.cli_installed ? 'bg-[var(--color-warning)]' : 'bg-[var(--text-tertiary)]'
-                  )} />
-                  <span className="text-sm text-[var(--text-secondary)]">
-                    {claudeStatus.logged_in ? 'Logged in' : claudeStatus.cli_installed ? 'Not logged in' : 'CLI not installed'}
-                  </span>
-                </div>
-                {claudeStatus.logged_in && (
-                  <button onClick={handleAddClaudeOAuth}
-                    className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]/90 transition-colors">
-                    Add as Provider
-                  </button>
-                )}
-                {!claudeStatus.logged_in && (
-                  <p className="text-sm text-[var(--text-tertiary)]">
-                    {claudeStatus.cli_installed
-                      ? 'Run "claude login" in your terminal first, then refresh this page.'
-                      : 'Install Claude Code CLI first, then run "claude login" in your terminal.'}
-                  </p>
-                )}
+          {claudeStatus?.allowed === false ? (
+            /* Cloud mode: OAuth not available, show desktop-only hint */
+            <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]">
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="text-sm font-medium text-[var(--text-primary)]">Claude Code Login</h4>
+                <span className="text-xs px-2 py-0.5 rounded bg-[var(--text-tertiary)]/10 text-[var(--text-tertiary)]">Desktop Only</span>
               </div>
-            )}
-          </div>
+              <p className="text-sm text-[var(--text-tertiary)]">
+                OAuth login via Claude Code CLI is only available when running NarraNexus locally (desktop app or <code className="text-xs">bash run.sh</code>).
+                For cloud usage, add a provider above with your API key.
+              </p>
+            </div>
+          ) : (
+            /* Local mode: show full Claude Code OAuth flow */
+            <div className="p-4 rounded-xl border border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="text-sm font-medium text-[var(--text-primary)]">Claude Code Login</h4>
+                {hasClaude && <span className="text-[var(--color-success)] text-sm ml-auto">{'\u2713'} Added</span>}
+              </div>
+              <p className="text-sm text-[var(--text-tertiary)] mb-2">OAuth login via Claude Code CLI. No API key needed.</p>
+              {!hasClaude && claudeStatus && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className={cn('inline-block w-2 h-2 rounded-full',
+                      claudeStatus.logged_in ? 'bg-[var(--color-success)]' :
+                      claudeStatus.cli_installed ? 'bg-[var(--color-warning)]' : 'bg-[var(--text-tertiary)]'
+                    )} />
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      {claudeStatus.logged_in ? 'Logged in' : claudeStatus.cli_installed ? 'Not logged in' : 'CLI not installed'}
+                    </span>
+                  </div>
+                  {claudeStatus.logged_in && (
+                    <button onClick={handleAddClaudeOAuth}
+                      className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]/90 transition-colors">
+                      Add as Provider
+                    </button>
+                  )}
+                  {!claudeStatus.logged_in && (
+                    <p className="text-sm text-[var(--text-tertiary)]">
+                      {claudeStatus.cli_installed
+                        ? 'Run "claude login" in your terminal first, then refresh this page.'
+                        : 'Install Claude Code CLI first, then run "claude login" in your terminal.'}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ---- Custom: Add Protocol Buttons ---- */}
           <div className="flex gap-2">
