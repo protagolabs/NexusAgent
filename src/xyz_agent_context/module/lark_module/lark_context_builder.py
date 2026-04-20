@@ -57,8 +57,12 @@ class LarkContextBuilder(ChannelContextBuilderBase):
             "send_tool_name": "lark_cli",
             "reply_instruction": (
                 'call `lark_cli(agent_id="{agent_id}", command="im +messages-send '
-                '--chat-id {chat_id} --text YOUR_REPLY")`. '
-                "Send exactly ONE message. Use `--text`, not `--markdown`."
+                '--chat-id {chat_id} --markdown YOUR_REPLY")`. '
+                "Send exactly ONE message. Prefer `--markdown` so headings, "
+                "bold, bullets and line breaks render as Lark rich text "
+                "(the CLI converts it to Lark post format automatically). "
+                "Use `--text` only when the reply must keep exact verbatim "
+                "layout — e.g. code blocks where spacing matters or ASCII art."
             ).format(agent_id=self.agent_id, chat_id=self.event.get("chat_id", "")),
         }
 

@@ -1,7 +1,7 @@
 ---
 code_file: src/xyz_agent_context/module/lark_module/lark_context_builder.py
 stub: false
-last_verified: 2026-04-16
+last_verified: 2026-04-19
 ---
 
 ## Why it exists
@@ -39,3 +39,11 @@ Lark-specific fields to the normalized format the runtime expects.
   default `"use the {tool} tool with room_id={id}"`, Lark provides
   an explicit CLI command example because `lark_cli` takes a command
   string, not structured parameters.
+- **`--markdown` is the default reply mode** — lark-cli auto-wraps
+  `--markdown` content into Lark's post format so headings, bold,
+  bullets and line breaks render as rich text in the chat bubble.
+  Using `--text` sends the raw string as-is, which meant earlier
+  versions leaked literal `**bold**` / backslash-n into user-facing
+  replies when the agent produced markdown-shaped output. `--text`
+  remains in the instruction as an escape hatch for code blocks /
+  ASCII art where exact-verbatim layout matters.
