@@ -247,13 +247,19 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
     }
 
     // 2. Add current session messages (from chatStore)
+    //
     // Dedup by (role + content) AND timestamp proximity: if a history entry
     // with identical role+content exists within SAME_MESSAGE_WINDOW_MS of the
     // session message's timestamp, they are the same message (already
-    // persisted) — drop the session copy. A coincidentally-identical old
-    // history message (e.g. "ok" from weeks ago) won't match because the
-    // timestamps differ by more than the window, so the user's just-sent
-    // message is preserved even before it's persisted.
+    // persisted) — drop the session copy.
+    //
+    // Bug 19: the match MUST consume the history timestamp it pairs with,
+    // otherwise a single history row can dedup multiple session messages of
+    // the same role+content. Real-world trigger: user retries the exact
+    // same question after a failed turn — session then has both the
+    // original user message (which legitimately matches history) AND the
+    // retry (which must NOT, because the history row belongs to the first
+    // one). Without consumption, the retry disappears from the UI.
     const SAME_MESSAGE_WINDOW_MS = 60_000;
     const historyByKey = new Map<string, number[]>();
     for (const item of items) {
@@ -269,10 +275,17 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
     for (const msg of messages) {
       const key = `${msg.role}:${msg.content}`;
       const historyTimestamps = historyByKey.get(key);
-      const hasNearMatch = historyTimestamps
-        ? historyTimestamps.some((ts) => Math.abs(msg.timestamp - ts) < SAME_MESSAGE_WINDOW_MS)
-        : false;
-      if (hasNearMatch) continue;
+      const matchIdx = historyTimestamps
+        ? historyTimestamps.findIndex(
+            (ts) => Math.abs(msg.timestamp - ts) < SAME_MESSAGE_WINDOW_MS,
+          )
+        : -1;
+      if (matchIdx >= 0 && historyTimestamps) {
+        // Consume the matched history timestamp so the next session
+        // message of the same role+content doesn't pair against it.
+        historyTimestamps.splice(matchIdx, 1);
+        continue;
+      }
 
       items.push({
         id: msg.id,
