@@ -467,10 +467,11 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 - "ongoing": Execute repeatedly until end_condition is met
                 WARNING: When changing job_type, you should also update trigger_config accordingly.
 
-            next_run_time (str, optional): Override the next execution time. ISO8601 format.
-                Use this to execute a job immediately or reschedule to a specific time.
-                Format: "2026-01-15T15:00:00" or "2026-01-15T15:00:00+08:00"
-                For immediate execution, use current time or a time in the near past.
+            next_run_time (str, optional): Override the next execution time.
+                ISO8601 UTC format ("YYYY-MM-DDTHH:MM:SSZ" or with explicit offset).
+                Use this for Type-B "execute immediately" or "reschedule to X".
+                For regular schedule changes, prefer updating trigger_config so the
+                job's frozen timezone is re-applied automatically.
 
             status (str, optional): Change job status. Valid values:
                 - "active": Activate or resume the job. JobTrigger will poll and execute it.
@@ -582,10 +583,22 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 except ValueError:
                     return {"success": False, "job_id": job_id, "message": f"Invalid job_type: {job_type}. Valid: one_off, scheduled, ongoing"}
             if next_run_time is not None:
+                # Atomic alpha+beta override: parse UTC input, then derive the
+                # beta pair in the job's frozen timezone so display and poller
+                # stay consistent.
                 try:
-                    updates["next_run_time"] = datetime.fromisoformat(next_run_time.replace("Z", "+00:00"))
+                    next_utc = datetime.fromisoformat(next_run_time.replace("Z", "+00:00"))
+                    if next_utc.tzinfo is None:
+                        from datetime import timezone as _tz
+                        next_utc = next_utc.replace(tzinfo=_tz.utc)
                 except ValueError as e:
                     return {"success": False, "job_id": job_id, "message": f"Invalid next_run_time format: {e}"}
+                from zoneinfo import ZoneInfo
+                tz_name = (job.trigger_config.timezone if job.trigger_config else None) or "UTC"
+                next_local = next_utc.astimezone(ZoneInfo(tz_name)).replace(tzinfo=None).isoformat()
+                updates["next_run_time"] = next_utc
+                updates["next_run_at_local"] = next_local
+                updates["next_run_tz"] = tz_name
             if status is not None:
                 try:
                     updates["status"] = JobStatus(status.lower())

@@ -663,7 +663,13 @@ The task was executed but produced no text output.
 
             # Handle based on job type
             if job.job_type == JobType.ONE_OFF:
-                # One-off job: mark as completed
+                # One-off job: mark completed, record last run, clear next run.
+                # All three writes together honor the alpha+beta atomic invariant
+                # (v2 timezone protocol).
+                tz_name = (job.trigger_config.timezone if job.trigger_config else None) or "UTC"
+                last_run_local = now.astimezone(ZoneInfo(tz_name)).replace(tzinfo=None).isoformat()
+                await repo.update_last_run(job.job_id, now, last_run_local, tz_name)
+                await repo.clear_next_run(job.job_id)
                 await repo.update_job_status(
                     job_id=job.job_id,
                     status=JobStatus.COMPLETED
