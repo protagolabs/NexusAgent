@@ -260,7 +260,20 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
     // original user message (which legitimately matches history) AND the
     // retry (which must NOT, because the history row belongs to the first
     // one). Without consumption, the retry disappears from the UI.
-    const SAME_MESSAGE_WINDOW_MS = 60_000;
+    //
+    // The window is a safety net for browser/server clock skew. After the
+    // backend fix that stamps user messages at turn-start (Event.created_at)
+    // instead of turn-end (utc_now() after agent finishes), the real diff
+    // between session ts and history ts is just RTT — milliseconds. The
+    // window only needs to cover clock drift now:
+    //   - NTP-synced machine: < 1s drift (any window works)
+    //   - Laptop off-network a while: 10s–1min
+    //   - Neglected / post-sleep laptop: can hit a few minutes
+    // 5 min covers realistic drift without being so loose that repeat-text
+    // edge cases feel weird. Note: short identical content sent twice
+    // (e.g. "好" / "go on") is NOT a false-positive source — the
+    // "consume matched history timestamp" logic pairs them one-to-one.
+    const SAME_MESSAGE_WINDOW_MS = 300_000;
     const historyByKey = new Map<string, number[]>();
     for (const item of items) {
       const key = `${item.role}:${item.content}`;

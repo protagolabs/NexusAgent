@@ -592,10 +592,27 @@ class ChatModule(XYZBaseModule):
         # Get working_source (execution source: chat/job/a2a)
         working_source = params.execution_ctx.working_source.value if params.execution_ctx else "unknown"
 
-        # Build shared meta_data fields
+        # Timestamp policy (fix: frontend dedup window) — user and assistant
+        # messages get DIFFERENT timestamps:
+        #   - user    → Event.created_at   (when the turn started, ~= when the
+        #              user pressed Enter; matches frontend session ts within RTT)
+        #   - assistant → utc_now()         (when this hook runs, ~= when the
+        #              agent finished; matches frontend stopStreaming ts)
+        # Before this split, both messages shared utc_now() which, for a slow
+        # turn, put the persisted user-message ts minutes past the frontend
+        # session ts. The dedup in ChatPanel (|session_ts - history_ts| <
+        # window) then failed and the user bubble rendered twice.
+        now_iso = utc_now().isoformat()
+        user_ts_iso = (
+            params.event.created_at.isoformat()
+            if params.event is not None and params.event.created_at is not None
+            else now_iso
+        )
+
+        # Build shared meta_data fields (assistant uses now; user overrides below)
         shared_meta = {
             "event_id": params.event_id,
-            "timestamp": utc_now().isoformat(),
+            "timestamp": now_iso,
             "instance_id": instance_id,
             "working_source": working_source,
         }
@@ -608,6 +625,8 @@ class ChatModule(XYZBaseModule):
                 if hasattr(channel_tag_data, "to_dict"):
                     channel_tag_data = channel_tag_data.to_dict()
                 shared_meta["channel_tag"] = channel_tag_data
+
+        user_meta = {**shared_meta, "timestamp": user_ts_iso}
 
         # Bug 8: detect failure FIRST. If the agent loop raised, persist
         # only the user question with status=failed so the next turn's
@@ -625,7 +644,7 @@ class ChatModule(XYZBaseModule):
                 "role": "user",
                 "content": params.input_content,
                 "meta_data": {
-                    **shared_meta,
+                    **user_meta,
                     "status": "failed",
                     "error_type": error_signal["error_type"],
                 },
@@ -635,7 +654,7 @@ class ChatModule(XYZBaseModule):
             messages.append({
                 "role": "user",
                 "content": params.input_content,
-                "meta_data": {**shared_meta},
+                "meta_data": {**user_meta},
             })
             messages.append({
                 "role": "assistant",
