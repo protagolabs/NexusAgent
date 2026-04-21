@@ -841,6 +841,7 @@ class JobRepository(BaseRepository[JobModel]):
             trigger_config_raw = row.get("trigger_config")
             next_run_time = None
 
+            next_run_tup = None
             if job_type_str in (JobType.SCHEDULED.value, JobType.ONGOING.value):
                 try:
                     # Parse trigger_config
@@ -850,45 +851,28 @@ class JobRepository(BaseRepository[JobModel]):
                         job_type_enum = JobType(job_type_str)
                         # Calculate next execution time (based on current time + interval)
                         from xyz_agent_context.module.job_module._job_scheduling import compute_next_run
-                        tup = compute_next_run(job_type_enum, tc, last_run_utc=now)
-                        next_run_time = tup.utc if tup else None
+                        next_run_tup = compute_next_run(job_type_enum, tc, last_run_utc=now)
                 except Exception as e:
                     logger.warning(f"Failed to calculate next_run_time for {job_id}: {e}")
-                    # Fallback: set to 1 hour later
-                    next_run_time = now + timedelta(hours=1)
 
-            # Build update statement
-            if next_run_time:
-                update_query = f"""
-                    UPDATE {self.table_name}
-                    SET status = %s, started_at = NULL, next_run_time = %s,
-                        last_error = %s, updated_at = %s
-                    WHERE job_id = %s
-                """
-                params = (
-                    new_status.value,
-                    next_run_time,
-                    f"Task timeout after {timeout_minutes} minutes, auto-recovered at {now}",
-                    now,
-                    job_id
-                )
+            # Status + error + started_at reset (no next_run fields — those are
+            # alpha+beta atomic via update_next_run / clear_next_run below).
+            await self._db.update(
+                self.table_name,
+                {"job_id": job_id},
+                {
+                    "status": new_status.value,
+                    "started_at": None,
+                    "last_error": f"Task timeout after {timeout_minutes} minutes, auto-recovered at {now}",
+                    "updated_at": now,
+                },
+            )
+            if next_run_tup is not None:
+                await self.update_next_run(job_id, next_run_tup)
             else:
-                update_query = f"""
-                    UPDATE {self.table_name}
-                    SET status = %s, started_at = NULL,
-                        last_error = %s, updated_at = %s
-                    WHERE job_id = %s
-                """
-                params = (
-                    new_status.value,
-                    f"Task timeout after {timeout_minutes} minutes, auto-recovered at {now}",
-                    now,
-                    job_id
-                )
+                await self.clear_next_run(job_id)
 
-            await self._db.execute(update_query, params=params, fetch=False)
-
-            next_run_str = next_run_time.strftime("%Y-%m-%d %H:%M") if next_run_time else "N/A"
+            next_run_str = next_run_tup.local if next_run_tup else "N/A"
             logger.warning(f"Recovered stuck job: {job_id} -> {new_status.value}, next_run: {next_run_str}")
             recovered_count += 1
 
@@ -921,34 +905,42 @@ class JobRepository(BaseRepository[JobModel]):
         if not results:
             return 0
 
+        from zoneinfo import ZoneInfo
+        from xyz_agent_context.module.job_module._job_scheduling import NextRunTuple
         recovered_count = 0
         now = utc_now()
 
         for row in results:
             job_id = row["job_id"]
             job_type_str = row["job_type"]
+            trigger_config_raw = row.get("trigger_config")
 
             # Determine recovery status based on type
             new_status = JobStatus.PENDING if job_type_str == JobType.ONE_OFF.value else JobStatus.ACTIVE
 
-            # Set next_run_time to current time so the next poll cycle schedules it immediately
-            # Since the last execution was interrupted, it should be re-executed as soon as possible
-            update_query = f"""
-                UPDATE {self.table_name}
-                SET status = %s, started_at = NULL, next_run_time = %s,
-                    last_error = %s, updated_at = %s
-                WHERE job_id = %s
-            """
-            params = (
-                new_status.value,
-                now,
-                f"Process restarted, auto-recovered at {now}",
-                now,
-                job_id
-            )
+            # Fire NOW in the job's frozen timezone (alpha + beta atomic pair)
+            tz_name = "UTC"
+            try:
+                tc_dict = self._parse_json_field(trigger_config_raw, {})
+                if isinstance(tc_dict, dict) and tc_dict.get("timezone"):
+                    tz_name = tc_dict["timezone"]
+            except Exception:
+                pass
+            now_local = now.astimezone(ZoneInfo(tz_name)).replace(tzinfo=None).isoformat()
+            immediate_tup = NextRunTuple(local=now_local, tz=tz_name, utc=now)
 
-            await self._db.execute(update_query, params=params, fetch=False)
-            logger.warning(f"Startup recovery: {job_id} -> {new_status.value}, next_run: NOW (immediate execution)")
+            await self._db.update(
+                self.table_name,
+                {"job_id": job_id},
+                {
+                    "status": new_status.value,
+                    "started_at": None,
+                    "last_error": f"Process restarted, auto-recovered at {now}",
+                    "updated_at": now,
+                },
+            )
+            await self.update_next_run(job_id, immediate_tup)
+            logger.warning(f"Startup recovery: {job_id} -> {new_status.value}, next_run: NOW (immediate execution, tz={tz_name})")
             recovered_count += 1
 
         return recovered_count
@@ -996,23 +988,39 @@ class JobRepository(BaseRepository[JobModel]):
         next_run_time: datetime
     ) -> int:
         """
-        Update Job's next_run_time by instance_id
+        Update Job's next_run_time by instance_id (atomic alpha + beta write).
 
         Used to activate BLOCKED Jobs after dependencies are fulfilled,
-        making them pollable by JobTrigger.
+        making them pollable by JobTrigger. Resolves the job's frozen timezone
+        from its trigger_config so the beta fields stay in sync with alpha.
 
         Args:
             instance_id: Instance ID
-            next_run_time: Next execution time
+            next_run_time: Next execution time (aware UTC datetime)
 
         Returns:
             Number of affected rows
         """
         logger.debug(f"    → JobRepository.update_next_run_time_by_instance({instance_id})")
 
+        # Resolve the job's frozen timezone to compute beta atomically.
+        from zoneinfo import ZoneInfo
+        job_row = await self._db.get_one(self.table_name, {"instance_id": instance_id})
+        tz_name = "UTC"
+        if job_row:
+            tc_raw = job_row.get("trigger_config")
+            try:
+                tc_dict = self._parse_json_field(tc_raw, {})
+                if isinstance(tc_dict, dict) and tc_dict.get("timezone"):
+                    tz_name = tc_dict["timezone"]
+            except Exception:
+                pass
+        local_str = next_run_time.astimezone(ZoneInfo(tz_name)).replace(tzinfo=None).isoformat()
+
         query = f"""
             UPDATE {self.table_name}
-            SET next_run_time = %s, updated_at = %s
+            SET next_run_time = %s, next_run_at_local = %s, next_run_tz = %s,
+                updated_at = %s
             WHERE instance_id = %s AND status IN (%s, %s)
         """
 
@@ -1020,6 +1028,8 @@ class JobRepository(BaseRepository[JobModel]):
             query,
             params=(
                 next_run_time,
+                local_str,
+                tz_name,
                 utc_now(),
                 instance_id,
                 JobStatus.PENDING.value,

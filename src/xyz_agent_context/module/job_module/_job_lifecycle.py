@@ -105,22 +105,45 @@ async def handle_job_execution_result(
     # Update database
     job_id = result.job_id
     if job_id:
-        logger.info(f"            Updating job: {job_id}, status={result.status}, next_run={result.next_run_time}")
+        logger.info(f"            Updating job: {job_id}, status={result.status}")
         try:
             existing_job = await repo.get_job(job_id)
             existing_process = existing_job.process if existing_job and existing_job.process else []
 
+            from zoneinfo import ZoneInfo
+            from xyz_agent_context.module.job_module._job_scheduling import compute_next_run
+
             now = utc_now()
-            updates = {
+            tz_name = (existing_job.trigger_config.timezone if existing_job and existing_job.trigger_config else None) or "UTC"
+            now_local = now.astimezone(ZoneInfo(tz_name)).replace(tzinfo=None).isoformat()
+
+            # 1) Status + process + last_error are LLM-decided (semantic)
+            await repo.update_job(job_id, {
                 "status": result.status.value,
                 "process": existing_process + result.process,
-                "last_run_time": now,
                 "last_error": result.last_error if result.status == JobStatus.FAILED else None,
                 "updated_at": now,
-                "next_run_time": result.next_run_time,
-            }
-            await repo.update_job(job_id, updates)
-            logger.info(f"            Job {job_id} updated: status={result.status.value}")
+            })
+
+            # 2) last_run is atomic alpha+beta in the job's frozen tz
+            await repo.update_last_run(job_id, now, now_local, tz_name)
+
+            # 3) next_run is DETERMINISTIC from trigger_config — LLM does NOT
+            #    set scheduling times. If terminal, clear; otherwise recompute.
+            if result.status in (JobStatus.COMPLETED, JobStatus.FAILED):
+                await repo.clear_next_run(job_id)
+            elif existing_job and existing_job.trigger_config:
+                next_tup = compute_next_run(
+                    existing_job.job_type,
+                    existing_job.trigger_config,
+                    last_run_utc=now,
+                )
+                if next_tup:
+                    await repo.update_next_run(job_id, next_tup)
+                else:
+                    await repo.clear_next_run(job_id)
+
+            logger.info(f"            Job {job_id} updated: status={result.status.value}, tz={tz_name}")
 
             if result.should_notify:
                 logger.info(f"            Should notify user: {result.notification_summary}")

@@ -413,32 +413,10 @@ class JobExecutionResult(BaseModel):
         )
     )
 
-    # === Next Execution Time (intelligently determined by LLM) ===
-    # 上限 7 天，防止 LLM 返回远未来的时间
-    MAX_NEXT_RUN_DAYS: ClassVar[int] = 90
-
-    next_run_time: Optional[datetime] = Field(
-        default=None,
-        description=(
-            "Next execution time in UTC (ISO 8601 format with Z suffix, e.g. 2026-03-17T09:13:00Z). "
-            "completed/failed -> null; "
-            "active -> default is current_time + interval_seconds, may adjust slightly based on context"
-        )
-    )
-
-    @field_validator("next_run_time")
-    @classmethod
-    def clamp_next_run_time(cls, v: Optional[datetime]) -> Optional[datetime]:
-        """将 next_run_time 限制在当前时间 + MAX_NEXT_RUN_DAYS 以内"""
-        if v is not None:
-            from xyz_agent_context.utils import utc_now
-            max_time = utc_now() + timedelta(days=cls.MAX_NEXT_RUN_DAYS)
-            # 比较前统一去掉 timezone 信息（LLM 可能返回 naive datetime）
-            v_naive = v.replace(tzinfo=None) if v.tzinfo else v
-            max_naive = max_time.replace(tzinfo=None) if max_time.tzinfo else max_time
-            if v_naive > max_naive:
-                v = max_time
-        return v
+    # v2 timezone protocol: next_run_time is NO LONGER LLM-decided.
+    # Scheduling is computed deterministically from trigger_config by
+    # _job_lifecycle after the LLM returns. The LLM only decides status
+    # (active / completed / failed), process, and notification intent.
 
     # === Error Information ===
     last_error: Optional[str] = Field(
@@ -507,26 +485,8 @@ class OngoingExecutionResult(BaseModel):
         description="Action records for this execution, 2-5 step descriptions"
     )
 
-    # === Next Execution ===
-    MAX_NEXT_RUN_DAYS: ClassVar[int] = 90
-
-    next_run_time: Optional[datetime] = Field(
-        default=None,
-        description="Next execution time (if should_continue=True)"
-    )
-
-    @field_validator("next_run_time")
-    @classmethod
-    def clamp_next_run_time(cls, v: Optional[datetime]) -> Optional[datetime]:
-        """将 next_run_time 限制在当前时间 + MAX_NEXT_RUN_DAYS 以内"""
-        if v is not None:
-            from xyz_agent_context.utils import utc_now
-            max_time = utc_now() + timedelta(days=cls.MAX_NEXT_RUN_DAYS)
-            v_naive = v.replace(tzinfo=None) if v.tzinfo else v
-            max_naive = max_time.replace(tzinfo=None) if max_time.tzinfo else max_time
-            if v_naive > max_naive:
-                v = max_time
-        return v
+    # v2 timezone protocol: next_run_time is NO LONGER LLM-decided here
+    # either. Scheduling is derived from trigger_config in _job_lifecycle.
 
     # === Notification Related ===
     should_notify: bool = Field(
