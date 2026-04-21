@@ -233,6 +233,17 @@ class MessageBusTrigger:
                 )
                 return False
 
+    async def _get_agent_owner(self, agent_id: str) -> str:
+        """Look up the owner user_id for an agent. Returns "" if unknown."""
+        try:
+            from xyz_agent_context.utils.db_factory import get_db_client
+            db = await get_db_client()
+            row = await db.get_one("agents", {"agent_id": agent_id})
+            return (row or {}).get("created_by", "") or ""
+        except Exception as e:
+            logger.warning(f"_get_agent_owner({agent_id}) failed: {e}")
+            return ""
+
     async def _handle_channel_batch(
         self,
         agent_id: str,
@@ -247,8 +258,12 @@ class MessageBusTrigger:
         processing cursor. On failure, records the failure for retry tracking.
         """
         try:
+            # Owner lookup up-front — used by both the prompt (to remind the
+            # agent its owner is waiting in chat) and the inbox writer.
+            owner_user_id = await self._get_agent_owner(agent_id)
+
             # Build prompt from messages
-            prompt = self._build_prompt(messages)
+            prompt = self._build_prompt(messages, owner_user_id=owner_user_id)
 
             logger.info(
                 f"MessageBusTrigger: triggering agent {agent_id} "
@@ -293,11 +308,21 @@ class MessageBusTrigger:
                 error=str(e),
             )
 
-    def _build_prompt(self, messages: List[BusMessage]) -> str:
+    def _build_prompt(
+        self, messages: List[BusMessage], owner_user_id: str = ""
+    ) -> str:
         """
         Build a prompt from a list of pending messages.
 
         Includes all messages in the batch so the agent has full context.
+
+        If `owner_user_id` is known, appends an owner-relay directive telling
+        the agent it MUST call send_message_to_user_directly(user_id=<owner>,
+        ...) to surface the peer exchange back into the owner's chat. Without
+        this directive, agents treat peer exchanges as self-contained (they
+        reply to the peer or stay silent), and the original owner who asked
+        "go talk to agent B for me" never hears back — the reply only lands
+        in the Inbox. observed as a silent-failure UX issue in production.
         """
         lines = ["[Message Bus - Incoming Messages]", ""]
         for msg in messages:
@@ -306,6 +331,54 @@ class MessageBusTrigger:
                 f"Time: {msg.created_at}\n"
                 f"{msg.content}\n"
             )
+
+        if owner_user_id:
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+            lines.append("## Owner Relay — REQUIRED")
+            lines.append("")
+            lines.append(
+                f"Your owner (user_id=`{owner_user_id}`) originally asked you "
+                f"to contact this peer agent. They are waiting in chat for "
+                f"the answer."
+            )
+            lines.append("")
+            lines.append(
+                "The owner's chat view does NOT automatically receive the "
+                "peer's reply. The ONLY channel that surfaces this exchange "
+                "to the owner is `send_message_to_user_directly`. If you do "
+                "not call it, the owner sees nothing — they only know "
+                "there's a new entry in some inbox they may not be looking "
+                "at. This is a silent-failure pattern we explicitly want to "
+                "avoid."
+            )
+            lines.append("")
+            lines.append("**What to do this turn:**")
+            lines.append(
+                f"1. Understand the peer reply above."
+            )
+            lines.append(
+                "2. If the peer's reply answers / progresses the owner's "
+                "original request → call "
+                f"`send_message_to_user_directly(agent_id=<you>, "
+                f"user_id=\"{owner_user_id}\", content=<summary + peer "
+                "quote>)`. Make the summary actionable: what did the peer "
+                "say, what does it mean for the owner's task, what's next."
+            )
+            lines.append(
+                "3. If the peer needs a clarifying follow-up from you → "
+                "send it via `bus_send_to_agent`, THEN also call "
+                "`send_message_to_user_directly` with a short status "
+                "update (\"asked peer for X, waiting for clarification\") "
+                "so the owner knows the thread is alive."
+            )
+            lines.append(
+                "4. Silence is the wrong default. Only stay silent if the "
+                "peer message is truly irrelevant (e.g. a closing "
+                "acknowledgment you already reported to the owner)."
+            )
+
         return "\n".join(lines)
 
     async def _invoke_runtime(
