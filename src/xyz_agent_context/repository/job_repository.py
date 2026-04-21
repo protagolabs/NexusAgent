@@ -13,8 +13,11 @@ Responsibilities:
 
 import json
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, TYPE_CHECKING
 from loguru import logger
+
+if TYPE_CHECKING:
+    from xyz_agent_context.module.job_module._job_scheduling import NextRunTuple
 
 from .base import BaseRepository
 from xyz_agent_context.utils import utc_now
@@ -247,6 +250,51 @@ class JobRepository(BaseRepository[JobModel]):
         )
 
         return await self.insert(job)
+
+    async def update_next_run(self, job_id: str, next_run: "NextRunTuple") -> int:
+        """
+        Atomic alpha+beta write. This is the ONLY allowed way to update
+        next-run-time fields; do not write next_run_time directly.
+        """
+        return await self._db.update(
+            self.table_name,
+            {"job_id": job_id},
+            {
+                "next_run_time": next_run.utc.isoformat().replace("+00:00", "Z"),
+                "next_run_at_local": next_run.local,
+                "next_run_tz": next_run.tz,
+            },
+        )
+
+    async def update_last_run(
+        self,
+        job_id: str,
+        last_run_utc: datetime,
+        last_run_local: str,
+        last_run_tz: str,
+    ) -> int:
+        """Atomic alpha+beta write for the most-recent-run fields."""
+        return await self._db.update(
+            self.table_name,
+            {"job_id": job_id},
+            {
+                "last_run_time": last_run_utc.isoformat().replace("+00:00", "Z"),
+                "last_run_at_local": last_run_local,
+                "last_run_tz": last_run_tz,
+            },
+        )
+
+    async def clear_next_run(self, job_id: str) -> int:
+        """For one_off completed / cancelled / end-of-ongoing jobs."""
+        return await self._db.update(
+            self.table_name,
+            {"job_id": job_id},
+            {
+                "next_run_time": None,
+                "next_run_at_local": None,
+                "next_run_tz": None,
+            },
+        )
 
     async def find_active_by_title(
         self,

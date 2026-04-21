@@ -1,3 +1,9 @@
+---
+code_file: src/xyz_agent_context/utils/schema_registry.py
+last_verified: 2026-04-21
+stub: false
+---
+
 # schema_registry.py
 
 Single source of truth for every database table — define columns once, run on both SQLite and MySQL, migrate automatically.
@@ -38,3 +44,9 @@ Before this file, table schemas lived only as raw `CREATE TABLE` SQL strings in 
 **Upserts need the table registered.** `database.py` falls back to `[table_name]` as the conflict target if the table is not in `TABLES`. An unregistered table that receives an upsert call will silently insert duplicates instead of updating.
 
 **New-contributor trap.** Registering a table here is necessary but not sufficient for a first-time install. The corresponding `create_*_table.py` script must also exist, because `auto_migrate` only adds columns to tables that already exist. A freshly cloned repo with no tables gets nothing from the registry alone.
+
+## 2026-04-21 · v2 时区协议字段
+
+`instance_jobs` 表新增 4 列：`next_run_at_local` / `next_run_tz` / `last_run_at_local` / `last_run_tz`（全部 TEXT/VARCHAR, nullable）。语义见 spec `reference/self_notebook/specs/2026-04-21-job-timezone-redesign-design.md` 第 4.1 节。
+
+这些列是 additive 变更，`auto_migrate` 启动时自动 `ALTER TABLE ADD COLUMN` 即可。**不改**原 `next_run_time` / `last_run_time` 列名或类型（它们在新协议下专职承载 UTC，对 LLM 不可见）。
