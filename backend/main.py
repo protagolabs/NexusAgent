@@ -107,6 +107,17 @@ async def lifespan(app: FastAPI):
     await auto_migrate(db._backend)
     logger.info("Schema auto-migration complete")
 
+    # One-shot data migrations (idempotent; run after schema migration)
+    from xyz_agent_context.utils.one_shot_migrations import (
+        migrate_jobs_protocol_v2_timezone,
+    )
+    migration_stats = await migrate_jobs_protocol_v2_timezone(db)
+    if migration_stats.get("cancelled"):
+        logger.warning(
+            f"[migration] Cancelled {migration_stats['cancelled']} pre-v2 jobs "
+            f"lacking timezone field; users will need to recreate them."
+        )
+
     # Wire system-default quota services. SystemProviderService is a
     # module-level singleton that reads env once; in local mode or when
     # env is incomplete its is_enabled() returns False and every downstream
