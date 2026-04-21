@@ -448,17 +448,21 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 Example: "Emphasize our 24-hour after-sales service and free on-site repair"
                 Note: If both payload and guidance_text are provided, guidance_text appends to the new payload.
 
-            trigger_config (dict, optional): New trigger configuration. Structure depends on job_type:
+            trigger_config (dict, optional): New trigger configuration.
+                REQUIRED for every shape: "timezone" as an IANA name (e.g.
+                "Asia/Shanghai"). Use the user's current timezone from the
+                User Temporal Context. Examples:
                 - For ONE_OFF jobs:
-                    {"run_at": "2026-01-20T09:00:00"}  # ISO8601 datetime
+                    {"run_at": "2026-01-20T09:00:00", "timezone": "Asia/Shanghai"}
+                    NOTE: run_at MUST be naive ISO 8601 (no "Z" / no offset).
                 - For SCHEDULED jobs (choose one):
-                    {"cron": "0 8 * * *"}  # Cron expression (every day at 8:00)
-                    {"cron": "0 9 * * 1"}  # Every Monday at 9:00
-                    {"interval_seconds": 3600}  # Every hour
-                    {"interval_seconds": 86400}  # Every day (86400 = 24*60*60)
+                    {"cron": "0 8 * * *", "timezone": "Asia/Shanghai"}
+                    {"cron": "0 9 * * 1", "timezone": "America/New_York"}
+                    {"interval_seconds": 3600, "timezone": "Asia/Shanghai"}
+                    {"interval_seconds": 86400, "timezone": "Asia/Shanghai"}
                 - For ONGOING jobs:
-                    {"interval_seconds": 86400, "end_condition": "Customer explicitly buys or refuses"}
-                    {"interval_seconds": 172800, "end_condition": "Project completed", "max_iterations": 10}
+                    {"interval_seconds": 86400, "end_condition": "...", "timezone": "Asia/Shanghai"}
+                    {"interval_seconds": 172800, "end_condition": "...", "max_iterations": 10, "timezone": "Asia/Shanghai"}
                 Common intervals: 3600(1h), 86400(1d), 172800(2d), 604800(1w)
 
             job_type (str, optional): Change the job type. Valid values:
@@ -495,7 +499,7 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
             job_update(
                 agent_id="agent_123",
                 job_id="job_abc123",
-                trigger_config={"interval_seconds": 604800}  # 7 days
+                trigger_config={"interval_seconds": 604800, "timezone": "Asia/Shanghai"}  # 7 days
             )
 
             # Manager says: "Emphasize after-sales service advantages when following up with Xiaoming"
@@ -523,7 +527,7 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 agent_id="agent_123",
                 job_id="job_abc123",
                 job_type="ongoing",
-                trigger_config={"interval_seconds": 86400, "end_condition": "Customer completes purchase or explicitly refuses"}
+                trigger_config={"interval_seconds": 86400, "end_condition": "Customer completes purchase or explicitly refuses", "timezone": "Asia/Shanghai"}
             )
         """
         try:
