@@ -145,3 +145,142 @@ async def test_max_results_respected(monkeypatch):
 
     await brave._search_with_retry(["x"], max_results=3, api_key="test-key")
     assert captured_params["count"] == 3
+
+
+# -------- per-query timeout ---------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_per_query_timeout_returns_error_bundle(monkeypatch):
+    """Slow Brave response → per-query wait_for fires → bundle error, no raise."""
+    monkeypatch.setattr(brave, "_PER_QUERY_TIMEOUT_S", 0.2)
+
+    async def handler(url, params, headers):
+        await asyncio.sleep(5.0)  # much longer than per-query cap
+        return _make_response(200, {"web": {"results": []}})
+
+    _patch_async_client(monkeypatch, handler)
+
+    start = time.monotonic()
+    bundles = await brave._search_with_retry(["slow-q"], 5, "test-key")
+    elapsed = time.monotonic() - start
+
+    assert elapsed < 2.0, f"per-query timeout didn't fire ({elapsed:.2f}s)"
+    assert len(bundles) == 1
+    assert bundles[0]["query"] == "slow-q"
+    assert bundles[0]["results"] == []
+    assert "timed out" in bundles[0]["error"]
+
+
+# -------- overall timeout -----------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_overall_timeout_fires_if_per_query_misses(monkeypatch):
+    """Defense-in-depth: if per-query somehow fails to fire, overall catches it.
+
+    We patch _fetch_one to just sleep forever (bypassing per-query's own wait_for).
+    """
+    monkeypatch.setattr(brave, "_OVERALL_TIMEOUT_S", 0.3)
+
+    async def never_finishes(client, query, max_results, api_key):
+        await asyncio.sleep(30)
+        return {"query": query, "error": None, "results": []}
+
+    monkeypatch.setattr(brave, "_fetch_one", never_finishes)
+
+    start = time.monotonic()
+    bundles = await brave._search_with_retry(["q1", "q2"], 5, "test-key")
+    elapsed = time.monotonic() - start
+
+    assert elapsed < 2.0, f"overall timeout didn't fire ({elapsed:.2f}s)"
+    assert len(bundles) == 2
+    for b in bundles:
+        assert "overall timeout" in b["error"]
+
+
+# -------- retry on 429 ---------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_retry_on_429_succeeds_on_next_attempt(monkeypatch):
+    """First attempt 429 → retry succeeds with 200."""
+    monkeypatch.setattr(brave, "_RETRY_BACKOFF_S", 0.01)
+    call_count = 0
+
+    async def handler(url, params, headers):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return _make_response(429, text="rate limited")
+        return _make_response(200, {
+            "web": {"results": [{"title": "ok", "url": "https://x/", "description": "s"}]}
+        })
+
+    _patch_async_client(monkeypatch, handler)
+    bundles = await brave._search_with_retry(["q"], 5, "test-key")
+    assert len(bundles) == 1
+    assert bundles[0]["error"] is None
+    assert bundles[0]["results"][0]["title"] == "ok"
+    assert call_count == 2
+
+
+# -------- retry on 5xx ---------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_retry_on_5xx_succeeds_after_flake(monkeypatch):
+    """First 503 → retry succeeds."""
+    monkeypatch.setattr(brave, "_RETRY_BACKOFF_S", 0.01)
+    call_count = 0
+
+    async def handler(url, params, headers):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return _make_response(503, text="unavailable")
+        return _make_response(200, {"web": {"results": []}})
+
+    _patch_async_client(monkeypatch, handler)
+    bundles = await brave._search_with_retry(["q"], 5, "test-key")
+    assert bundles[0]["error"] is None
+    assert call_count == 2
+
+
+# -------- retry exhaustion -----------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_retry_exhausted_raises_runtime_error(monkeypatch):
+    """All K=3 attempts 500 → RuntimeError, no hang."""
+    monkeypatch.setattr(brave, "_RETRY_BACKOFF_S", 0.01)
+    monkeypatch.setattr(brave, "_MAX_ATTEMPTS", 3)
+
+    async def handler(url, params, headers):
+        return _make_response(500, text="server error")
+
+    _patch_async_client(monkeypatch, handler)
+
+    with pytest.raises(RuntimeError, match="failed after 3 attempts"):
+        await brave._search_with_retry(["q"], 5, "test-key")
+
+
+# -------- 401 does NOT retry --------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_401_auth_failure_surfaces_in_bundle_not_retried(monkeypatch):
+    """401 is unrecoverable — bundle error, not retry."""
+    call_count = 0
+
+    async def handler(url, params, headers):
+        nonlocal call_count
+        call_count += 1
+        return _make_response(401, text="invalid key")
+
+    _patch_async_client(monkeypatch, handler)
+    bundles = await brave._search_with_retry(["q"], 5, "test-key")
+
+    assert len(bundles) == 1
+    assert "auth rejected" in bundles[0]["error"]
+    assert call_count == 1, f"401 was retried {call_count} times; must not retry"
