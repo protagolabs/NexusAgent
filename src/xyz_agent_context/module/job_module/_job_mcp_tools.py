@@ -86,10 +86,16 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 - "one_off": Single execution at a specific time
                 - "scheduled": Periodic execution on a schedule (cron or interval)
                 - "ongoing": Continuous execution until end_condition is met (REQUIRED for sales follow-up!)
-            trigger_config: Configuration depends on job_type:
-                - one_off: {"run_at": "ISO8601"}
-                - scheduled: {"cron": "* * * * *"} or {"interval_seconds": 3600}
-                - ongoing: {"interval_seconds": 86400, "end_condition": "customer buys or explicitly refuses"}
+            trigger_config: Configuration depends on job_type.
+                REQUIRED for every shape: "timezone" as an IANA name
+                (e.g. "Asia/Shanghai", "America/New_York"). Use the user's
+                current timezone from the User Temporal Context.
+                - one_off: {"run_at": "2026-01-20T09:00:00", "timezone": "Asia/Shanghai"}
+                    NOTE: run_at MUST be naive ISO 8601 (no "Z", no "+08:00" suffix).
+                    Declare timezone via the separate "timezone" field instead.
+                - scheduled: {"cron": "0 8 * * *", "timezone": "Asia/Shanghai"}
+                             or {"interval_seconds": 3600, "timezone": "Asia/Shanghai"}
+                - ongoing: {"interval_seconds": 86400, "end_condition": "...", "timezone": "Asia/Shanghai"}
             payload: The instruction to execute
             notification_method: default "inbox"
             task_key: Optional identifier for dependencies
@@ -113,7 +119,7 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 title="Competitor Research",
                 description="Research main competitors",
                 job_type="one_off",
-                trigger_config={"run_at": "2026-01-20T09:00:00"},
+                trigger_config={"run_at": "2026-01-20T09:00:00", "timezone": "Asia/Shanghai"},
                 payload="Research competitors and send report...",
                 related_entity_id="user_manager"  # Report back to requester
             )
@@ -127,7 +133,8 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 job_type="ongoing",  # ← MUST be "ongoing" for sales follow-up!
                 trigger_config={
                     "interval_seconds": 86400,  # Check every day
-                    "end_condition": "Customer explicitly closes deal (places order) or explicitly declines (says not needed)"
+                    "end_condition": "Customer explicitly closes deal (places order) or explicitly declines (says not needed)",
+                    "timezone": "Asia/Shanghai"
                 },
                 payload="Target customer Xiaoming, sell MacBook Air M4, understand needs and recommend suitable configuration",
                 related_entity_id="user_xiaoming",  # Target customer
@@ -141,7 +148,7 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 title="MacBook Air Sales Progress Monitoring",
                 description="Report customer follow-up progress to sales manager daily",
                 job_type="scheduled",
-                trigger_config={"cron": "0 18 * * *"},  # 6 PM daily
+                trigger_config={"cron": "0 18 * * *", "timezone": "Asia/Shanghai"},  # 6 PM daily
                 payload="Report follow-up progress for all customers, report regardless of whether there is progress",
                 related_entity_id="user_manager"  # Report to manager
             )
@@ -245,17 +252,11 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 limit=limit
             )
 
-            jobs_data = []
-            for job, score in results:
-                jobs_data.append({
-                    "job_id": job.job_id,
-                    "title": job.title,
-                    "description": job.description,
-                    "job_type": job.job_type.value,
-                    "status": job.status.value,
-                    "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None,
-                    "similarity_score": round(score, 4),
-                })
+            from xyz_agent_context.module.job_module._job_response import job_to_llm_dict
+            jobs_data = [
+                {**job_to_llm_dict(job), "similarity_score": round(score, 4)}
+                for job, score in results
+            ]
 
             return {
                 "success": True,
@@ -306,26 +307,16 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
             if job.agent_id != agent_id:
                 return {"success": False, "error": "Access denied: Job belongs to a different agent"}
 
+            from xyz_agent_context.module.job_module._job_response import job_to_llm_dict
             return {
                 "success": True,
                 "job": {
-                    "job_id": job.job_id,
-                    "agent_id": job.agent_id,
-                    "user_id": job.user_id,
-                    "title": job.title,
-                    "description": job.description,
-                    "job_type": job.job_type.value,
-                    "trigger_config": job.trigger_config.model_dump() if job.trigger_config else None,
-                    "payload": job.payload,
-                    "status": job.status.value,
+                    **job_to_llm_dict(job),
                     "process": job.process,
-                    "last_run_time": job.last_run_time.isoformat() if job.last_run_time else None,
-                    "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None,
                     "last_error": job.last_error,
-                    "notification_method": job.notification_method,
                     "created_at": job.created_at.isoformat() if job.created_at else None,
                     "updated_at": job.updated_at.isoformat() if job.updated_at else None,
-                }
+                },
             }
 
         except Exception as e:
@@ -384,16 +375,13 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 limit=limit
             )
 
+            from xyz_agent_context.module.job_module._job_response import job_to_llm_dict
             jobs_data = []
             for job in jobs:
-                jobs_data.append({
-                    "job_id": job.job_id,
-                    "title": job.title,
-                    "description": job.description[:200] + "..." if len(job.description) > 200 else job.description,
-                    "job_type": job.job_type.value,
-                    "status": job.status.value,
-                    "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None,
-                })
+                entry = job_to_llm_dict(job)
+                if len(entry["description"] or "") > 200:
+                    entry["description"] = entry["description"][:200] + "..."
+                jobs_data.append(entry)
 
             return {
                 "success": True,
@@ -566,7 +554,28 @@ def create_job_mcp_server(port: int, get_db_client_fn) -> FastMCP:
                 base_payload = updates.get("payload", job.payload) or ""
                 updates["payload"] = f"{base_payload}\n\n## Manager Guidance\n{guidance_text}"
             if trigger_config is not None:
-                updates["trigger_config"] = trigger_config
+                # Validate + recompute alpha/beta atomically so display matches poller view
+                from xyz_agent_context.schema.job_schema import TriggerConfig
+                from xyz_agent_context.module.job_module._job_scheduling import compute_next_run
+                from pydantic import ValidationError as _VE
+                try:
+                    tc_model = TriggerConfig(**trigger_config)
+                except _VE as ve:
+                    first = ve.errors()[0]
+                    loc = ".".join(str(p) for p in first.get("loc", ()))
+                    return {"success": False, "job_id": job_id,
+                            "message": f"Invalid trigger_config ({loc}): {first['msg']}"}
+                updates["trigger_config"] = tc_model
+                effective_type = updates.get("job_type", job.job_type)
+                nxt = compute_next_run(effective_type, tc_model)
+                if nxt:
+                    updates["next_run_time"] = nxt.utc
+                    updates["next_run_at_local"] = nxt.local
+                    updates["next_run_tz"] = nxt.tz
+                else:
+                    updates["next_run_time"] = None
+                    updates["next_run_at_local"] = None
+                    updates["next_run_tz"] = None
             if job_type is not None:
                 try:
                     updates["job_type"] = JobType(job_type.lower())

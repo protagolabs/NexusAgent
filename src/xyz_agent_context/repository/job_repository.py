@@ -598,7 +598,8 @@ class JobRepository(BaseRepository[JobModel]):
 
         allowed_fields = {
             'title', 'description', 'payload',
-            'next_run_time', 'status', 'related_entity_id',
+            'next_run_time', 'next_run_at_local', 'next_run_tz',
+            'status', 'related_entity_id',
             'trigger_config', 'job_type'
         }
 
