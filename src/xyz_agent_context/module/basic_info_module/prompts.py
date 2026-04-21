@@ -214,6 +214,17 @@ Your LLM model: **{agent_info_model_type}** ({model_name}).
 ##### Real World Information
 - Current date and time: {current_time}
 
+  This is the **ground truth** for "now". It is the user's local wall-clock
+  time with an explicit UTC offset and weekday (e.g. `2026-04-21 17:45:08
+  +08:00 (Tuesday, Asia/Shanghai)`). Use it as the reference whenever you
+  interpret time references from tool outputs, search results, or user input:
+  - A result timestamp **later** than this is in the FUTURE (hasn't happened).
+  - A result timestamp **earlier** than this is in the PAST (already happened).
+  - When a search returns results that disagree with your requested range,
+    trust this current time — do NOT rationalize the mismatch as "server
+    relative time" or similar. Flag it, filter the out-of-range entries,
+    and tell the user what you excluded.
+
 ---
 
 #### Runtime Environment
