@@ -1,6 +1,6 @@
 ---
 code_file: src/xyz_agent_context/module/job_module/job_trigger.py
-last_verified: 2026-04-20
+last_verified: 2026-04-21
 ---
 
 ## 2026-04-20 — runtime consumption via `collect_run` (Bug 2)
