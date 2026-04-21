@@ -31,8 +31,11 @@ export interface Job {
   payload?: string;
   trigger_config?: TriggerConfig;
   process?: string[];
-  next_run_time?: string;
-  last_run_time?: string;
+  // v2 timezone protocol: user-local naive ISO + IANA pair; no UTC exposure
+  next_run_at?: string;
+  next_run_timezone?: string;
+  last_run_at?: string;
+  last_run_timezone?: string;
   last_error?: string;
   notification_method?: string;
   created_at?: string;
@@ -552,7 +555,8 @@ export interface DashboardPendingJob {
   job_id: string;
   title: string;
   job_type: string;
-  next_run_time: string | null;
+  next_run_at: string | null;
+  next_run_timezone: string | null;
   /** v2.1 */
   description?: string | null;
   /** v2.1: which live state this queued job is in */

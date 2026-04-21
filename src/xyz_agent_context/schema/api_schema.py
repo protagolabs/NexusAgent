@@ -409,7 +409,13 @@ class MCPValidateAllResponse(BaseModel):
 # ===== Job Schemas =====
 
 class JobResponse(BaseModel):
-    """Response model for a single job"""
+    """
+    Response model for a single job.
+
+    v2 timezone protocol (2026-04-21): frontend/UI sees only user-local beta
+    fields (next_run_at + next_run_timezone). UTC alpha fields
+    (next_run_time, last_run_time) are poller-internal and NOT exposed here.
+    """
     job_id: str
     agent_id: str
     user_id: str
@@ -420,8 +426,10 @@ class JobResponse(BaseModel):
     payload: Optional[str] = None
     trigger_config: Optional[dict] = None
     process: Optional[List[str]] = None
-    next_run_time: Optional[str] = None
-    last_run_time: Optional[str] = None
+    next_run_at: Optional[str] = None
+    next_run_timezone: Optional[str] = None
+    last_run_at: Optional[str] = None
+    last_run_timezone: Optional[str] = None
     last_error: Optional[str] = None
     notification_method: Optional[str] = None
     created_at: Optional[str] = None

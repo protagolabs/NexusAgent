@@ -290,7 +290,8 @@ async def fetch_jobs(agent_ids: list[str]) -> dict[str, dict[str, list[dict]]]:
     state_placeholders = ",".join("%s" for _ in _LIVE_JOB_STATES)
     sql = (
         f"SELECT job_id, agent_id, title, description, job_type, status, "
-        f"next_run_time, started_at, last_error, last_run_time, iteration_count "
+        f"next_run_at_local, next_run_tz, started_at, last_error, "
+        f"last_run_at_local, last_run_tz, iteration_count "
         f"FROM instance_jobs WHERE agent_id IN ({placeholders}) "
         f"AND status IN ({state_placeholders})"
     )
@@ -310,9 +311,11 @@ async def fetch_jobs(agent_ids: list[str]) -> dict[str, dict[str, list[dict]]]:
             "description": r.get("description"),
             "job_type": r["job_type"],
             "started_at": r.get("started_at"),
-            "next_run_time": r.get("next_run_time"),
+            "next_run_at": r.get("next_run_at_local"),
+            "next_run_timezone": r.get("next_run_tz"),
             "last_error": r.get("last_error"),
-            "last_run_time": r.get("last_run_time"),
+            "last_run_at": r.get("last_run_at_local"),
+            "last_run_timezone": r.get("last_run_tz"),
             "iteration_count": r.get("iteration_count") or 0,
         })
     return out

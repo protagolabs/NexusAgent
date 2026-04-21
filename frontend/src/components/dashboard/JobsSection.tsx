@@ -70,7 +70,7 @@ export function JobsSection({ agentId, runningJobs, pendingJobs }: Props) {
               title={j.title}
               subtitle={j.description}
               state={j.queue_status ?? 'pending'}
-              extraRight={j.next_run_time ? `next ${formatTime(j.next_run_time)}` : null}
+              extraRight={j.next_run_at ? `next ${j.next_run_at}${j.next_run_timezone ? ` (${j.next_run_timezone})` : ''}` : null}
             />
           ))}
         </ul>
@@ -203,12 +203,13 @@ function ActionBtn({ label, onClick }: { label: string; onClick: (e: React.Mouse
 function JobDetailBody({ detail }: { detail: Record<string, unknown> }) {
   const d = detail;
   const trigger = String(d.trigger_config ?? '(manual)');
-  const nextRun = d.next_run_time ? String(d.next_run_time) : null;
+  const nextRun = d.next_run_at ? String(d.next_run_at) : null;
+  const nextRunTz = d.next_run_timezone ? String(d.next_run_timezone) : null;
   const iter = typeof d.iteration_count === 'number' ? d.iteration_count : 0;
   const lastErr = d.last_error ? String(d.last_error) : null;
   return (
     <div className="text-[var(--text-secondary)] space-y-0.5">
-      {nextRun && <div>Next run: <span className="font-mono">{nextRun}</span></div>}
+      {nextRun && <div>Next run: <span className="font-mono">{nextRun}{nextRunTz ? ` (${nextRunTz})` : ''}</span></div>}
       {iter > 0 && <div>Iterations: {iter}</div>}
       {trigger && <div className="truncate">Trigger: <span className="font-mono">{trigger}</span></div>}
       {lastErr && (
