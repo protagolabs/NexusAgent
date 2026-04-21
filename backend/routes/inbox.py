@@ -1,152 +1,214 @@
 """
 @file_name: inbox.py
-@author: NetMind.AI
-@date: 2025-11-28
-@description: REST API routes for inbox messages
+@author: NexusAgent
+@date: 2026-04-09
+@description: Agent Inbox API — exposes MessageBus channels and messages to the frontend
 
-Provides endpoints for:
-- GET /api/inbox - List inbox messages for a user
-- PUT /api/inbox/{message_id}/read - Mark message as read
-- PUT /api/inbox/read-all - Mark all messages as read
+Endpoints:
+  GET  /api/agent-inbox              — list channels with messages for an agent
+  PUT  /api/agent-inbox/{message_id}/read — mark a message as read
 """
 
+from __future__ import annotations
+
 from typing import Optional
+
 from fastapi import APIRouter, Query
 from loguru import logger
-
-from xyz_agent_context.utils.db_factory import get_db_client
-from xyz_agent_context.utils import format_for_api
-from xyz_agent_context.repository import InboxRepository
-from xyz_agent_context.schema import (
-    MessageSourceResponse,
-    InboxMessageResponse,
-    InboxListResponse,
-    MarkReadResponse,
-)
-
 
 router = APIRouter()
 
 
-def inbox_model_to_response(msg) -> InboxMessageResponse:
-    """Convert InboxMessage model to response"""
-    # Handle source conversion
-    source = None
-    if msg.source:
-        source = MessageSourceResponse(
-            type=msg.source.type if hasattr(msg.source, 'type') else None,
-            id=msg.source.id if hasattr(msg.source, 'id') else None,
-        )
-
-    return InboxMessageResponse(
-        message_id=msg.message_id,
-        user_id=msg.user_id,
-        message_type=msg.message_type.value if hasattr(msg.message_type, 'value') else str(msg.message_type),
-        title=msg.title,
-        content=msg.content,
-        source=source,
-        event_id=msg.event_id,
-        is_read=msg.is_read,
-        created_at=format_for_api(msg.created_at),
-    )
+async def _get_db():
+    from xyz_agent_context.utils.db_factory import get_db_client
+    return await get_db_client()
 
 
-@router.get("", response_model=InboxListResponse)
-async def list_inbox_messages(
-    user_id: str = Query(..., description="User ID"),
+async def _resolve_agent_names(db, agent_ids: list[str]) -> dict[str, str]:
+    """Resolve agent_id -> agent_name. Returns dict mapping id to name."""
+    if not agent_ids:
+        return {}
+    rows = await db.get_by_ids("agents", "agent_id", agent_ids)
+    return {
+        r["agent_id"]: r.get("agent_name", r["agent_id"])
+        for r in rows if r
+    }
+
+
+@router.get("")
+async def get_agent_inbox(
+    agent_id: str = Query(..., description="Agent ID"),
     is_read: Optional[bool] = Query(None, description="Filter by read status"),
-    limit: int = Query(50, description="Max number of messages to return"),
+    limit: Optional[int] = Query(None, description="Max messages per channel (-1 for unlimited)"),
 ):
     """
-    List inbox messages for a user
+    Get all channels and messages for an agent.
+
+    Returns data shaped for the frontend MatrixRoom-compatible format:
+    {
+      rooms: [{ room_id, room_name, members, unread_count, messages, latest_at }],
+      total_unread: int
+    }
     """
-    logger.info(f"Listing inbox for user: {user_id}, is_read: {is_read}")
-
     try:
-        db_client = await get_db_client()
-        repo = InboxRepository(db_client)
+        db = await _get_db()
 
-        # Get messages
-        messages = await repo.get_messages(
-            user_id=user_id,
-            is_read=is_read,
-            limit=limit
-        )
+        # 1. Get all channels this agent is a member of
+        member_rows = await db.get("bus_channel_members", {"agent_id": agent_id})
+        if not member_rows:
+            return {"success": True, "rooms": [], "total_unread": 0}
 
-        # Get unread count
-        unread = await repo.get_unread_count(user_id)
+        channel_ids = [r["channel_id"] for r in member_rows]
+        # Build cursor map: channel_id -> last_processed_at
+        cursor_map = {
+            r["channel_id"]: r.get("last_processed_at") or r.get("last_read_at") or "1970-01-01"
+            for r in member_rows
+        }
 
-        # Convert to response format
-        message_responses = [inbox_model_to_response(msg) for msg in messages]
+        # 2. Get channel details
+        channel_rows = await db.get_by_ids("bus_channels", "channel_id", channel_ids)
+        channel_map = {r["channel_id"]: r for r in channel_rows if r}
 
-        logger.info(f"Found {len(message_responses)} messages, {unread} unread")
+        # 3. Get all members for these channels
+        all_members = []
+        for cid in channel_ids:
+            rows = await db.get("bus_channel_members", {"channel_id": cid})
+            all_members.extend(rows)
 
-        return InboxListResponse(
-            success=True,
-            messages=message_responses,
-            count=len(message_responses),
-            unread_count=unread,
-        )
+        # Collect all unique agent_ids for name resolution
+        all_agent_ids = list(set(
+            [r["agent_id"] for r in all_members] + [agent_id]
+        ))
+        name_map = await _resolve_agent_names(db, all_agent_ids)
+
+        # 4. Get messages per channel
+        effective_limit = 50
+        if limit is not None:
+            effective_limit = 9999 if limit < 0 else limit
+
+        total_unread = 0
+        rooms = []
+
+        for cid in channel_ids:
+            channel = channel_map.get(cid)
+            if not channel:
+                continue
+
+            cursor = cursor_map.get(cid, "1970-01-01")
+
+            # Fetch messages — use %s (MySQL style); auto-translated for SQLite
+            query = (
+                f"SELECT * FROM bus_messages WHERE channel_id = %s "
+                f"ORDER BY created_at DESC LIMIT {int(effective_limit)}"
+            )
+            msg_rows = await db.execute(query, (cid,))
+            # Reverse to chronological order
+            msg_rows = list(reversed(msg_rows))
+
+            # Count unread (messages after cursor, not from self)
+            unread = sum(
+                1 for m in msg_rows
+                if m.get("from_agent") != agent_id
+                and (m.get("created_at", "") > cursor)
+            )
+            total_unread += unread
+
+            # Filter by is_read if specified
+            if is_read is not None:
+                if is_read:
+                    msg_rows = [
+                        m for m in msg_rows
+                        if m.get("created_at", "") <= cursor or m.get("from_agent") == agent_id
+                    ]
+                else:
+                    msg_rows = [
+                        m for m in msg_rows
+                        if m.get("from_agent") != agent_id and m.get("created_at", "") > cursor
+                    ]
+
+            # Build members list for this channel
+            channel_members = [r for r in all_members if r["channel_id"] == cid]
+            members = [
+                {
+                    "agent_id": m["agent_id"],
+                    "agent_name": name_map.get(m["agent_id"], m["agent_id"]),
+                    "matrix_user_id": m["agent_id"],  # compat field
+                }
+                for m in channel_members
+            ]
+
+            # Build messages
+            messages = []
+            for m in msg_rows:
+                sender = m.get("from_agent", "")
+                msg_time = m.get("created_at", "")
+                is_msg_read = (
+                    sender == agent_id
+                    or msg_time <= cursor
+                )
+                messages.append({
+                    "message_id": m.get("message_id", ""),
+                    "sender_id": sender,
+                    "sender_name": name_map.get(sender, sender),
+                    "content": m.get("content", ""),
+                    "is_read": is_msg_read,
+                    "created_at": msg_time,
+                })
+
+            latest_at = msg_rows[-1].get("created_at") if msg_rows else None
+
+            rooms.append({
+                "room_id": cid,
+                "room_name": channel.get("name", cid),
+                "members": members,
+                "unread_count": unread,
+                "messages": messages,
+                "latest_at": latest_at,
+            })
+
+        # Sort rooms: unread first, then by latest message time desc
+        rooms.sort(key=lambda r: (r["unread_count"] == 0, r.get("latest_at") or ""), reverse=True)
+
+        return {
+            "success": True,
+            "rooms": rooms,
+            "total_unread": total_unread,
+        }
 
     except Exception as e:
-        logger.error(f"Error listing inbox: {e}")
-        return InboxListResponse(
-            success=False,
-            error=str(e)
-        )
+        logger.error(f"[get_agent_inbox] Error: {e}", exc_info=True)
+        return {"success": False, "rooms": [], "total_unread": 0, "error": str(e)}
 
 
-@router.put("/{message_id}/read", response_model=MarkReadResponse)
-async def mark_message_read(message_id: str):
+@router.put("/{message_id}/read")
+async def mark_message_read(message_id: str, agent_id: str = Query(...)):
     """
-    Mark a single message as read
-    """
-    logger.info(f"Marking message as read: {message_id}")
+    Mark a message as read by advancing the read cursor.
 
+    Finds the message, then updates the agent's last_read_at cursor
+    for that channel to the message's timestamp.
+    """
     try:
-        db_client = await get_db_client()
-        repo = InboxRepository(db_client)
+        db = await _get_db()
 
-        await repo.mark_as_read(message_id)
+        # Find the message to get its channel and timestamp
+        msg = await db.get_one("bus_messages", {"message_id": message_id})
+        if not msg:
+            return {"success": False, "error": "Message not found", "marked_count": 0}
 
-        return MarkReadResponse(
-            success=True,
-            marked_count=1,
+        channel_id = msg["channel_id"]
+        msg_time = msg.get("created_at", "")
+
+        # Update the cursor — use %s (MySQL style); auto-translated for SQLite
+        await db.execute(
+            "UPDATE bus_channel_members SET last_read_at = %s "
+            "WHERE channel_id = %s AND agent_id = %s AND (last_read_at IS NULL OR last_read_at < %s)",
+            (msg_time, channel_id, agent_id, msg_time),
+            fetch=False,
         )
+
+        return {"success": True, "marked_count": 1}
 
     except Exception as e:
-        logger.error(f"Error marking message read: {e}")
-        return MarkReadResponse(
-            success=False,
-            error=str(e)
-        )
-
-
-@router.put("/read-all", response_model=MarkReadResponse)
-async def mark_all_messages_read(
-    user_id: str = Query(..., description="User ID"),
-):
-    """
-    Mark all messages as read for a user
-    """
-    logger.info(f"Marking all messages as read for user: {user_id}")
-
-    try:
-        db_client = await get_db_client()
-        repo = InboxRepository(db_client)
-
-        count = await repo.mark_all_as_read(user_id)
-
-        logger.info(f"Marked {count} messages as read")
-
-        return MarkReadResponse(
-            success=True,
-            marked_count=count,
-        )
-
-    except Exception as e:
-        logger.error(f"Error marking all messages read: {e}")
-        return MarkReadResponse(
-            success=False,
-            error=str(e)
-        )
+        logger.error(f"[mark_message_read] Error: {e}", exc_info=True)
+        return {"success": False, "error": str(e), "marked_count": 0}
