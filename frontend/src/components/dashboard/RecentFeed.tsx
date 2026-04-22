@@ -15,9 +15,9 @@ const KIND_ICON: Record<RecentEvent['kind'], string> = {
 };
 
 const KIND_COLOR: Record<RecentEvent['kind'], string> = {
-  completed: 'text-emerald-600',
+  completed: 'text-[var(--color-green-500)]',
   running: 'text-sky-600',
-  failed: 'text-red-600',
+  failed: 'text-[var(--color-red-500)]',
   chat: 'text-gray-600',
   other: 'text-gray-500',
 };
