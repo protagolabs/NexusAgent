@@ -1,7 +1,7 @@
 ---
 code_file: src/xyz_agent_context/module/lark_module/_lark_mcp_tools.py
 stub: false
-last_verified: 2026-04-16
+last_verified: 2026-04-22
 ---
 
 ## Why it exists
@@ -51,3 +51,14 @@ Secret to unblock real-time auto-reply for agent-assisted setups), and
 - Skill discovery happens at each `lark_skill` call (not cached). If the
   user installs new skills after process start, they become available
   immediately — no restart needed.
+- `lark_setup` schedules a 15-minute background finalizer via
+  `asyncio.create_task(_finalize_setup(...))` that waits for the
+  lark-cli subprocess to finish the user's browser OAuth, then flips
+  the DB credential row to `bot_ready`. The task is named
+  `lark_finalize_setup:{agent_id}` (visible in `asyncio.all_tasks()`)
+  and a `done_callback` logs any exception at ERROR level — without the
+  callback, fire-and-forget exceptions would be silently dropped into
+  `Task.exception()` and never surface. This task holds references to
+  the credential row and workspace across a long wait; if it hangs or
+  misbehaves the symptom is "Lark authorized but bot never goes
+  ready." See TODO-2026-04-22 R2.

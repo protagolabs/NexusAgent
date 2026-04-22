@@ -529,9 +529,30 @@ def register_lark_mcp_tools(mcp: Any) -> None:
             # user finishes in the browser (or we time out after 15 min),
             # it reads the CLI-written config.json and flips the DB row
             # to bot_ready with the real app_id + keychain reference.
-            asyncio.create_task(
-                _finalize_setup(agent_id, proc, workspace, profile_name)
+            #
+            # The task is fire-and-forget *functionally* (the MCP tool
+            # returns immediately), but we attach a done_callback so any
+            # exception raised during the 15-minute wait surfaces as an
+            # ERROR log instead of silently vanishing into a discarded
+            # Task.exception(). We also name the task so it shows up in
+            # asyncio.all_tasks() diagnostics with the owning agent_id.
+            _finalize_task = asyncio.create_task(
+                _finalize_setup(agent_id, proc, workspace, profile_name),
+                name=f"lark_finalize_setup:{agent_id}",
             )
+
+            def _log_finalize_exception(task: asyncio.Task, aid: str = agent_id) -> None:
+                if task.cancelled():
+                    logger.warning(f"Lark finalize_setup cancelled for agent={aid}")
+                    return
+                exc = task.exception()
+                if exc is not None:
+                    logger.error(
+                        f"Lark finalize_setup failed for agent={aid}: {exc!r}",
+                        exc_info=exc,
+                    )
+
+            _finalize_task.add_done_callback(_log_finalize_exception)
 
             return {
                 "success": True,
