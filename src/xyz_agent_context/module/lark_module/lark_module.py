@@ -90,6 +90,23 @@ _THREE_CLICK_BACKGROUND = (
     "Click 1/2/3 depending on where Matrix says we are.\n\n"
 )
 
+_IDENTITY_GUIDE = (
+    "### Identity — `--as bot` vs `--as user`\n"
+    "Every `lark_cli` write command MUST specify `--as` explicitly:\n"
+    "- `--as bot` — bot's own identity. **Default for routine messaging** "
+    "(`im +messages-send`), creating docs, and any app-level action. Use this "
+    "for day-to-day chat replies.\n"
+    "- `--as user` — impersonates the owner. Use ONLY for reading owner-private "
+    "data (own calendar / docs / mail) AND only when `is_owner_interacting=True`.\n"
+    "- Omitting `--as` makes lark-cli default to `auto`, which silently picks "
+    "`user` whenever a user token exists — that triggers `missing_scope: "
+    "im:message:send_as_user` on send commands. Always write `--as bot` "
+    "(or `--as user` where justified), never let it default.\n"
+    "- If a command does error with `missing_scope: X`, the recovery is "
+    "`lark_cli(\"auth login --scope \\\"X\\\" --json --no-wait\")` — this is "
+    "allowed and mints a verification URL for the user to click.\n\n"
+)
+
 _IRON_RULES = (
     "### Iron rules (non-negotiable)\n\n"
     "1. **MCP only.** Never use Bash to run `lark-cli`, `npm install`, "
@@ -412,6 +429,11 @@ class LarkModule(XYZBaseModule):
         # --- Three-click background only while configuring ----------------
         background = _THREE_CLICK_BACKGROUND if stage != "completed" else ""
 
+        # --- Identity guide: only when we can actually do lark_cli writes
+        # (i.e. stage=completed). During configuration Agent isn't composing
+        # im +messages-send commands, so the guidance is just noise.
+        identity_guide = _IDENTITY_GUIDE if stage == "completed" else ""
+
         return (
             "## Lark/Feishu Integration\n\n"
             f"{mode_section}"
@@ -420,6 +442,7 @@ class LarkModule(XYZBaseModule):
             f"{background}"
             f"{matrix}"
             f"{coach}"
+            f"{identity_guide}"
             f"{skill_section}"
             f"{_IRON_RULES}"
         )

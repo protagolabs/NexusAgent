@@ -523,15 +523,31 @@ def register_lark_mcp_tools(mcp: Any) -> None:
         to load its SKILL.md. Learning syntax from the skill doc beats
         trial-and-error.
 
-        Identity: pick `--as bot` for writes (send, create) and `--as user` for
-        private reads (search own contacts/docs). Do NOT add `--profile` or
-        `--format json` — both are injected / forbidden by shortcut commands.
+        Identity — **ALWAYS specify `--as bot` or `--as user` explicitly**:
+          - `--as bot`: the bot uses its own identity. Default for routine
+            messaging (`im +messages-send`), creating docs, and any app-level
+            write. **Prefer this for day-to-day chat.**
+          - `--as user`: the bot impersonates the owner. Use ONLY for reading
+            owner-private data (own calendar / docs / mail) AND only when
+            `is_owner_interacting=True`.
+          - Do NOT omit `--as`. lark-cli defaults to `auto`, which silently
+            picks `user` whenever a user token exists — that triggers
+            `missing_scope: im:message:send_as_user` on send commands
+            (we do not grant that scope by default, and do not plan to).
+
+        Do NOT add `--profile` or `--format json` — both are injected /
+        forbidden by shortcut commands.
 
         On failure:
-          - "missing scope X" / "permission denied": follow the error's hint;
-            typically `auth login --scope X` via this same tool.
-          - "Command blocked": the command hit the lifecycle whitelist. Use
-            the dedicated tool (lark_setup / lark_permission_advance / ...).
+          - "missing_scope: X" (bot or user scope missing): call this tool
+            with `"auth login --scope \\"X\\" --json --no-wait"`. The response
+            includes a verification URL — send it to the user and wait for
+            them to click. This is the sanctioned increment-scope path.
+          - "Command blocked: `auth login` without --scope ...": you tried a
+            bare `auth login` — that's reserved for `lark_permission_advance`.
+            Re-issue with `--scope <missing>` instead.
+          - "Command blocked" (other): the command hit the lifecycle whitelist.
+            Use the dedicated tool (lark_setup / lark_permission_advance / ...).
           - "No Lark bot bound": run lark_setup or lark_bind first.
         """
         cred = await _get_credential(agent_id)

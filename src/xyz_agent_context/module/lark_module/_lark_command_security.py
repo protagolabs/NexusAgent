@@ -1,11 +1,18 @@
 """
 @file_name: _lark_command_security.py
-@date: 2026-04-16
+@date: 2026-04-22
 @description: Security layer for the generic lark_cli MCP tool.
 
 Validates commands against a whitelist of allowed top-level domains and
 a blocklist of dangerous operations. Prevents shell injection and
 secret leakage.
+
+`auth login` is partially allowed: bare `auth login` and `auth login
+--recommend` (initial OAuth bundle) remain blocked — those must go
+through `lark_permission_advance` which owns the three-click state
+machine. `auth login --scope <X>` is allowed as an incremental
+scope top-up, for the case where `--recommend` didn't cover a scope
+the Agent encountered at runtime (e.g. `im:message:send_as_user`).
 """
 
 from __future__ import annotations
@@ -37,13 +44,15 @@ ALLOWED_DOMAINS = {
     "doctor",
 }
 
-# Explicitly blocked command patterns (matched against full command string)
+# Explicitly blocked command patterns (matched against full command string).
+# Note: `auth login` is NOT listed here — its handling is subcommand-aware
+# (see validate_command below). Only bare / --recommend forms get blocked;
+# `auth login --scope X` for incremental top-ups is allowed.
 BLOCKED_PATTERNS = [
     "config init",          # Must use lark_setup tool
     "config remove",        # Dangerous — removes app config
     "profile remove",       # Must use unbind flow
     "profile add",          # Must use lark_setup tool
-    "auth login",           # Must use lark_auth tool (controls OAuth)
     "auth logout",          # Dangerous — revokes tokens
     "event +subscribe",     # Long-running — handled by trigger
     "update",               # lark-cli self-update
@@ -109,13 +118,38 @@ def validate_command(command: str) -> Tuple[bool, str]:
     if domain not in ALLOWED_DOMAINS:
         return False, f"Unknown command domain: '{domain}'. Allowed: {', '.join(sorted(ALLOWED_DOMAINS))}"
 
-    # Special auth restrictions: only allow read-only subcommands
+    # Special auth restrictions
     if domain == "auth":
         if len(tokens) < 2:
-            return False, "auth requires a subcommand (status, check, scopes)"
+            return False, "auth requires a subcommand (status, check, scopes, login)"
         sub = tokens[1].lower()
-        if sub not in ("status", "check", "scopes", "list"):
-            return False, f"auth {sub} is not allowed via lark_cli — use dedicated tools for login/logout"
+
+        # Read-only subcommands: always allowed
+        if sub in ("status", "check", "scopes", "list"):
+            return True, ""
+
+        # `auth login`: allowed ONLY with --scope (incremental top-up).
+        # Bare / --recommend forms must go through lark_permission_advance
+        # which owns the three-click initial flow.
+        if sub == "login":
+            rest = [t.lower() for t in tokens[2:]]
+            if "--scope" not in rest:
+                return False, (
+                    "`auth login` without --scope must go through "
+                    "`lark_permission_advance` (controls the three-click "
+                    "state machine). Only `auth login --scope <X>` is "
+                    "allowed here, for incremental scope top-ups after a "
+                    "command reports missing_scope."
+                )
+            if "--recommend" in rest:
+                return False, (
+                    "`auth login --recommend` is reserved for "
+                    "`lark_permission_advance`. Use just `auth login "
+                    "--scope <X> --json --no-wait` for incremental grants."
+                )
+            return True, ""
+
+        return False, f"auth {sub} is not allowed via lark_cli"
 
     return True, ""
 
