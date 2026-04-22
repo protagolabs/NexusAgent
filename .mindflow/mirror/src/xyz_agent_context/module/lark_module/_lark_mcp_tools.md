@@ -6,59 +6,91 @@ last_verified: 2026-04-22
 
 ## Why it exists
 
-Registers Lark MCP tools on the FastMCP server. Exposes 7 tools:
-`lark_cli` (main execution), `lark_setup` (agent-assisted app creation) /
-`lark_auth` / `lark_auth_complete` (OAuth lifecycle), `lark_status` (health +
-receive state + dev console URL), `lark_enable_receive` (user pastes App
-Secret to unblock real-time auto-reply for agent-assisted setups), and
-`lark_skill` (load SKILL.md docs).
+Registers Lark MCP tools on the FastMCP server. C-mini redesign (2026-04-22)
+collapsed the lifecycle surface from 10 tools to **7**, with the four
+permission-flow tools merged into one state-machine entry.
+
+Current tools:
+- `lark_cli` — main execution of arbitrary lark-cli commands
+- `lark_setup` — Click 1: create NEW Lark app (agent-assisted)
+- `lark_bind` — bind EXISTING app (user pastes app_id + secret)
+- **`lark_permission_advance`** — single entry for the three-click
+  authorization lifecycle (Click 2, Click 3, availability)
+- `lark_enable_receive` — store App Secret so WebSocket subscriber can
+  auto-reply (Phase 3)
+- `lark_status` — health + Matrix self-heal from CLI state
+- `lark_skill` — load SKILL.md for a lark-cli domain
 
 ## Design decisions
 
-- **Single `lark_cli` tool** for all domain operations. The Agent learns CLI
-  commands from instructions + Skill docs rather than having a dedicated
-  tool per operation. This scales to all CLI capabilities without code
-  changes.
+- **Single `lark_cli` tool** for all domain operations. Agent learns syntax
+  from `lark_skill` + Module instructions rather than a tool per operation.
+- **Three-click authorization in ONE tool** (`lark_permission_advance`).
+  Previously 4 tools (`lark_configure_permissions`, `lark_auth`,
+  `lark_auth_complete`, `lark_mark_console_done`) — their docstrings
+  contained cross-tool "MANDATORY" directives that collided with
+  `get_instructions` coach, making the Agent stall at Click 3. The state
+  machine lives in one `event` parameter (`""` | `"admin_approved"` |
+  `"user_authorized"` | `"availability_ok"`), so docstring conflicts are
+  now structurally impossible.
+- **`event` dispatched via `_advance_*` helpers** (module-level async
+  functions) so tests can target each transition without going through
+  `register_lark_mcp_tools`. Top-level tool body only handles guards
+  (completed-state, unknown event) and delegates.
+- **User-facing messages as module constants** (`_MSG_*`). Tool returns
+  them in `data.user_facing_message`; Agent sends verbatim. Keeps wording
+  identical across agents and turns — no per-Agent drift.
+- **Idempotent `event=""`**: if `admin_request_url` already exists, return
+  it instead of re-running `auth login --no-wait` (which would invalidate
+  the URL the user may already have open).
+- **Completed-state guard**: `admin_approved` / `user_authorized` on an
+  already-completed credential returns a harmless no-op with a
+  `user_facing_message` telling the Agent to check the Matrix.
 - **Security via `_lark_command_security`** — `validate_command` +
-  `sanitize_command` are called before every `lark_cli` invocation.
-- **Lifecycle tools** (`lark_setup`, `lark_auth`, `lark_auth_complete`,
-  `lark_status`) remain dedicated because they require structured flows
-  (URL extraction, device code exchange) that don't map to a single CLI
-  command string.
-- **`lark_auth` accepts `scopes` parameter** — when a CLI command fails
-  with "missing scope", the Agent extracts the scope name and requests it
-  specifically, instead of always using `--recommend`.
-- **`lark_skill` exposes SKILL.md as a tool**, not a Resource. Claude Agent
-  SDK surfaces MCP Tools directly to the LLM, but does not expose Resources
-  as callable, so a dedicated tool is the only reliable path. Accepts both
-  "im" and "lark-im" name forms. `agent_id` parameter is kept only for API
-  consistency with the other Lark tools; skill content is identical across
-  agents.
+  `sanitize_command` before every `lark_cli` call; unchanged from
+  pre-redesign.
+- **Self-heal in `lark_cli` and `lark_status`**: a successful `--as user`
+  call proves OAuth is live, so flip `user_oauth_completed_at` +
+  `bot_scopes_confirmed` + `console_setup_done_at` without waiting for an
+  explicit `user_authorized` event. Keeps Matrix truthful even if Agent
+  skipped a ceremony step.
 
 ## Upstream / downstream
 
-- **Upstream**: `lark_module.py` calls `register_lark_mcp_tools(mcp)`.
-- **Downstream**: `_lark_command_security.py` (validation),
-  `_lark_credential_manager.py` (credential lookup), `lark_cli_client.py`
-  (`_run_with_agent_id`), `_lark_workspace.py` (for `lark_setup`),
-  `_lark_skill_loader.py` (SKILL.md loader, called from `lark_skill`).
+- **Upstream**: `lark_module.py` calls `register_lark_mcp_tools(mcp)` from
+  `create_mcp_server`.
+- **Downstream**: `_lark_credential_manager.py`
+  (`current_click_stage`, `patch_permission_state`, `update_auth_status`);
+  `_lark_command_security.py` (`validate_command`, `sanitize_command`);
+  `_lark_workspace.py` (`build_profile_name`, `ensure_workspace`,
+  `get_home_env`); `lark_cli_client.py` (`_run_with_agent_id`);
+  `_lark_skill_loader.py` (called from `lark_skill`);
+  `_lark_service.py` (`do_bind` for `lark_bind`).
 
 ## Gotchas
 
-- `lark_setup` creates a credential with `app_id="pending_setup"`. This
-  must be updated to the real app_id after the user completes browser
-  setup. Currently handled by credential watcher or status check.
-- Skill discovery happens at each `lark_skill` call (not cached). If the
-  user installs new skills after process start, they become available
-  immediately — no restart needed.
-- `lark_setup` schedules a 15-minute background finalizer via
-  `asyncio.create_task(_finalize_setup(...))` that waits for the
-  lark-cli subprocess to finish the user's browser OAuth, then flips
-  the DB credential row to `bot_ready`. The task is named
-  `lark_finalize_setup:{agent_id}` (visible in `asyncio.all_tasks()`)
-  and a `done_callback` logs any exception at ERROR level — without the
-  callback, fire-and-forget exceptions would be silently dropped into
-  `Task.exception()` and never surface. This task holds references to
-  the credential row and workspace across a long wait; if it hangs or
-  misbehaves the symptom is "Lark authorized but bot never goes
-  ready." See TODO-2026-04-22 R2.
+- **Click 2's device_code is NEVER poll-able**. It was minted by the
+  `auth login --domain all --recommend --no-wait` call that seeds the
+  submit-to-admin URL. Passing it to `auth login --device-code` returns
+  `authorization_pending` forever (or `expired` after a while). The tool
+  writes it to DB as `admin_request_device_code` and NEVER reads it back
+  for polling — the only thing we ever poll is `user_authz_device_code`,
+  which is minted fresh by `event="admin_approved"`.
+- **`lark_setup` writes `app_id="pending_setup"` + `is_active=False`**
+  before forking the background finalizer. `hook_data_gathering` in
+  `lark_module.py` now injects `lark_info` for this pending row (P4 fix);
+  without that fix, Agent sees "No Lark bot bound" for the ~15s window
+  and tries to call `lark_setup` again.
+- `_finalize_setup` is a fire-and-forget `asyncio.create_task` named
+  `lark_finalize_setup:{agent_id}`, with a `done_callback` that logs
+  exceptions at ERROR level. Without the callback, exceptions during the
+  15-minute wait would silently vanish into `Task.exception()`. Symptom
+  of a bug there: "Lark authorized but bot never goes ready."
+- **Removed tools** (`lark_configure_permissions`, `lark_auth`,
+  `lark_auth_complete`, `lark_mark_console_done`) are referenced only in
+  legacy log lines and the file docstring's "replaces" list. Do NOT
+  resurrect them as aliases — the whole point of the redesign is that
+  there's one entry and no possible docstring collision.
+- **`_tool_policy_guard.py:215`** still lists MCP tools in its Bash-block
+  error text. When adding/removing lifecycle tools, update that list too
+  (grep for `mcp__lark_module__` outside this file).

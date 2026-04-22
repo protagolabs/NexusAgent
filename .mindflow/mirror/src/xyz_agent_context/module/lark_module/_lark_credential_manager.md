@@ -1,7 +1,7 @@
 ---
 code_file: src/xyz_agent_context/module/lark_module/_lark_credential_manager.py
 stub: false
-last_verified: 2026-04-14
+last_verified: 2026-04-22
 ---
 
 ## Why it exists
@@ -22,6 +22,15 @@ than touching the DB directly.
 - **DB column still named `app_secret_encrypted`** — the column name
   is kept for backward compatibility with existing databases; the
   Python field was renamed to `app_secret_encoded`.
+- **`permission_state` is a JSON blob**, not a set of columns. Key
+  schema lives in a docstring on the `permission_state` field; the
+  three-click fields (`admin_request_*`, `admin_approved_at`,
+  `user_authz_*`, `user_oauth_completed_at`, etc.) can evolve without
+  DB migrations.
+- **`current_click_stage()` is the single source of truth** for the
+  three-click state machine. `get_instructions`, `lark_permission_advance`
+  guards, and `lark_status` returns all route through this method.
+  Strictly derived from DB fields — never from user's literal words.
 
 ## Upstream / downstream
 

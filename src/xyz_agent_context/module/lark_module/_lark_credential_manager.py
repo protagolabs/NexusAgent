@@ -70,14 +70,25 @@ class LarkCredential:
     owner_name: str = ""  # Display name of the owner
     auth_status: str = AUTH_STATUS_NOT_LOGGED_IN  # not_logged_in / bot_ready / user_logged_in / expired
     is_active: bool = True
-    # Free-form setup/permission progress blob. Kept in DB as JSON so new
-    # phases can be added without schema migrations. Current keys:
-    #   user_oauth_url, user_oauth_device_code   — pending OAuth flow
-    #   user_oauth_completed_at                  — ISO timestamp (success)
-    #   user_scopes_granted                      — list[str]
-    #   bot_scopes_confirmed                     — bool (user said "done")
-    #   availability_confirmed                   — bool (user said "done")
-    #   console_setup_done_at                    — ISO timestamp
+    # Free-form JSON blob tracking the three-click authorization flow.
+    # Keys (see spec 2026-04-22-lark-three-click-auth-design §5.2):
+    #   Click 2 — submit scope request to admin
+    #     admin_request_url          — verification URL (user clicks to submit)
+    #     admin_request_device_code  — bound to Click 2 URL; NEVER poll-able
+    #     admin_request_generated_at — ISO
+    #   Admin approval (self-reported by user; no API to query)
+    #     admin_approved_at          — ISO, when user said "admin approved"
+    #   Click 3 — user personal authorization
+    #     user_authz_url             — fresh URL minted after admin_approved
+    #     user_authz_device_code     — poll-able code for Click 3
+    #     user_authz_generated_at    — ISO
+    #   Completion (set when user_authz_device_code successfully exchanges for token)
+    #     user_oauth_completed_at    — ISO timestamp (success)
+    #     user_scopes_granted        — list[str]
+    #     bot_scopes_confirmed       — bool, auto-flipped on completion
+    #     console_setup_done_at      — ISO, auto-flipped on completion
+    #   Optional
+    #     availability_confirmed     — bool (user confirms app visible to org)
     permission_state: dict = field(default_factory=dict)
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -91,12 +102,30 @@ class LarkCredential:
         return bool(self.app_secret_encoded)
 
     def user_oauth_ok(self) -> bool:
-        """Has the user completed `auth login --domain all --recommend`?"""
+        """Has user authorization been completed (Click 3 tokens minted)?"""
         return bool(self.permission_state.get("user_oauth_completed_at"))
 
-    def console_setup_ok(self) -> bool:
-        """Has the user confirmed the dev-console manual steps?"""
-        return bool(self.permission_state.get("console_setup_done_at"))
+    def current_click_stage(self) -> str:
+        """Where we are in the three-click authorization flow.
+
+        Returns one of:
+          'not_started'       — no admin request URL yet
+          'waiting_admin'     — Click 2 URL generated, user may have clicked,
+                                but admin hasn't approved (or we don't know yet)
+          'waiting_user_click'— admin approved, Click 3 URL ready, user hasn't
+                                clicked (or click hasn't been polled yet)
+          'completed'         — user authorization minted a token
+
+        Derivation strictly by DB fields, not by user's literal words.
+        """
+        ps = self.permission_state or {}
+        if ps.get("user_oauth_completed_at"):
+            return "completed"
+        if ps.get("user_authz_url"):
+            return "waiting_user_click"
+        if ps.get("admin_request_url"):
+            return "waiting_admin"
+        return "not_started"
 
 
 class LarkCredentialManager:
