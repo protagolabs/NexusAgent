@@ -68,10 +68,24 @@ class ClaudeAgentSDK:
         # Step 0-2: Build system prompt. Currently the Claude Agent SDK does not support multi-turn conversations,
         # so we need to manually append the conversation history to the system prompt.
         # Limit the maximum length of the system prompt to avoid "Argument list too long" errors.
-        # Linux command-line argument limit is about 2MB, but the Claude SDK internally adds other arguments.
-        # Use conservative settings to avoid "Argument list too long" errors.
-        MAX_SYSTEM_PROMPT_LENGTH = 60000  # Approximately 60KB
-        MAX_HISTORY_LENGTH = 30000  # Maximum history length 30KB
+        #
+        # The Python SDK (see claude_agent_sdk/_internal/transport/subprocess_cli.py)
+        # passes system_prompt via `--system-prompt <str>` argv. Linux limits a
+        # single argv entry to MAX_ARG_STRLEN = PAGE_SIZE * 32 = 128 KiB on
+        # typical x86_64 kernels. A naive char-count limit is unsafe when the
+        # prompt contains multi-byte (e.g. Chinese) content — 1 char can be 3
+        # UTF-8 bytes — so we apply two limits: a char-count ceiling (for
+        # readability and predictability) and a byte-count ceiling (hard
+        # enforcement against E2BIG).
+        #
+        # History: agents often run 10+ turns; 50K keeps 3-5 full turns.
+        # System prompt: T8 (ENABLE_TOOL_SEARCH=false for non-Claude models)
+        # forces the full MCP tool schemas (~40 tools) into the base prompt,
+        # typically 60-80K chars; 100K gives headroom without hitting the
+        # 128 KiB argv byte ceiling for mixed-language content.
+        MAX_SYSTEM_PROMPT_LENGTH = 100_000  # chars
+        MAX_SYSTEM_PROMPT_BYTES = 120 * 1024  # ~120 KiB, leaves 8 KiB for argv overhead
+        MAX_HISTORY_LENGTH = 50_000  # chars
 
         system_prompt = ""
         for msg in messages:
@@ -107,10 +121,29 @@ class ClaudeAgentSDK:
             system_prompt += history_text
             system_prompt += "\n=== Chat History End ===\n These are the chat history between you and the user. This time please make the response by user input in this turn."
 
-        # Final check on the total length of system_prompt
+        # Final check on the total length of system_prompt — two-pass bound.
+        #   Pass 1: char count. Caps human-readable size.
+        #   Pass 2: UTF-8 byte count. Hard guard against the Linux 128 KiB
+        #           argv limit when the prompt contains multi-byte content.
         if len(system_prompt) > MAX_SYSTEM_PROMPT_LENGTH:
-            logger.warning(f"System prompt too long ({len(system_prompt)} chars), truncating to {MAX_SYSTEM_PROMPT_LENGTH} chars")
+            logger.warning(
+                f"System prompt too long ({len(system_prompt)} chars), "
+                f"truncating to {MAX_SYSTEM_PROMPT_LENGTH} chars"
+            )
             system_prompt = system_prompt[:MAX_SYSTEM_PROMPT_LENGTH] + "\n\n[...truncated due to length limit...]"
+
+        _encoded = system_prompt.encode("utf-8")
+        if len(_encoded) > MAX_SYSTEM_PROMPT_BYTES:
+            logger.warning(
+                f"System prompt exceeds byte ceiling "
+                f"({len(_encoded)} bytes > {MAX_SYSTEM_PROMPT_BYTES}), "
+                f"truncating at UTF-8 boundary"
+            )
+            # decode('utf-8', errors='ignore') drops any partial multi-byte
+            # sequence introduced by the byte slice, so the result is always
+            # valid UTF-8.
+            system_prompt = _encoded[:MAX_SYSTEM_PROMPT_BYTES].decode("utf-8", errors="ignore")
+            system_prompt += "\n\n[...truncated due to byte limit...]"
                 
         logger.debug(f"System prompt length: {len(system_prompt):,} chars")
         logger.debug(f"Your MCP: {claude_agent_mcp_dict}")
