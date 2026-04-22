@@ -19,7 +19,8 @@ Current tools:
 - `lark_enable_receive` — store App Secret so WebSocket subscriber can
   auto-reply (Phase 3)
 - `lark_status` — health + Matrix self-heal from CLI state
-- `lark_skill` — load SKILL.md for a lark-cli domain
+- `lark_skill` — read any file from a lark skill pack (SKILL.md default,
+  `path=` for references/routes/scenes/data files)
 
 ## Design decisions
 
@@ -94,3 +95,9 @@ Current tools:
 - **`_tool_policy_guard.py:215`** still lists MCP tools in its Bash-block
   error text. When adding/removing lifecycle tools, update that list too
   (grep for `mcp__lark_module__` outside this file).
+- **`lark_skill` is the ONLY FS reach** for Agents into Lark skill docs.
+  The MCP container has the files at `~/.agents/skills/`; the Agent's
+  workspace sandbox does not. Docstring + `lark_module._build_skill_section`
+  system prompt both spell this out; `_lark_skill_loader` also prepends a
+  banner and rewrites all in-doc links into `lark_skill(..., path=...)`
+  calls so the Agent never falls back to `Read`.

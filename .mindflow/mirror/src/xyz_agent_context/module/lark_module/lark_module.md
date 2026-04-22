@@ -38,6 +38,14 @@ for the full rationale.
 - **Skill section** (`_build_skill_section`) renders ONLY when
   `stage == completed`. Saves ~600 tokens during configuration where
   the Agent shouldn't be learning `im +messages-send` syntax yet.
+  It also carries the "Lark skill files live in the MCP container, not
+  your workspace — use `lark_skill(agent_id, name, path)`, never
+  `Read`/`Glob`/`Grep`" rule. This rule must be surfaced in all three
+  places that teach the Agent about lark_skill (docstring in
+  `_lark_mcp_tools.py`; banner prepended by `_lark_skill_loader.py`;
+  this system prompt section). Drift in any one undermines the other
+  two — see `2026-04-22` post-C-mini link-rewrite change in
+  `_lark_skill_loader.md`.
 - **P4 fix in `hook_data_gathering`**: removed the `if cred and cred.is_active`
   gate. Now injects `lark_info` for ANY credential row (including
   `pending_setup` / `is_active=False`) so the Matrix can show

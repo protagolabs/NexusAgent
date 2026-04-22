@@ -148,10 +148,43 @@ check_deps() {
     fi
   fi
 
-  # Install Lark CLI Skills (Agent knowledge docs for lark-cli usage)
-  if ! ls ~/.claude/skills/lark-shared/SKILL.md &>/dev/null 2>&1; then
-    echo -e "${Y}Installing Lark CLI Skills...${R}"
-    npx skills add larksuite/cli -y -g 2>&1 | tail -1
+  # Install Lark CLI Skills (the knowledge packs the `lark_skill` MCP tool
+  # serves to the Agent — SKILL.md indexes + references/, routes/, scenes/
+  # subdirs). Without these, `lark_skill(...)` returns "not found" and the
+  # Agent has to trial-and-error every lark-cli command.
+  #
+  # Mirror the Docker install: `HOME=$HOME npx skills add larksuite/cli -y -g`
+  # lands the files at ~/.agents/skills/lark-*/ with a symlink at
+  # ~/.claude/skills/lark-*/. Wrap in the same timeout / graceful-degrade
+  # pattern as lark-cli itself so a stalled npx registry doesn't wedge startup.
+  _LARK_SKILLS_TIMEOUT=180
+
+  _try_install_lark_skills() {
+    echo -e "${Y}Installing Lark CLI Skills (timeout ${_LARK_SKILLS_TIMEOUT}s)...${R}"
+    (HOME="$HOME" npx skills add larksuite/cli -y -g 2>&1 | tail -3) &
+    local npx_pid=$!
+    local elapsed=0
+    while kill -0 "$npx_pid" 2>/dev/null; do
+      if [ "$elapsed" -ge "$_LARK_SKILLS_TIMEOUT" ]; then
+        echo -e "${RED}npx skills install hung > ${_LARK_SKILLS_TIMEOUT}s — killing.${R}"
+        kill -9 "$npx_pid" 2>/dev/null
+        wait "$npx_pid" 2>/dev/null
+        return 124
+      fi
+      sleep 1
+      elapsed=$((elapsed + 1))
+    done
+    wait "$npx_pid"
+    return $?
+  }
+
+  if ! ls ~/.agents/skills/lark-shared/SKILL.md &>/dev/null 2>&1 \
+     && ! ls ~/.claude/skills/lark-shared/SKILL.md &>/dev/null 2>&1; then
+    if ! _try_install_lark_skills; then
+      echo -e "${Y}⚠ Lark skill install failed/timed out — `lark_skill(...)` MCP tool will return 'not found'. Lark/Feishu features degrade to runtime help (`<domain> +<cmd> --help`).${R}"
+      echo "  Retry later: HOME=\$HOME npx skills add larksuite/cli -y -g"
+      echo ""
+    fi
   fi
 
   # Check Python version (>=3.13 required)

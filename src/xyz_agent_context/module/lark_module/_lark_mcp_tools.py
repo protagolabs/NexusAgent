@@ -11,7 +11,7 @@ Tools exposed (7 total):
   - lark_permission_advance(agent_id, event="")    — Drive Click 2 & Click 3
   - lark_enable_receive(agent_id, app_secret)      — Enable real-time auto-reply
   - lark_status(agent_id)                          — Health + Matrix self-heal
-  - lark_skill(agent_id, name)                     — Load SKILL.md
+  - lark_skill(agent_id, name, path="SKILL.md")    — Read any skill file
 
 See spec: reference/self_notebook/specs/2026-04-22-lark-three-click-auth-design.md
 
@@ -519,9 +519,11 @@ def register_lark_mcp_tools(mcp: Any) -> None:
         docs, query calendar, etc.
 
         First-use tip: for a domain you haven't used in this session, call
-        `lark_skill(agent_id, <domain>)` first (e.g. "lark-im", "lark-calendar")
-        to load its SKILL.md. Learning syntax from the skill doc beats
-        trial-and-error.
+        `lark_skill(agent_id, <domain>)` first (e.g. "lark-im",
+        "lark-calendar") to load its SKILL.md. That tool is also the ONLY
+        way to read any Lark skill file — follow the `path=` hints it
+        emits next to each link. Do NOT try to `Read` skill files
+        directly; they live in the MCP container, not your workspace.
 
         Identity — **ALWAYS specify `--as bot` or `--as user` explicitly**:
           - `--as bot`: the bot uses its own identity. Default for routine
@@ -980,39 +982,74 @@ def register_lark_mcp_tools(mcp: Any) -> None:
         }
 
     @mcp.tool()
-    async def lark_skill(agent_id: str, name: str) -> dict:
-        """Load the SKILL.md knowledge doc for a Lark CLI domain.
+    async def lark_skill(
+        agent_id: str,
+        name: str,
+        path: str = "SKILL.md",
+    ) -> dict:
+        """Read any file from a Lark CLI skill pack. This is the **only**
+        way to access Lark skill docs on NarraNexus — the `Read` / `Glob`
+        / `Grep` tools cannot see these files (they live inside the MCP
+        container, not in the agent workspace).
 
-        WHEN TO CALL: before using a Lark domain you haven't used in this
-        session. The SKILL.md teaches correct command syntax, identity rules
-        (--as user vs --as bot), ID types (open_id / chat_id / user_id), and
-        common gotchas. Reading it first prevents multi-turn trial-and-error.
+        Typical flow:
 
-        RECOMMENDED FIRST CALL: lark_skill(agent_id, "lark-shared") — covers
-        authentication, permission handling, and --as user/bot rules that
-        apply to all other domains.
+          1. First call: `lark_skill(agent_id, "lark-shared")` — auth,
+             permissions, and the `--as user` vs `--as bot` rules every
+             other domain relies on.
+          2. Then the domain skill, e.g. `lark_skill(agent_id, "lark-im")`.
+             That returns the skill's SKILL.md index page.
+          3. When the returned markdown references another file, call this
+             tool again with `path=<the relative path from that link>`.
+             Example: a link `[+search-user](references/lark-contact-search-user.md)`
+             inside `lark-contact/SKILL.md` is fetched as
+             `lark_skill(agent_id, "lark-contact",
+                         path="references/lark-contact-search-user.md")`.
+             A cross-skill link `[auth rules](../lark-shared/SKILL.md)`
+             means "switch skill": `lark_skill(agent_id, "lark-shared")`.
 
-        AVAILABLE SKILLS (call this tool to load any):
-        - lark-shared: authentication, permissions, --as user/bot (read first)
-        - lark-im: messaging — send/reply/search messages, manage chats
-        - lark-contact: people search by email / name / phone
-        - lark-calendar: agenda, create events, free/busy query
-        - lark-doc / lark-sheets / lark-drive / lark-mail / lark-task
-        - lark-wiki / lark-vc / lark-minutes / lark-base / lark-event
-        - lark-whiteboard / lark-workflow-meeting-summary
-        - lark-workflow-standup-report / lark-openapi-explorer / lark-skill-maker
+        The MCP tool auto-rewrites in-document links next to each link
+        label so the correct `lark_skill(...)` call is spelled out for
+        you — copy it verbatim.
+
+        Available skills: lark-shared (read first), lark-im, lark-contact,
+        lark-calendar, lark-doc, lark-sheets, lark-drive, lark-mail,
+        lark-task, lark-wiki, lark-vc, lark-minutes, lark-base, lark-event,
+        lark-whiteboard, lark-slides, lark-okr, lark-approval,
+        lark-attendance, lark-workflow-meeting-summary,
+        lark-workflow-standup-report, lark-openapi-explorer,
+        lark-skill-maker.
 
         Args:
-            agent_id: Kept for API consistency; skill content is agent-agnostic.
-            name: Accepts "lark-im" or "im" form.
+            agent_id: Kept for API consistency; skill content is
+                agent-agnostic.
+            name: Skill name; "lark-im" or "im" form both accepted.
+            path: Relative filename inside the skill directory. Defaults
+                to "SKILL.md" (the index page). Must stay within the
+                skill dir — "../elsewhere" is rejected.
         """
-        from ._lark_skill_loader import get_available_skills, load_skill_content
+        from ._lark_skill_loader import get_available_skills, load_skill_file
         normalized = name if name.startswith("lark-") else f"lark-{name}"
-        content = load_skill_content(normalized)
-        if not content:
+        content = load_skill_file(normalized, path)
+        if content is None:
+            logger.info(
+                f"[LarkSkill] miss agent={agent_id} skill={normalized} path={path!r}"
+            )
             return {
                 "success": False,
-                "error": f"Skill '{normalized}' not found.",
+                "error": (
+                    f"File '{path}' not found in skill '{normalized}' "
+                    "(or path escapes the skill directory)."
+                ),
                 "available": get_available_skills(),
             }
-        return {"success": True, "name": normalized, "content": content}
+        logger.info(
+            f"[LarkSkill] hit agent={agent_id} skill={normalized} "
+            f"path={path!r} size={len(content)}"
+        )
+        return {
+            "success": True,
+            "name": normalized,
+            "path": path,
+            "content": content,
+        }
