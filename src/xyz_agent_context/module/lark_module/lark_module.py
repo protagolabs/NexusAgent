@@ -115,6 +115,15 @@ _IRON_RULES = (
 )
 
 
+def _dev_console_url(brand: str, app_id: str) -> str:
+    """Dev-console URL for a given (brand, app_id). Empty if app not ready."""
+    if not app_id or app_id == "pending_setup":
+        return ""
+    if brand == "feishu":
+        return f"https://open.feishu.cn/app/{app_id}"
+    return f"https://open.larksuite.com/app/{app_id}"
+
+
 def _build_skill_section() -> str:
     """Lark_cli usage guide — rendered only when stage=completed.
 
@@ -366,11 +375,7 @@ class LarkModule(XYZBaseModule):
                 "- If it returns `fresh_url`, send that new URL to user.\n\n"
             )
         elif stage == "completed" and not receive_ok:
-            brand_key = lark_info.get("brand", "lark")
-            console = (
-                f"https://open.feishu.cn/app/{app_id}" if brand_key == "feishu"
-                else f"https://open.larksuite.com/app/{app_id}"
-            )
+            console = _dev_console_url(lark_info.get("brand", "lark"), app_id)
             coach = (
                 "### Next action\n"
                 f"- Ask user to open {console} → 'Credentials & Basic Info' → copy App Secret.\n"
@@ -382,13 +387,23 @@ class LarkModule(XYZBaseModule):
             if availability_ok:
                 coach = "**All configured.** Bot is fully operational for owner AND visible to colleagues.\n\n"
             else:
+                console = _dev_console_url(lark_info.get("brand", "lark"), app_id)
                 coach = (
-                    "### Optional follow-up\n"
-                    "- Bot works for the owner. If they want colleagues to use it, "
-                    "ask them to publish a version with expanded 可见范围 in dev "
-                    "console, then call "
+                    "### Optional follow-up — make the bot visible to colleagues\n"
+                    "Bot currently works **for the owner only**. No colleague can "
+                    "discover or DM it yet. To open it up, proactively walk the "
+                    "user through these steps (send them verbatim):\n\n"
+                    f"1. 打开 {console} → 「版本管理与发布」→「创建版本」\n"
+                    "2. 在「可见范围」里勾选要让它看到的同事，或直接选全员\n"
+                    "3. 点「保存」\n"
+                    "4. 点「申请线上发版」—— 这会把发版请求提交给企业管理员\n"
+                    "5. 等管理员在 Lark Admin Console 批准（如果用户本人就是管理员，"
+                    "让他自己去后台批）。审批通过后其他同事才能看到并找到这个 bot。\n\n"
+                    "After the user confirms admin approved the release, call "
                     "`lark_permission_advance(agent_id, event=\"availability_ok\")` "
-                    "after they confirm.\n\n"
+                    "to mark this step done in the matrix.\n\n"
+                    "This step is **optional** — skipping it doesn't block owner's "
+                    "own use of the bot. Mention it once; don't nag if the user skips.\n\n"
                 )
 
         # --- Skill section: only when fully configured --------------------
