@@ -162,6 +162,24 @@ echo "  claude:   $("$NODE_DIR/node_modules/.bin/claude" --version 2>&1 | head -
 echo "  lark-cli: $("$NODE_DIR/node_modules/.bin/lark-cli" --version 2>&1 | head -1 || echo '(version check failed)')"
 
 # Step 4: Copy project source
+#
+# Excludes are the cheapest knob in the build pipeline — every MB that slips
+# through goes into the dmg and then to every user who downloads it. History
+# (2026-04-23): `reference/` alone was 586 MB of unrelated research code
+# (Qwen-Agent / openclaw) that bloated the dmg from an expected ~600 MB to
+# 1.4 GB. Whenever the top-level tree gains a new directory, stop and ask:
+# "is this imported at runtime?" — if not, add to this list.
+#
+# Categories:
+#   Build artifacts / caches:       .venv .git node_modules __pycache__ *.pyc
+#                                   .ruff_cache .pytest_cache .vite *.log
+#   Dev / editor / IDE state:       .claude .codex .vscode .github .DS_Store
+#   Unrelated repos & research:     reference related_project production_plan
+#                                   .worktrees
+#   Docs (served by GitHub, not by the app): docs .mindflow
+#   Deploy / CI / image dump:       deploy desktop tauri image.png
+#   Non-bundle test / session data: tests sessions .evermemos .env
+#   Broken dup files macOS makes:   * 2
 echo ""
 echo "--- Step 4: Copying project source ---"
 rm -rf "$PROJ_DIR"
@@ -172,12 +190,15 @@ rsync -a \
     --exclude='*.pyc' --exclude='.env' --exclude='logs' \
     --exclude='.claude' --exclude='.codex' --exclude='.worktrees' \
     --exclude='.evermemos' --exclude='related_project' \
+    --exclude='reference' --exclude='.mindflow' --exclude='docs' \
+    --exclude='.github' --exclude='production_plan' \
     --exclude='sessions' --exclude='deploy' --exclude='tests' \
     --exclude='* 2' --exclude='.ruff_cache' --exclude='.pytest_cache' \
     --exclude='.vscode' --exclude='.DS_Store' --exclude='*.log' \
     --exclude='image.png' --exclude='.vite' \
     "$PROJECT_ROOT/" "$PROJ_DIR/"
 echo "Project source copied"
+echo "  size: $(du -sh "$PROJ_DIR" | cut -f1)"
 
 # Step 5: Clean ALL extended attributes in tauri dir (macOS resource fork issue)
 #
@@ -339,6 +360,21 @@ else
 fi
 
 # Create DMG from the staged .app
+#
+# DMG layout, not just the bare .app:
+#   /Volumes/NarraNexus/
+#     NarraNexus.app         ← your app
+#     Applications  →  /Applications  (symlink, shown in Finder as "应用程序")
+#
+# The symlink is what produces the classic "drag the app onto the
+# Applications folder to install" experience. Without it, hdiutil opens the
+# DMG with just the .app sitting alone and the user has no visual cue where
+# to drop it — they often end up running the app straight out of the mounted
+# DMG volume (slow + breaks on eject).
+#
+# To get positioning / background image / custom icon-view layout, we'd need
+# an AppleScript pass + a custom .DS_Store. That's 50 lines of fiddly code
+# for UI polish; skipping until we have a proper installer design.
 echo ""
 echo "--- Creating DMG ---"
 DMG_DIR="$SRC_TAURI/target/release/bundle/dmg"
@@ -346,7 +382,16 @@ mkdir -p "$DMG_DIR"
 DMG_PATH="$DMG_DIR/NarraNexus.dmg"
 rm -f "$DMG_PATH"
 STAGE_DMG="$STAGE_DIR/NarraNexus.dmg"
-hdiutil create -volname NarraNexus -srcfolder "$STAGE_APP" -ov -format UDZO "$STAGE_DMG"
+
+DMG_LAYOUT="$STAGE_DIR/dmg-layout"
+rm -rf "$DMG_LAYOUT"
+mkdir -p "$DMG_LAYOUT"
+# ditto (instead of cp -R) preserves .app internal metadata and avoids
+# re-introducing xattrs the earlier --noextattr pass stripped.
+ditto --noextattr --noqtn "$STAGE_APP" "$DMG_LAYOUT/NarraNexus.app"
+ln -s /Applications "$DMG_LAYOUT/Applications"
+
+hdiutil create -volname NarraNexus -srcfolder "$DMG_LAYOUT" -ov -format UDZO "$STAGE_DMG"
 # Copy the finished DMG back under the project tree
 cp "$STAGE_DMG" "$DMG_PATH"
 echo "DMG created: $DMG_PATH"
