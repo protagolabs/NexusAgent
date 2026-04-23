@@ -4,6 +4,95 @@ stub: false
 last_verified: 2026-04-23
 ---
 
+## 2026-04-23 update (2/2) — prompt rewrite: hint-oriented, NarraNexus-aware
+
+Second pass on the same day. The first pass (below) was too
+prescriptive ("MUST specify --as", step-by-step auth scripts) and
+was missing coverage for bot-scope recovery, scope accumulation, and
+the NarraNexus-specific ways we diverge from stock lark-cli
+(per-agent workspace isolation, no global filesystem access to
+skill files). Rewrote in a hint-oriented register, explicitly
+pointing agents at `lark_skill(agent_id, "lark-shared", ...)` and
+the per-domain skill docs for details we deliberately don't
+duplicate inline.
+
+### What changed in this pass
+
+- **`_IDENTITY_GUIDE`** relaxed from "Every write command MUST specify
+  `--as` explicitly" to a starting-orientation: which identity is
+  right for which kind of action, and a pointer to the domain skill
+  docs when in doubt. The absolute `MUST` was getting in the way of
+  legitimate user-only APIs like `im +messages-search`.
+- **`_INCREMENTAL_AUTH_GUIDE`** rewritten:
+  - Dropped the Step 1 / Step 2 script in favour of bullet-style
+    reminders. Less "orders", more "things that trap agents".
+  - Added explicit bot-scope vs user-scope branch. Previously any
+    `missing_scope` pushed the agent onto the `auth login --scope X
+    --no-wait` path, which is a dead end for bot scopes (they must
+    be opened at the Lark developer console; the error response
+    usually carries a `console_url`). Xinyao's case happened to be
+    user-scope so this wasn't visible, but a bot-scope Xinyao would
+    have been stuck minting URLs the user can never redeem.
+  - Added "scopes accumulate across logins" — avoids the
+    anti-pattern of re-requesting already-granted scopes every
+    time.
+  - Explicit pointer at `lark_skill(agent_id, "lark-shared",
+    "SKILL.md")` for the authoritative contract; the inline bullets
+    are what we've seen agents miss even when the skill doc is
+    loaded.
+- **New `_NARRANEXUS_SPECIFICS` section** (gated on stage=completed).
+  Calls out the two ways our setup diverges from the assumptions
+  baked into upstream SKILL.md:
+  - Lark skill files are MCP-container-side, not filesystem-side;
+    `Read`/`Glob`/`Grep` can't see them. The skill files themselves
+    still carry "CRITICAL — MUST use Read to read ../lark-shared/"
+    instructions (upstream-authored, not patchable from our side).
+    This section is how we override those without touching the
+    files.
+  - Auth is per-agent, not global. Upstream "re-run `lark-cli
+    config init` globally" guidance is about host installs;
+    `lark_setup` / `lark_bind` MCP tools manage per-agent
+    credentials for us.
+- **Iron rule #7 added** — "Confirm before destructive /
+  broad-reach writes." Deleting a doc, cancelling a meeting,
+  removing a chat member, broadcasting to a large group, editing
+  shared artifacts. The previous six rules covered impersonation,
+  secrets, and untrusted input, but not high-blast-radius
+  destructive action. `--dry-run` surfaced as the recommended
+  preview mechanism.
+- **`lark_cli` tool docstring "On failure" block trimmed** —
+  previously tried to restate the two-step auth flow inline. Now
+  just points at the prompt's "Incremental scope authorization"
+  section and the `lark-shared` SKILL, with the five concrete
+  error-code branches kept as a one-liner each (missing_scope,
+  authorization_pending, Command blocked with/without --scope,
+  No Lark bot bound). Our docstring is hints + NarraNexus-specific
+  overrides, not a replacement for upstream SKILL docs.
+
+### Token budget impact (estimated)
+
+Stage=completed prompt gained ~400 tokens (new
+`_NARRANEXUS_SPECIFICS`, new iron rule) and lost ~200 tokens
+(trimmed `_INCREMENTAL_AUTH_GUIDE`, lighter `_IDENTITY_GUIDE`).
+Net ~+200 tokens over pass 1. Acceptable given the coverage gaps
+closed.
+
+### Tests pinning this
+
+`tests/lark_module/test_incremental_auth_guide.py` now covers 12
+assertions:
+- 5 from pass 1 (two-step flow phrasing, gating on stage=completed,
+  no re-minting, etc.)
+- Bot-scope vs user-scope branching present
+- Scope accumulation taught
+- Guide references `lark_skill(agent_id, "lark-shared")`
+- Iron rule #7 (destructive confirm) present
+- NarraNexus-specifics section teaches workspace isolation +
+  `lark_skill` pointer
+- NarraNexus-specifics section teaches per-agent auth (names
+  `lark_setup` / `lark_bind`)
+- NarraNexus-specifics section rendered in `get_instructions`
+
 ## 2026-04-23 update — incremental scope authorization guide
 
 Added `_INCREMENTAL_AUTH_GUIDE` constant and wired it into the

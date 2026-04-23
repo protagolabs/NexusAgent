@@ -4,6 +4,30 @@ stub: false
 last_verified: 2026-04-23
 ---
 
+## 2026-04-23 (2/2) — trim docstring to hints + pointers
+
+Second pass on the `lark_cli` docstring same day. Pass 1 inlined a
+multi-step recap of the auth flow; pass 2 trims it back to "hint +
+pointer" so the tool docstring doesn't compete with upstream SKILL
+docs. The on-failure block now:
+- Names `missing_scope` and sends the reader to the prompt's
+  "Incremental scope authorization" section and
+  `lark_skill(agent_id, "lark-shared", "SKILL.md")` for the
+  authoritative contract. Calls out the bot-scope vs user-scope
+  divergence in one line so agents don't dead-end a bot-scope
+  error into a user-OAuth URL.
+- Keeps the one-liner decoding for `authorization_pending`,
+  `Command blocked` (with/without `--scope`), and `No Lark bot
+  bound` — these are the actual short strings agents see and need
+  translated before they can read anything else.
+
+Philosophy fixed here: our docstrings are not a replacement for
+upstream skill docs. They are (a) navigation hints and (b)
+NarraNexus-specific overrides where our setup differs from a stock
+global lark-cli install (per-agent workspace, MCP-mediated skill
+reading, per-agent credential management via `lark_setup` /
+`lark_bind`).
+
 ## 2026-04-23 — lark_cli "On failure" rewrite for missing_scope
 
 The `missing_scope` recovery bullet in the `lark_cli` tool docstring

@@ -111,6 +111,9 @@ def test_guide_teaches_remembering_device_code_from_prior_turn():
         "previous --no-wait",
         "prior --no-wait",
         "earlier --no-wait",
+        "from your earlier",
+        "from your previous",
+        "from your prior",
         "step 1",
     ]
     assert any(s in lower for s in signals), (
@@ -142,3 +145,156 @@ def test_guide_is_rendered_only_when_stage_completed():
         "guide actually reaches the agent's system prompt."
     )
     assert 'stage == "completed"' in src
+
+
+def test_guide_distinguishes_bot_scope_recovery_from_user_scope():
+    """A missing_scope on a --as bot call cannot be fixed by `auth
+    login` — bot scopes are opened at the Lark developer console. A
+    guide that collapses both into "mint a URL" would push bot-scope
+    failures down a dead-end path the user can't redeem.
+    """
+    from xyz_agent_context.module.lark_module.lark_module import (
+        _INCREMENTAL_AUTH_GUIDE,
+    )
+
+    lower = _INCREMENTAL_AUTH_GUIDE.lower()
+    # Bot-scope branch must be mentioned — either by calling out `--as
+    # bot` explicitly or by mentioning the developer console / console
+    # URL as the recovery path.
+    bot_branch_signals = [
+        "--as bot",
+        "developer console",
+        "console_url",
+        "bot scope",
+        "bot-identity",
+    ]
+    assert any(s in lower for s in bot_branch_signals), (
+        "Incremental auth guide must distinguish bot-scope recovery "
+        "(developer console) from user-scope recovery (auth login). "
+        "Collapsing both into a single path pushes bot-scope errors "
+        "into a URL loop the user cannot redeem."
+    )
+
+
+def test_guide_mentions_scope_accumulation():
+    """The agent should know that granted scopes persist across
+    logins — otherwise it will pile all previously-granted scopes into
+    every new login URL, forcing the user to re-authorize them each
+    time.
+    """
+    from xyz_agent_context.module.lark_module.lark_module import (
+        _INCREMENTAL_AUTH_GUIDE,
+    )
+
+    lower = _INCREMENTAL_AUTH_GUIDE.lower()
+    signals = [
+        "already-granted",
+        "already granted",
+        "carry over",
+        "accumulate",
+        "persist across",
+    ]
+    assert any(s in lower for s in signals), (
+        "Incremental auth guide must indicate that scopes accumulate "
+        "across logins. Without this, the agent may bundle "
+        "previously-granted scopes into every new URL."
+    )
+
+
+def test_guide_points_agent_at_lark_shared_skill_doc():
+    """Our module prompt is not a replacement for the full skill docs —
+    it should carry a few critical reminders inline and otherwise point
+    the agent at `lark_skill(agent_id, "lark-shared")` for the
+    authoritative contract.
+    """
+    from xyz_agent_context.module.lark_module.lark_module import (
+        _INCREMENTAL_AUTH_GUIDE,
+    )
+
+    assert "lark_skill(" in _INCREMENTAL_AUTH_GUIDE, (
+        "Guide should reference `lark_skill(...)` so the agent knows "
+        "where to read the full contract when inline reminders aren't "
+        "enough."
+    )
+    assert "lark-shared" in _INCREMENTAL_AUTH_GUIDE
+
+
+def test_iron_rules_include_destructive_confirmation():
+    """Deleting docs, cancelling meetings, removing chat members,
+    broadcasting to large groups — these are irreversible or
+    high-blast-radius actions. The iron rules must require
+    confirmation before executing when intent is ambiguous.
+    """
+    from xyz_agent_context.module.lark_module.lark_module import _IRON_RULES
+
+    lower = _IRON_RULES.lower()
+    # A rule that addresses destructive writes — accept either framing.
+    assert "destructive" in lower or "irreversible" in lower, (
+        "Iron rules should explicitly address destructive / irreversible "
+        "actions."
+    )
+    assert "confirm" in lower, (
+        "Iron rules should require the agent to confirm with the user "
+        "before executing destructive actions when intent is ambiguous."
+    )
+
+
+def test_narranexus_specifics_teaches_workspace_isolation():
+    """The Lark skill docs assume a global CLI install; NarraNexus
+    isolates per-agent. The agent must be told that `Read`/`Glob`/`Grep`
+    cannot see skill files — use `lark_skill(agent_id, name, path)`.
+    Missing this, the agent will keep trying `Read` on paths that
+    cross-references like `../lark-shared/SKILL.md` suggest.
+    """
+    from xyz_agent_context.module.lark_module.lark_module import (
+        _NARRANEXUS_SPECIFICS,
+    )
+
+    assert "lark_skill(" in _NARRANEXUS_SPECIFICS, (
+        "NarraNexus-specifics section must direct the agent at "
+        "`lark_skill(agent_id, name, path)` for reading Lark reference "
+        "material."
+    )
+    # Explicitly flag that filesystem read tools don't work for this.
+    lower = _NARRANEXUS_SPECIFICS.lower()
+    assert "read" in lower and ("glob" in lower or "grep" in lower), (
+        "NarraNexus-specifics should name `Read`/`Glob`/`Grep` as the "
+        "tools that CANNOT see Lark skill files, so the agent doesn't "
+        "keep reaching for them."
+    )
+
+
+def test_narranexus_specifics_teaches_per_agent_auth():
+    """Auth tokens are per-agent, not global. The agent should know
+    that completing OAuth for one agent doesn't grant anything to
+    another, and that `lark_setup` / `lark_bind` manage credentials
+    per agent (i.e. do NOT shell out to `lark-cli config init`).
+    """
+    from xyz_agent_context.module.lark_module.lark_module import (
+        _NARRANEXUS_SPECIFICS,
+    )
+
+    lower = _NARRANEXUS_SPECIFICS.lower()
+    per_agent_signals = ["per-agent", "per agent", "each agent", "isolated"]
+    assert any(s in lower for s in per_agent_signals), (
+        "NarraNexus-specifics must state that auth is per-agent."
+    )
+    # Should point at the MCP tools that manage credentials rather
+    # than letting the agent shell out to global CLI commands.
+    assert "lark_setup" in _NARRANEXUS_SPECIFICS or "lark_bind" in _NARRANEXUS_SPECIFICS
+
+
+def test_narranexus_specifics_rendered_only_when_stage_completed():
+    """Same rationale as the other post-onboarding sections: during
+    onboarding (stage != completed) the three-click flow handles
+    lark-cli access end-to-end; these NarraNexus callouts are noise.
+    """
+    import inspect
+
+    from xyz_agent_context.module.lark_module import lark_module as lm
+
+    src = inspect.getsource(lm.LarkModule.get_instructions)
+    assert "_NARRANEXUS_SPECIFICS" in src, (
+        "get_instructions must render _NARRANEXUS_SPECIFICS so the "
+        "workspace / per-agent-auth callouts actually reach the agent."
+    )
