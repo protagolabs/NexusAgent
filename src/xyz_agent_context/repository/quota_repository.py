@@ -48,16 +48,23 @@ class QuotaRepository(BaseRepository[Quota]):
     ) -> None:
         """Atomic UPDATE. Flips status to 'exhausted' when either dimension's
         post-update remaining is <= 0.
+
+        Comparisons are written additively (`used + delta >= cap`) rather
+        than subtractively (`cap - used - delta <= 0`). All six operands
+        are BIGINT UNSIGNED in MySQL, so any intermediate that could go
+        negative aborts the whole UPDATE with error 1690. The additive
+        form only adds UNSIGNED to UNSIGNED on each side of the
+        comparison, which can never underflow.
         """
         sql = f"""
         UPDATE {self.table_name}
         SET used_input_tokens  = used_input_tokens  + %s,
             used_output_tokens = used_output_tokens + %s,
             status = CASE
-              WHEN (initial_input_tokens + granted_input_tokens
-                    - used_input_tokens - %s) <= 0
-                OR (initial_output_tokens + granted_output_tokens
-                    - used_output_tokens - %s) <= 0
+              WHEN (used_input_tokens + %s)
+                   >= (initial_input_tokens + granted_input_tokens)
+                OR (used_output_tokens + %s)
+                   >= (initial_output_tokens + granted_output_tokens)
               THEN 'exhausted'
               ELSE status
             END
@@ -74,6 +81,12 @@ class QuotaRepository(BaseRepository[Quota]):
     ) -> None:
         """Atomic UPDATE. Reactivates an exhausted user when the grant lifts
         remaining above zero in both dimensions.
+
+        Reactivation condition is additive for the same reason as
+        ``atomic_deduct``: when ``used`` already exceeds ``cap + delta``
+        (the grant is too small to cover the debt), a subtractive form
+        would underflow BIGINT UNSIGNED and roll the whole UPDATE back,
+        silently losing the granted credit.
         """
         sql = f"""
         UPDATE {self.table_name}
@@ -81,10 +94,10 @@ class QuotaRepository(BaseRepository[Quota]):
             granted_output_tokens = granted_output_tokens + %s,
             status = CASE
               WHEN status = 'exhausted'
-                AND (initial_input_tokens + granted_input_tokens + %s
-                     - used_input_tokens) > 0
-                AND (initial_output_tokens + granted_output_tokens + %s
-                     - used_output_tokens) > 0
+                AND used_input_tokens
+                    < (initial_input_tokens + granted_input_tokens + %s)
+                AND used_output_tokens
+                    < (initial_output_tokens + granted_output_tokens + %s)
               THEN 'active'
               ELSE status
             END
