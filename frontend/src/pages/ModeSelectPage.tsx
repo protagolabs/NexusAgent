@@ -16,8 +16,7 @@ import { cn } from '@/lib/utils';
 // Hardcoded cloud endpoint for locally-built clients (Tauri desktop, dev).
 // Docker-deployed cloud-web builds inject their own URL via /config.js at
 // container start, which takes precedence in getApiBaseUrl().
-// Replace with the real domain once DNS is ready.
-const DEFAULT_CLOUD_URL = 'http://13.40.48.129/';
+const DEFAULT_CLOUD_URL = 'https://agent.narra.nexus/';
 
 interface ModeCardProps {
   icon: React.ReactNode;
