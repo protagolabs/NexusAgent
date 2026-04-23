@@ -65,6 +65,22 @@ Order 0 (sqlite_proxy) has `startup_delay_ms: Some(3000)`. This mirrors the
 try to connect to the proxy before it binds port 8100 and crash. The value
 was chosen empirically — on slow machines 3 s may not be enough.
 
+## Bundled Node.js + CLI helper
+
+`resolve_bundled_node_bins()` returns the two directories that must be on
+PATH for every Python child process when running from the dmg:
+  `resources/nodejs/bin` (real node interpreter) and
+  `resources/nodejs/node_modules/.bin` (the `claude` / `lark-cli` shims).
+
+Layout is produced by `scripts/build-desktop.sh` step 3.5-3.6. In dev mode
+the helper returns an empty Vec — dev users already have node + CLIs on
+their shell PATH.
+
+`sidecar::process_manager::start_service` reads this helper and prepends the
+paths to the PATH env var it passes each child. Without that prefix,
+`claude_agent_sdk` cannot find the `claude` binary and the chat loop dies
+with "No such file or directory".
+
 ## Gotchas
 
 `resolve_db_path` always uses `~/.narranexus/nexus.db` regardless of mode.

@@ -8,6 +8,12 @@ SRC_TAURI="$TAURI_DIR/src-tauri"
 RESOURCES_DIR="$SRC_TAURI/resources"
 PYTHON_DIR="$RESOURCES_DIR/python"
 PROJ_DIR="$RESOURCES_DIR/project"
+NODE_DIR="$RESOURCES_DIR/nodejs"
+
+# Node.js version — pinned to an LTS so claude-code / lark-cli compatibility is
+# predictable. Bump deliberately; we take on the support tail whenever we bump.
+# Override via env if you need to test a different version.
+NODE_VERSION="${NODE_VERSION:-v22.11.0}"
 
 echo "=== NarraNexus Desktop Build ==="
 echo "Project root: $PROJECT_ROOT"
@@ -17,10 +23,12 @@ echo ""
 echo "--- Step 0: Cleaning previous build ---"
 rm -rf "$PYTHON_DIR"
 rm -rf "$PROJ_DIR"
+rm -rf "$NODE_DIR"
 rm -rf "$RESOURCES_DIR/venv"
 rm -rf "$SRC_TAURI/target"
 mkdir -p "$PYTHON_DIR"
 mkdir -p "$PROJ_DIR"
+mkdir -p "$NODE_DIR"
 echo "Clean done"
 
 # Step 1: Build frontend
@@ -63,6 +71,95 @@ echo ""
 echo "--- Step 3: Installing Python dependencies ---"
 "$PYTHON_DIR/bin/python3" -m pip install --no-cache-dir "$PROJECT_ROOT" 2>&1 | tail -5
 echo "Python dependencies installed"
+
+# Step 3.5: Bundle Node.js + CLI runtime dependencies.
+#
+# Why bundled, not user-installed:
+#   claude_agent_sdk (our hard Python dep) spawns the `claude` CLI as a
+#   subprocess — which is a Node.js script shipped via npm. A Mac end-user may
+#   not have Node.js at all, and even if they do, Finder-launched .app
+#   subprocesses get the launchd minimal PATH (`/usr/bin:/bin:/usr/sbin:/sbin`)
+#   that usually doesn't include ~/.npm-global/bin, /opt/homebrew/bin, etc.
+#   The only robust answer is to ship node + the CLIs inside the app bundle
+#   and have process_manager.rs prepend their directories to PATH for every
+#   spawned Python service.
+#
+# lark-cli is shipped the same way — previously run.sh did a best-effort
+# `npm install -g @larksuite/cli`, which again required node on the user
+# machine. Bundling it eliminates that dependency too.
+#
+# Bundle layout:
+#   resources/nodejs/
+#     bin/node                    ← interpreter for shebangs
+#     bin/npm                     ← (only used at build time)
+#     lib/node_modules/           ← node's own stdlib
+#     node_modules/               ← our installed packages (claude-code, lark-cli)
+#     node_modules/.bin/claude    ← shim exposed on PATH
+#     node_modules/.bin/lark-cli  ← shim exposed on PATH
+echo ""
+echo "--- Step 3.5: Downloading Node.js $NODE_VERSION ---"
+if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
+    NODE_ARCH="arm64"
+else
+    NODE_ARCH="x64"
+fi
+NODE_TARBALL="node-${NODE_VERSION}-darwin-${NODE_ARCH}.tar.gz"
+NODE_URL="https://nodejs.org/dist/${NODE_VERSION}/${NODE_TARBALL}"
+
+curl -L --fail -o "/tmp/$NODE_TARBALL" "$NODE_URL"
+tar xzf "/tmp/$NODE_TARBALL" -C "$NODE_DIR" --strip-components=1
+rm "/tmp/$NODE_TARBALL"
+echo "Node.js downloaded: $("$NODE_DIR/bin/node" --version)"
+
+# Step 3.6: Install bundled CLIs (claude-code + lark-cli) into $NODE_DIR
+#
+# We install as *local* packages (no `-g`) so everything lives inside
+# $NODE_DIR/node_modules/ and the shim binaries end up at
+# $NODE_DIR/node_modules/.bin/. A local install keeps the bundle fully
+# self-contained — no writing to /usr/local/, no sudo, no host state.
+#
+# `npm config set prefix` isolation prevents npm from reaching into the
+# user's global prefix (e.g. ~/.npm-global) and picking up / clobbering their
+# installs during build.
+echo ""
+echo "--- Step 3.6: Installing bundled CLIs (claude-code + lark-cli) ---"
+cat > "$NODE_DIR/package.json" <<'NODEPKG'
+{
+  "name": "narranexus-bundled-clis",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Bundled CLI runtime for NarraNexus desktop — not published.",
+  "dependencies": {
+    "@anthropic-ai/claude-code": "latest",
+    "@larksuite/cli": "latest"
+  }
+}
+NODEPKG
+
+# Use the bundled npm + node exclusively by prepending $NODE_DIR/bin to PATH
+# and pointing npm's prefix at $NODE_DIR itself. --omit=dev is belt-and-braces
+# (no devDeps declared) and --no-audit/--no-fund shave a chunk of startup.
+(
+    cd "$NODE_DIR"
+    PATH="$NODE_DIR/bin:$PATH" \
+    "$NODE_DIR/bin/npm" install \
+        --omit=dev --no-audit --no-fund --loglevel=error \
+        2>&1 | tail -10
+)
+
+# Sanity-check: the shims must exist at the path process_manager.rs will
+# prepend to PATH at runtime. If either is missing the build is broken — fail
+# loudly here rather than ship a half-working dmg.
+for bin in claude lark-cli; do
+    if [ ! -x "$NODE_DIR/node_modules/.bin/$bin" ]; then
+        echo "ERROR: bundled CLI shim missing: $NODE_DIR/node_modules/.bin/$bin"
+        echo "       npm install step above likely failed; re-run with verbose logging."
+        exit 1
+    fi
+done
+echo "Bundled CLIs installed:"
+echo "  claude:   $("$NODE_DIR/node_modules/.bin/claude" --version 2>&1 | head -1 || echo '(version check failed)')"
+echo "  lark-cli: $("$NODE_DIR/node_modules/.bin/lark-cli" --version 2>&1 | head -1 || echo '(version check failed)')"
 
 # Step 4: Copy project source
 echo ""

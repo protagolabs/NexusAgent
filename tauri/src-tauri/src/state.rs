@@ -120,6 +120,35 @@ pub fn is_bundled() -> bool {
         || resources.join("python/bin/python3").exists()
 }
 
+/// Directories containing bundled Node.js + CLI shims that Python child
+/// processes need on PATH.
+///
+/// Why PATH-prepending matters:
+///   The Python `claude_agent_sdk` package spawns the `claude` CLI as a
+///   subprocess — it looks for `claude` on PATH. A Mac .app launched from
+///   Finder inherits the launchd minimal PATH
+///   (`/usr/bin:/bin:/usr/sbin:/sbin`), which never contains `claude`. Without
+///   this prefix, every chat turn ends with "claude: command not found".
+///
+/// Return order matters: entries earlier in the Vec are earlier on PATH. We
+/// put `bin/` (real `node`) BEFORE `node_modules/.bin/` (shim scripts) so
+/// that when `claude`'s shebang does `#!/usr/bin/env node`, `env` finds our
+/// bundled node, not some other node the user happens to have.
+pub fn resolve_bundled_node_bins() -> Vec<PathBuf> {
+    let resources = resolve_resource_dir();
+    let mut out = Vec::new();
+    for subdir in &["resources/nodejs", "nodejs"] {
+        let root = resources.join(subdir);
+        if !root.exists() {
+            continue;
+        }
+        out.push(root.join("bin"));
+        out.push(root.join("node_modules/.bin"));
+        break;
+    }
+    out
+}
+
 /// Resolve the SQLite database path using platform app-data directory.
 pub fn resolve_db_path() -> PathBuf {
     dirs::home_dir()

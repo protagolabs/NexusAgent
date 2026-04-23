@@ -1,19 +1,23 @@
-// Preflight for Lark/Feishu optional integration.
+// Lark skill-pack preflight.
 //
-// Mirrors the `check_deps` flow in `run.sh`:
-//   1. If `lark-cli` binary is missing on PATH → `npm install -g @larksuite/cli`
-//   2. If `~/.agents/skills/lark-shared/SKILL.md` is missing (and no
-//      `~/.claude/skills/lark-shared/SKILL.md` symlink) → `npx skills add
-//      larksuite/cli -y -g`
+// Scope, post-bundling:
+//   After we started bundling Node.js + @larksuite/cli inside the dmg (see
+//   scripts/build-desktop.sh step 3.5-3.6), we no longer need to `npm install
+//   -g` anything at runtime — the CLI binaries are guaranteed present on the
+//   bundled PATH via state::resolve_bundled_node_bins().
 //
-// Everything is "best effort": failures log a warning but never block the app.
-// If the user has no `node`/`npm` on PATH we skip entirely — Lark features
-// degrade gracefully (the `lark_skill` MCP tool returns "not found" and the
-// Agent falls back to `<domain> +<cmd> --help`).
+//   What is still runtime-installed is the **skill pack** (the `lark_skill`
+//   MCP tool's SKILL.md knowledge under ~/.agents/skills/lark-*/). Those are
+//   data files distributed via `npx skills add larksuite/cli -y -g`, not the
+//   CLI itself, so they have to live in the user's home directory to be
+//   visible to other tooling (claude-code's skill system in particular).
 //
-// Iron rule #7 alignment: keep this in lockstep with the lark install block
-// in scripts/run.sh. If you change timeouts / the install command there, fix
-// them here too.
+//   We invoke the bundled `npx` binary directly (`resources/nodejs/bin/npx`)
+//   so this works even on Macs with zero host Node.js.
+//
+// Iron rule #7 reminder: scripts/run.sh still does a full
+// `npm install -g @larksuite/cli` + `npx skills add ...` because dev mode
+// uses the host's node. Bundle mode is simpler.
 
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -21,98 +25,78 @@ use std::time::Duration;
 use tokio::process::Command;
 use tokio::time::timeout;
 
-const LARK_CLI_INSTALL_TIMEOUT: Duration = Duration::from_secs(120);
+use crate::state::{resolve_bundled_node_bins, resolve_resource_dir};
+
 const LARK_SKILLS_INSTALL_TIMEOUT: Duration = Duration::from_secs(180);
 
 /// Entry point — spawn as a detached task in setup(). Non-blocking.
 pub fn run_preflight() {
     tokio::spawn(async move {
-        if !command_exists("npm").await {
-            log::warn!(
-                "lark preflight: `npm` not on PATH — skipping lark-cli install. \
-                 Lark/Feishu features will be disabled. Install Node.js from \
-                 https://nodejs.org/ and relaunch to enable them."
-            );
+        if lark_skills_present() {
+            log::info!("lark preflight: skill pack already installed");
             return;
         }
 
-        install_lark_cli_if_missing().await;
-        install_lark_skills_if_missing().await;
+        let npx = match find_bundled_npx() {
+            Some(p) => p,
+            None => {
+                // Dev mode: no bundled node. Fall back to system npx if
+                // present. If nothing is available, warn and move on — the
+                // user is likely running `bash run.sh` which has its own
+                // install block.
+                log::info!(
+                    "lark preflight: no bundled npx — skipping runtime skill install \
+                     (dev mode; run.sh handles this path)"
+                );
+                return;
+            }
+        };
+
+        install_skill_pack(&npx).await;
     });
 }
 
-async fn command_exists(cmd: &str) -> bool {
-    // `command -v` returns 0 iff the command resolves on PATH. Pipe output to
-    // /dev/null — we only care about the exit status.
-    Command::new("sh")
-        .arg("-c")
-        .arg(format!("command -v {}", cmd))
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .await
-        .map(|s| s.success())
-        .unwrap_or(false)
+/// Locate the bundled npx shim. In bundle mode this is at
+/// `resources/nodejs/bin/npx`. Returns None in dev mode.
+fn find_bundled_npx() -> Option<PathBuf> {
+    let resources = resolve_resource_dir();
+    for subdir in &["resources/nodejs/bin/npx", "nodejs/bin/npx"] {
+        let p = resources.join(subdir);
+        if p.exists() {
+            return Some(p);
+        }
+    }
+    None
 }
 
-async fn install_lark_cli_if_missing() {
-    if command_exists("lark-cli").await {
-        log::info!("lark preflight: lark-cli already installed");
-        return;
-    }
-
+async fn install_skill_pack(npx: &PathBuf) {
     log::info!(
-        "lark preflight: lark-cli not found — running `npm install -g @larksuite/cli` (timeout {}s)",
-        LARK_CLI_INSTALL_TIMEOUT.as_secs()
-    );
-
-    let fut = Command::new("npm")
-        .args(["install", "-g", "@larksuite/cli"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .status();
-
-    match timeout(LARK_CLI_INSTALL_TIMEOUT, fut).await {
-        Ok(Ok(status)) if status.success() => {
-            log::info!("lark preflight: lark-cli install OK");
-        }
-        Ok(Ok(status)) => {
-            log::warn!(
-                "lark preflight: npm install exited {} — Lark features will be disabled. \
-                 Common fixes: change registry (`npm config set registry \
-                 https://registry.npmmirror.com`), fix permissions (use nvm or sudo), \
-                 or check network to registry.npmjs.org.",
-                status
-            );
-        }
-        Ok(Err(e)) => {
-            log::warn!("lark preflight: failed to spawn npm: {}", e);
-        }
-        Err(_) => {
-            log::warn!(
-                "lark preflight: npm install hung > {}s — abandoning. Retry manually: \
-                 `npm install -g @larksuite/cli`",
-                LARK_CLI_INSTALL_TIMEOUT.as_secs()
-            );
-        }
-    }
-}
-
-async fn install_lark_skills_if_missing() {
-    if lark_skills_present() {
-        log::info!("lark preflight: lark-shared skill pack already installed");
-        return;
-    }
-
-    log::info!(
-        "lark preflight: installing Lark CLI Skills via `npx skills add larksuite/cli -y -g` (timeout {}s)",
+        "lark preflight: installing Lark CLI skill pack via bundled npx (timeout {}s)",
         LARK_SKILLS_INSTALL_TIMEOUT.as_secs()
     );
 
-    // Mirror run.sh: `HOME=$HOME npx skills add larksuite/cli -y -g`.
-    // HOME is already inherited from our env, so no need to re-export.
-    let fut = Command::new("npx")
+    // Build PATH with bundled node bins first, so `npx` itself finds the
+    // bundled node interpreter (its shebang is `#!/usr/bin/env node`).
+    let path_prefix = resolve_bundled_node_bins()
+        .iter()
+        .map(|p| p.to_string_lossy().to_string())
+        .collect::<Vec<_>>()
+        .join(":");
+    let parent_path = std::env::var("PATH").unwrap_or_default();
+    let child_path = if path_prefix.is_empty() {
+        parent_path
+    } else if parent_path.is_empty() {
+        path_prefix
+    } else {
+        format!("{}:{}", path_prefix, parent_path)
+    };
+
+    // Mirror scripts/run.sh: `HOME=$HOME npx skills add larksuite/cli -y -g`.
+    // HOME is inherited; we just need to make sure the bundled node is on
+    // PATH so the npx shim resolves.
+    let fut = Command::new(npx)
         .args(["skills", "add", "larksuite/cli", "-y", "-g"])
+        .env("PATH", &child_path)
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .status();
@@ -123,18 +107,19 @@ async fn install_lark_skills_if_missing() {
         }
         Ok(Ok(status)) => {
             log::warn!(
-                "lark preflight: npx skills add exited {} — `lark_skill(...)` MCP tool \
-                 will return 'not found'. Retry manually: \
-                 `HOME=$HOME npx skills add larksuite/cli -y -g`",
+                "lark preflight: bundled npx skills add exited {} — `lark_skill(...)` \
+                 MCP tool will return 'not found' until the user re-launches with \
+                 network access.",
                 status
             );
         }
         Ok(Err(e)) => {
-            log::warn!("lark preflight: failed to spawn npx: {}", e);
+            log::warn!("lark preflight: failed to spawn bundled npx: {}", e);
         }
         Err(_) => {
             log::warn!(
-                "lark preflight: npx skills add hung > {}s — abandoning.",
+                "lark preflight: bundled npx skills add hung > {}s — abandoning. \
+                 Likely a slow / blocked npm registry; retry later.",
                 LARK_SKILLS_INSTALL_TIMEOUT.as_secs()
             );
         }

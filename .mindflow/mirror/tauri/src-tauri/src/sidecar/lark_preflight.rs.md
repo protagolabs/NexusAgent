@@ -3,47 +3,50 @@ code_file: tauri/src-tauri/src/sidecar/lark_preflight.rs
 last_verified: 2026-04-23
 ---
 
-# lark_preflight.rs — best-effort lark-cli + skill-pack installer on dmg startup
+# lark_preflight.rs — skill-pack (SKILL.md) runtime installer
 
 ## Intent
 
-Bring the bundled desktop app to parity with `scripts/run.sh`'s `check_deps`
-flow for the **optional** Lark/Feishu integration. Iron rule #7 — run.sh and
-dmg must run the same logic — applies even to optional integrations; without
-this, the dmg silently disables every Lark Module because `lark_skill(...)`
-MCP tool returns "not found" and the Agent has no way to know why.
+The `claude` and `lark-cli` binaries themselves are bundled inside the dmg
+(see scripts/build-desktop.sh step 3.5-3.6), so there is nothing to `npm
+install -g` at runtime. What is NOT bundled is the **Lark skill pack**:
+the `lark_skill` MCP tool reads SKILL.md knowledge files under
+`~/.agents/skills/lark-*/`, which `npx skills add larksuite/cli -y -g`
+installs into the user's home directory.
+
+We have to do this at runtime (not build) because the files must live under
+$HOME so the user's other tooling (claude-code's skill system in
+particular) can discover them too — a build-time copy into the bundle
+wouldn't satisfy that.
 
 ## Why best-effort + detached
 
-- Lark is optional. A user with no node/npm must still be able to use the
-  rest of NarraNexus, so every failure path logs a warning and returns.
-- `npm install -g` can hang for minutes on slow registries. Blocking setup()
-  on it would delay the window and the rest of the services. The preflight is
-  fire-and-forget (`tokio::spawn`), capped with `tokio::time::timeout` per
-  subcommand (120 s for lark-cli, 180 s for the skill pack).
-- First Lark call after a slow install may still fail because the install is
-  still in progress — acceptable; user can retry and by then it's done.
+- Install may hang on slow registries → `tokio::time::timeout` with 180s cap.
+- Install may outright fail (no network, broken npm registry). The `lark_skill`
+  MCP tool degrades to "not found" in that case — the Agent falls back to
+  `<domain> +<cmd> --help`, which is worse UX but not broken.
+- setup() must not block on this — `tokio::spawn` fire-and-forget.
 
-## What it mirrors
+## Changes vs. run.sh
 
-The entire flow is a port of the lark-install block in `scripts/run.sh`
-(roughly lines 82–188 at time of writing). Keep changes to that block in
-lockstep with this file:
-
-- `npm install -g @larksuite/cli` when `lark-cli` absent on PATH
-- `HOME=$HOME npx skills add larksuite/cli -y -g` when
-  `~/.agents/skills/lark-shared/SKILL.md` AND
-  `~/.claude/skills/lark-shared/SKILL.md` are both missing
+`scripts/run.sh` still installs both the lark-cli binary (`npm install -g
+@larksuite/cli`) and the skill pack (`npx skills add ...`). Bundle mode
+does only the skill-pack step, because the binary is shipped inside the dmg.
 
 ## Upstream / downstream
 
 - **Called by:** `lib.rs::run()` inside `setup()`
-- **Calls out to:** system `sh`, `npm`, `npx` binaries — all optional
+- **Depends on:** bundled `resources/nodejs/bin/npx` — resolved via
+  `state::resolve_resource_dir()` and `state::resolve_bundled_node_bins()`
+- **Fallback:** dev mode (no bundled npx) → log and skip; `bash run.sh`
+  covers that path via npm-global
 
 ## Gotchas
 
-- `command_exists` spawns `sh -c "command -v …"`. On Windows this would fail,
-  but the dmg target is macOS-only so we don't guard further.
-- `npm install -g` with no prefix config may need sudo on some setups.
-  run.sh's warning text about `npm config set registry` / permissions /
-  network is mirrored here so users see the same remediation hints.
+- PATH construction in `install_skill_pack`: bundled node must be first on
+  PATH so `#!/usr/bin/env node` in the npx shim resolves to OUR node, not
+  whatever node the user might have. Same pattern as
+  `process_manager::start_service`.
+- `lark_skills_present()` checks two locations because `skills add -g`
+  installs to `~/.agents/skills/` and creates a `~/.claude/skills/` symlink.
+  Either one satisfies the MCP tool's lookup order.

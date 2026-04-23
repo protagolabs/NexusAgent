@@ -34,7 +34,8 @@
     ],
     "resources": [
       "resources/python/**/*",
-      "resources/project/**/*"
+      "resources/project/**/*",
+      "resources/nodejs/**/*"
     ],
     "macOS": {
       "minimumSystemVersion": "12.0"

@@ -124,6 +124,61 @@ check_deps() {
     echo ""
   }
 
+  # Install Claude Code CLI (@anthropic-ai/claude-code). HARD dependency:
+  # claude_agent_sdk spawns this binary every chat turn, so if it's absent
+  # the agent loop fails immediately. Unlike lark-cli we do not degrade
+  # gracefully — we exit.
+  _CLAUDE_CLI_TIMEOUT=180
+
+  _try_install_claude_cli() {
+    local action="$1"
+    echo -e "${Y}${action} @anthropic-ai/claude-code (timeout ${_CLAUDE_CLI_TIMEOUT}s)...${R}"
+    (npm install -g @anthropic-ai/claude-code) &
+    local npm_pid=$!
+    local elapsed=0
+    while kill -0 "$npm_pid" 2>/dev/null; do
+      if [ "$elapsed" -ge "$_CLAUDE_CLI_TIMEOUT" ]; then
+        echo -e "${RED}npm install hung > ${_CLAUDE_CLI_TIMEOUT}s — killing.${R}"
+        kill -9 "$npm_pid" 2>/dev/null
+        wait "$npm_pid" 2>/dev/null
+        return 124
+      fi
+      sleep 1
+      elapsed=$((elapsed + 1))
+    done
+    wait "$npm_pid"
+    return $?
+  }
+
+  if ! command -v claude &>/dev/null; then
+    if ! _try_install_claude_cli "Installing"; then
+      echo -e "${RED}Failed to install @anthropic-ai/claude-code — this is a HARD dependency.${R}"
+      echo ""
+      echo "  claude_agent_sdk (our Python Agent framework) spawns the \`claude\`"
+      echo "  binary every chat turn. Without it nothing works."
+      echo ""
+      echo "  Common fixes:"
+      echo "    • Slow registry (China): npm config set registry https://registry.npmmirror.com"
+      echo "    • Permission denied: use nvm (https://github.com/nvm-sh/nvm) or sudo"
+      echo "    • Network blocked: check connection to registry.npmjs.org"
+      echo "  Then retry: npm install -g @anthropic-ai/claude-code"
+      echo ""
+      exit 1
+    fi
+    # Post-install PATH verification (same class of bug as lark-cli below).
+    if ! command -v claude &>/dev/null; then
+      _npm_prefix=$(npm config get prefix 2>/dev/null || echo "")
+      if [ -n "$_npm_prefix" ] && [ -x "$_npm_prefix/bin/claude" ]; then
+        echo -e "${RED}claude installed at $_npm_prefix/bin but not on \$PATH.${R}"
+        echo "  Add to your shell rc: export PATH=\"$_npm_prefix/bin:\$PATH\""
+        echo "  Then restart the shell and retry bash run.sh."
+        exit 1
+      fi
+      echo -e "${RED}claude install reported success but binary is nowhere to be found.${R}"
+      exit 1
+    fi
+  fi
+
   if ! command -v lark-cli &>/dev/null; then
     if ! _try_install_lark_cli "Installing"; then
       _warn_lark_skipped
