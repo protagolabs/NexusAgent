@@ -49,10 +49,19 @@ pub fn run() {
 
             // Dashboard v2 (TDR-7): keep the TrayIcon handle in AppState so that
             // `commands::tray::set_tray_badge` can update its title later.
+            //
+            // Intentionally verbose drop order: newer rustc (1.80+) tightened
+            // temporary-scope rules so that `if let Ok(..) = state.tray_handle.lock()`
+            // holds the MutexGuard temporary until the end of the enclosing block,
+            // which outlives the inner `state` binding and produces
+            // "does not live long enough" (E0597). Binding the lock result
+            // explicitly makes the drop sequence trivially correct regardless of
+            // rustc version.
             let tray = tray::create_tray(app)?;
             {
                 let state = app.state::<AppState>();
-                if let Ok(mut guard) = state.tray_handle.lock() {
+                let lock_result = state.tray_handle.lock();
+                if let Ok(mut guard) = lock_result {
                     *guard = Some(tray);
                 }
             }
