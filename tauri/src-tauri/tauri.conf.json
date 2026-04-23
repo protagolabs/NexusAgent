@@ -35,7 +35,8 @@
     "resources": [
       "resources/python/**/*",
       "resources/project/**/*",
-      "resources/nodejs/**/*"
+      "resources/nodejs/**/*",
+      "resources/lark-skills/**/*"
     ],
     "macOS": {
       "minimumSystemVersion": "12.0",
