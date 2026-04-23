@@ -4,6 +4,29 @@ stub: false
 last_verified: 2026-04-23
 ---
 
+## 2026-04-23 update (4/4) — `_INCREMENTAL_AUTH_GUIDE` 加 admin-approval 两阶段说明
+
+第四轮修改。2026-04-23 agent_bbddea03706e 的增量授权会话里，当 user 第一次
+点链接时 Lark 服务器返回 `authorization failed: ... pending approval`——
+企业租户对新 scope 的默认行为是**管理员必须先审批 scope 进入 app**，
+然后才能做用户级授权。这是**两个不同的 URL / 两次点击**，不是一次性的。
+
+现状：Agent 只知道"mint 一次 → 让 user 点一次"，第一次把话说死
+（"点完我就去查"），之后 poll 失败就重 mint，user 端体验是"刚点完又让我点"。
+
+修法：`_INCREMENTAL_AUTH_GUIDE` 第二个 bullet 之后新加一条 bullet 讲：
+- 对 enterprise tenant 的新 scope，**第一个 URL 可能是 admin 审批请求**
+- 不要承诺 "click once and done"；告知 user 可能需要 admin 先批
+- 看到 poll 返回 `pending approval` 时**不要立刻重 mint**，等 user 确认 admin
+  批过再 mint 新的
+- Admin 批过之后的那次 `--no-wait` 拿到的 device_code 才是能换 user
+  token 的那个
+
+测试 pin 在 `tests/lark_module/test_incremental_auth_guide.py::
+test_guide_warns_about_admin_approval_preceding_user_authorization`——
+断言 guide 提到了 admin approval、pending approval 错误、以及禁止
+"click once" 类话术。
+
 ## 2026-04-23 update (3/3) — `_INCREMENTAL_AUTH_GUIDE` 加 "把 device_code 写进 reasoning" 提醒
 
 第三轮修改，配合**跨 turn reasoning 持久化**（见

@@ -284,6 +284,63 @@ def test_narranexus_specifics_teaches_per_agent_auth():
     assert "lark_setup" in _NARRANEXUS_SPECIFICS or "lark_bind" in _NARRANEXUS_SPECIFICS
 
 
+def test_guide_warns_about_admin_approval_preceding_user_authorization():
+    """For enterprise tenants and/or scopes the tenant hasn't pre-approved
+    at the app level, the first `auth login --scope X --no-wait` URL
+    clicked by the user often submits an admin-approval request, not
+    personal authorization. Lark then returns
+    `authorization failed: ... pending approval` on poll until the admin
+    approves. Only after admin approval does a second mint + click yield
+    the personal-auth token.
+
+    Without this knowledge the Agent:
+    - promises the user "click this once and I'll have your files"
+    - on `pending approval` just re-mints and sends a new URL, confusing
+      the user ("I just clicked, why another URL?")
+    - never surfaces the two-stage nature until the user pieces it
+      together themselves
+
+    The guide must teach this up-front so the Agent sets correct
+    expectations ("this may first need admin approval") and handles
+    `pending approval` errors without re-minting prematurely.
+    """
+    from xyz_agent_context.module.lark_module.lark_module import (
+        _INCREMENTAL_AUTH_GUIDE,
+    )
+
+    lower = _INCREMENTAL_AUTH_GUIDE.lower()
+    # Must name the admin approval concept.
+    assert "admin" in lower and "approval" in lower, (
+        "Lark guide must mention admin approval as a possible first "
+        "stage of incremental-scope authorization."
+    )
+    # Must tell the Agent NOT to promise a one-click completion when
+    # the scope might need admin approval.
+    one_click_signals = [
+        "two clicks",
+        "two different",
+        "two urls",
+        "not one",
+        "don't promise",
+        "do not promise",
+        "don't guarantee",
+    ]
+    assert any(s in lower for s in one_click_signals), (
+        "Guide must push back on the 'click once and done' framing "
+        "so Agent sets correct expectations when first minting."
+    )
+    # Must name the poll error pattern so Agent recognizes it.
+    pending_signals = [
+        "pending approval",
+        "pending_approval",
+        "pending-approval",
+    ]
+    assert any(s in lower for s in pending_signals), (
+        "Guide must name the `pending approval` poll error so Agent "
+        "recognizes it and doesn't re-mint blindly."
+    )
+
+
 def test_guide_reminds_agent_to_restate_device_code_in_reasoning():
     """Key lesson from 2026-04-23 prod session with agent_7f357515e25a:
     even though the Agent correctly intended `--device-code <D>` as the
