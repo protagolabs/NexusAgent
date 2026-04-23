@@ -1,7 +1,31 @@
 ---
 code_file: src/xyz_agent_context/module/chat_module/chat_module.py
-last_verified: 2026-04-20
+last_verified: 2026-04-23
 ---
+
+## 2026-04-23 update — 持久化 Agent reasoning 以跨 turn
+
+`hook_after_event_execution` 现在除了保存 `send_message_to_user_directly` 的 content（用户可见文字），还把 `params.io_data.final_output`（Agent 的 reasoning）**截断后**存到 assistant 消息的 `meta_data.reasoning`（上限 2000 字符 + `…[reasoning truncated]` 标记）。
+
+`hook_data_gathering` 在所有 load + sort 完成后，遍历 `all_messages`：对每条 assistant 消息，如果 `meta_data.reasoning` 非空，把 content 包成：
+```
+<my_reasoning>
+{reasoning}
+</my_reasoning>
+
+<reply_to_user>
+{original content}
+</reply_to_user>
+```
+
+**动机**（2026-04-23 产线事件，agent_7f357515e25a）：增量 Lark scope 授权时，`auth login --no-wait` 返回的 `device_code` 值只在那一轮的 `tool_call_output_item` 里，不跨 turn。Agent 下一轮想用 `--device-code <D>` poll 时拿不到 `D`，只能写出 `auth login --device-code --as ...`（缺值），回退到 `--no-wait` 重铸——orphan 用户点过的 URL。本修改让 Agent 可以通过在 reasoning 里 restate 关键值（device_code、job_id、token 等）把它们带到下一轮。前端 chat_history API 拿到的 row 不变（content 字段还是 send_message 原文），splicing 只发生在**喂 LLM 之前的那一次渲染**；持久化的 row 只是多了 `meta_data.reasoning` 字段。
+
+配套变更：
+- `src/xyz_agent_context/module/basic_info_module/prompts.py` 新增 "Working Memory Across Turns" 段，向所有 trigger 源的 Agent 说明"tool output 一次性，reasoning 跨轮"这件事 + 要求 Agent 主动 restate 关键值到 reasoning
+- `src/xyz_agent_context/module/lark_module/lark_module.py::_INCREMENTAL_AUTH_GUIDE` 追加一条 bullet，明确说 mint 完后要把 device_code/scope/URL 写进 reasoning
+- 回归 pin 在 `tests/chat_module/test_reasoning_persistence.py`（持久化 + splicing 双向）、`tests/basic_info_module/test_cross_turn_memory_guidance.py`（prompt 三句话）、`tests/lark_module/test_incremental_auth_guide.py::test_guide_reminds_agent_to_restate_device_code_in_reasoning`
+
+**不改前端** — frontend 的 chat bubble 照旧读 `get_simple_chat_history` 返回的 content，看到的还是 send_message 原文。meta_data.reasoning 仅供后端组装 LLM 上下文用。
 
 # chat_module.py — ChatModule 实现
 

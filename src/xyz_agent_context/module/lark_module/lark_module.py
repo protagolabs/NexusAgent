@@ -138,7 +138,14 @@ _INCREMENTAL_AUTH_GUIDE = (
     "- Already-granted scopes carry over between logins, so request only "
     "the one that's currently missing; no need to re-list the full set.\n"
     "- Mint fresh when the user reports the prior link broken / expired "
-    "/ never clicked, or when you genuinely don't remember sending one.\n\n"
+    "/ never clicked, or when you genuinely don't remember sending one.\n"
+    "- **Write the `device_code` into your reasoning before ending the "
+    "turn.** Tool-call outputs don't survive across turns (see Working "
+    "Memory Across Turns in your system prompt); if you don't restate "
+    "the value in your reasoning, next-turn-you won't have it and will "
+    "mint a fresh one — orphaning the user's click on the URL you just "
+    "sent. Minimum to restate: `device_code`, `scope`, and the "
+    "`verification_url` you sent.\n\n"
 )
 
 _NARRANEXUS_SPECIFICS = (

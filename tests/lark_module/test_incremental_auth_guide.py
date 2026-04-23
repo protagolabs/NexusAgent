@@ -284,6 +284,39 @@ def test_narranexus_specifics_teaches_per_agent_auth():
     assert "lark_setup" in _NARRANEXUS_SPECIFICS or "lark_bind" in _NARRANEXUS_SPECIFICS
 
 
+def test_guide_reminds_agent_to_restate_device_code_in_reasoning():
+    """Key lesson from 2026-04-23 prod session with agent_7f357515e25a:
+    even though the Agent correctly intended `--device-code <D>` as the
+    next step, it wrote `auth login --device-code --as ...` because the
+    `device_code` value lived only in the prior turn's tool_call_output
+    and did not survive into this turn's context. The runtime-level fix
+    persists the Agent's reasoning across turns, but only values the
+    Agent *wrote into its reasoning* get carried — not raw tool outputs.
+
+    So the Lark guide must explicitly nudge the Agent to restate the
+    `device_code` (and the verification URL) in its reasoning before
+    ending the mint turn. Otherwise it'll still lose the value next
+    turn even with the new persistence path working.
+    """
+    from xyz_agent_context.module.lark_module.lark_module import (
+        _INCREMENTAL_AUTH_GUIDE,
+    )
+
+    lower = _INCREMENTAL_AUTH_GUIDE.lower()
+    # Must mention reasoning / thinking as the durable channel.
+    assert "reasoning" in lower or "thinking" in lower, (
+        "Lark guide must reference the Agent's reasoning as the place "
+        "to carry the device_code across turns."
+    )
+    # Must name the action verb — restate / write / keep in reasoning.
+    action_verbs = ["restate", "write it", "keep it", "record it", "note it", "copy it"]
+    assert any(v in lower for v in action_verbs), (
+        "Lark guide must use an explicit action verb so the Agent "
+        "knows what to DO with the device_code, not just that it "
+        "exists."
+    )
+
+
 def test_narranexus_specifics_rendered_only_when_stage_completed():
     """Same rationale as the other post-onboarding sections: during
     onboarding (stage != completed) the three-click flow handles

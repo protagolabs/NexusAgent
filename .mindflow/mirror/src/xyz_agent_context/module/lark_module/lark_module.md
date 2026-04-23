@@ -4,6 +4,24 @@ stub: false
 last_verified: 2026-04-23
 ---
 
+## 2026-04-23 update (3/3) — `_INCREMENTAL_AUTH_GUIDE` 加 "把 device_code 写进 reasoning" 提醒
+
+第三轮修改，配合**跨 turn reasoning 持久化**（见
+`.mindflow/mirror/src/xyz_agent_context/module/chat_module/chat_module.py.md`
+2026-04-23 那一段）。
+
+`_INCREMENTAL_AUTH_GUIDE` 末尾追加一条 bullet：mint 完 `--no-wait` 之后，
+要把 `device_code`、scope、`verification_url` 显式写进自己的 reasoning
+里，因为 tool-call output 单 turn 就消失。如果不 restate，下一轮 Agent
+拿不到 `device_code` 值，只能重新 mint 一次——orphan 用户刚点过的 URL，
+陷入 xinyao / bin liang 今天经历过的死循环。
+
+动机：2026-04-23 线上 session `agent_7f357515e25a` 里 Agent **理解**
+机制（它自己诊断出来了），但还是循环，因为 tool output 里的
+`OaEmm_C8Jy40…` 100 字节 opaque 串下一轮丢失。最后 user 把 device_code
+当人肉 relay 传回去才解的围。现在 reasoning 跨 turn 保留了，Agent 只要
+按这条 bullet 做就能自救。
+
 ## 2026-04-23 update (2/2) — prompt rewrite: hint-oriented, NarraNexus-aware
 
 Second pass on the same day. The first pass (below) was too

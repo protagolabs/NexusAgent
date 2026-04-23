@@ -401,6 +401,26 @@ class ChatModule(XYZBaseModule):
         else:
             logger.debug("ChatModule.hook_data_gathering: No history messages retrieved")
 
+        # Splice persisted reasoning (see hook_after_event_execution) back
+        # into assistant message content, wrapped with tag markers so the
+        # next turn's LLM can tell "what I thought last turn" apart from
+        # "what I said to the user last turn". Tool-call outputs are not
+        # preserved across turns — this splicing is the mechanism that
+        # lets the Agent carry machine-readable values (device codes,
+        # job ids, fresh URLs) forward, by relying on the Agent having
+        # restated them in its own reasoning before ending the turn.
+        for _msg in all_messages:
+            if _msg.get("role") != "assistant":
+                continue
+            _reasoning = (_msg.get("meta_data") or {}).get("reasoning")
+            if not _reasoning:
+                continue
+            _original = _msg.get("content", "") or ""
+            _msg["content"] = (
+                f"<my_reasoning>\n{_reasoning}\n</my_reasoning>\n\n"
+                f"<reply_to_user>\n{_original}\n</reply_to_user>"
+            )
+
         # Fill merged history messages into ctx_data
         ctx_data.chat_history = all_messages
         return ctx_data
@@ -617,6 +637,29 @@ class ChatModule(XYZBaseModule):
             "working_source": working_source,
         }
 
+        # Reasoning persistence (2026-04-23): tool-call outputs are ephemeral
+        # to the turn, but the Agent's written reasoning (final_output) is
+        # the one channel that can carry machine-readable values (device
+        # codes, job ids, freshly minted URLs) into the next turn. Capture
+        # it on assistant meta_data so hook_data_gathering can splice it
+        # back into content when building next turn's chat history. Cap
+        # length to keep the JSON row bounded; long tool outputs the Agent
+        # wanted to remember should be summarised by the Agent itself in
+        # its reasoning, not blindly persisted in full.
+        _MAX_REASONING_CHARS = 2000
+        _raw_reasoning = params.io_data.final_output if params.io_data else ""
+        if _raw_reasoning and len(_raw_reasoning) > _MAX_REASONING_CHARS:
+            assistant_reasoning: str = (
+                _raw_reasoning[:_MAX_REASONING_CHARS] + "…[reasoning truncated]"
+            )
+        else:
+            assistant_reasoning = _raw_reasoning or ""
+        assistant_meta = (
+            {**shared_meta, "reasoning": assistant_reasoning}
+            if assistant_reasoning
+            else {**shared_meta}
+        )
+
         # Inject channel_tag if available (set by Triggers for source tracking)
         if params.ctx_data and params.ctx_data.extra_data:
             channel_tag_data = params.ctx_data.extra_data.get("channel_tag")
@@ -659,7 +702,7 @@ class ChatModule(XYZBaseModule):
             messages.append({
                 "role": "assistant",
                 "content": assistant_content,
-                "meta_data": {**shared_meta},
+                "meta_data": {**assistant_meta},
             })
         else:
             # Background task (job/lark/message_bus) where agent chose not to message user:
@@ -668,7 +711,7 @@ class ChatModule(XYZBaseModule):
             messages.append({
                 "role": "assistant",
                 "content": activity_summary,
-                "meta_data": {**shared_meta, "message_type": "activity"},
+                "meta_data": {**assistant_meta, "message_type": "activity"},
             })
 
         # Save updated history (using instance_id)

@@ -227,6 +227,41 @@ Your LLM model: **{agent_info_model_type}** ({model_name}).
 
 ---
 
+#### Working Memory Across Turns
+
+Your turn has two persistence layers with very different lifetimes:
+
+- **Your reasoning** (the text you write outside of tool calls — what
+  users see as "thinking") IS preserved across turns. Next-turn-you
+  will see it.
+- **Tool call arguments** and **tool call outputs** are ephemeral to
+  this turn only. They vanish before the next turn. The exchange
+  `auth login --no-wait → {{device_code: ABC…}}` leaves no record of
+  `ABC…` for next-turn-you.
+
+When a tool result contains a value you'll need in a later turn —
+device_code, job_id, freshly created url, file token, session id,
+search hit id — **restate that value in your reasoning before
+ending the turn**. Next-turn-you reads your reasoning and can cite
+the value back.
+
+Concrete example (Lark incremental auth):
+
+```
+[tool call] auth login --scope "search:docs:read" --no-wait
+[tool output] {{ "device_code": "OaEmm_C8Jy40…", "user_code": "79UT-2B34", "verification_url": "https://…" }}
+[your reasoning — written before ending the turn]
+Minted device_code=OaEmm_C8Jy40… for scope search:docs:read,
+URL=https://… sent to the user. Next turn if user confirms
+clicking, poll with `auth login --device-code OaEmm_C8Jy40…`.
+```
+
+Writing that reasoning paragraph is the only way `OaEmm_C8Jy40…`
+survives into the next turn. Without it, you'll mint a fresh code
+and the user's click on the old URL will orphan.
+
+---
+
 #### Runtime Environment
 
 {deployment_context}
