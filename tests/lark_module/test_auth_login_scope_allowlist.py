@@ -45,6 +45,40 @@ class TestAuthLoginWithScopeAllowed:
         assert ok, f"expected allow, got block: {reason}"
 
 
+class TestAuthLoginDeviceCodePollAllowed:
+    """`auth login --device-code <D>` is the canonical POLL step of the
+    incremental-auth dance (mint via `--no-wait`, then poll via
+    `--device-code`). It does NOT take `--scope` — the scope was named
+    at mint time. Our security validator used to require `--scope` on
+    every `auth login` form, which incorrectly blocked the poll — agent
+    then worked around by wedging `--device-code` into a --scope call,
+    producing the garbled `auth login --device-code --as ...` commands
+    and the loop observed with agent_7f357515e25a / agent_bbddea03706e
+    on 2026-04-23."""
+
+    @pytest.mark.parametrize("cmd", [
+        "auth login --device-code Oy4P4ZdufyfihQ1w",
+        "auth login --device-code Oy4P4Z --json",
+        'auth login --device-code "Oy4P4ZdufyfihQ1w-rIkY1b72Z_IonajGq-OOOOOOOOO_8VlGWOOOOOt"',
+    ])
+    def test_device_code_poll_without_scope_allowed(self, cmd):
+        ok, reason = validate_command(cmd)
+        assert ok, (
+            f"`auth login --device-code <D>` is the standard POLL step "
+            f"of incremental auth and must be allowed. Got block: {reason}"
+        )
+
+    def test_device_code_combined_with_scope_still_allowed(self):
+        """Defensive: a belt-and-suspenders form where the agent passes
+        both `--scope X` and `--device-code D` must also be allowed
+        (matches the pre-fix workaround that agents learned during the
+        loop; blocking it would regress agents mid-flight)."""
+        ok, reason = validate_command(
+            'auth login --scope "space:document:retrieve" --device-code Oy4P4Z'
+        )
+        assert ok, f"expected allow, got block: {reason}"
+
+
 class TestAuthLoginRecommendWithScopeStillBlocked:
     def test_recommend_plus_scope_is_still_blocked(self):
         """Defense against an Agent trying to sneak --recommend past the gate

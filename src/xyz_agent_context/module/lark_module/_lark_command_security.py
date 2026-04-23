@@ -128,24 +128,39 @@ def validate_command(command: str) -> Tuple[bool, str]:
         if sub in ("status", "check", "scopes", "list"):
             return True, ""
 
-        # `auth login`: allowed ONLY with --scope (incremental top-up).
-        # Bare / --recommend forms must go through lark_permission_advance
-        # which owns the three-click initial flow.
+        # `auth login`: allowed only when targeted at incremental auth —
+        # either the MINT side (`--scope <X>`, optionally with `--no-wait`)
+        # or the POLL side (`--device-code <D>`, optionally with `--scope`).
+        # Bare `auth login` / `auth login --domain` / `auth login
+        # --recommend` stay blocked: those forms are the three-click
+        # initial flow and must go through `lark_permission_advance`.
         if sub == "login":
             rest = [t.lower() for t in tokens[2:]]
-            if "--scope" not in rest:
+            has_scope = "--scope" in rest
+            has_device_code = "--device-code" in rest
+            if not has_scope and not has_device_code:
                 return False, (
-                    "`auth login` without --scope must go through "
-                    "`lark_permission_advance` (controls the three-click "
-                    "state machine). Only `auth login --scope <X>` is "
-                    "allowed here, for incremental scope top-ups after a "
-                    "command reports missing_scope."
+                    "`auth login` without --scope or --device-code must "
+                    "go through `lark_permission_advance` (controls the "
+                    "three-click state machine). Use `auth login --scope "
+                    "<X> --json --no-wait` to mint a device code, then "
+                    "`auth login --device-code <D>` to poll."
                 )
             if "--recommend" in rest:
                 return False, (
                     "`auth login --recommend` is reserved for "
                     "`lark_permission_advance`. Use just `auth login "
                     "--scope <X> --json --no-wait` for incremental grants."
+                )
+            if "--domain" in rest and not has_scope and not has_device_code:
+                # Defensive: `--domain` alone without explicit scope or
+                # device-code is effectively the bulk request path that
+                # three-click owns. Belt-and-suspenders (already covered
+                # by the initial check above, kept for clarity).
+                return False, (
+                    "`auth login --domain ...` without --scope or "
+                    "--device-code must go through "
+                    "`lark_permission_advance`."
                 )
             return True, ""
 
