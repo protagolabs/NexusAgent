@@ -128,13 +128,16 @@ const SLOT_DEFS: { key: string; label: string; desc: string; protocol: string }[
 // of their head. Rendered as dimmed chips below the ModelBubbleInput —
 // click a chip and it moves into the selected-models bubble row.
 //
-// Protocol note: the backend only knows two protocols (openai, anthropic).
-// Almost every third-party provider here (Gemini / GLM / Kimi / Qwen /
-// MiniMax / DeepSeek) is consumed through an OpenAI-compatible proxy, so
-// they all live under 'openai'. If a future provider genuinely speaks
-// the Anthropic wire format, add it to the 'anthropic' group instead.
+// Why we DON'T filter by the form's protocol: in practice almost all of
+// our users hit providers through a forwarding platform (Yunwu /
+// OpenRouter / NetMind / custom proxies) that does its own protocol
+// translation. A Custom Anthropic endpoint may be fronting GPT, Gemini,
+// or MiniMax; a Custom OpenAI endpoint may be fronting Claude. Hiding
+// suggestions based on the form's declared protocol would steer users
+// away from valid model names. Always show the full set and let the
+// user pick — they know what their forwarder exposes.
 //
-// List curation rules the user signed off on:
+// List curation rules:
 //   - OpenAI: 10 newest text / chat / reasoning models
 //   - Anthropic: all current models
 //   - Gemini: all current text models, exclude deprecated / embedding /
@@ -146,14 +149,12 @@ const SLOT_DEFS: { key: string; label: string; desc: string; protocol: string }[
 
 interface ModelSuggestionGroup {
   label: string
-  protocol: 'anthropic' | 'openai'
   models: string[]
 }
 
 const MODEL_SUGGESTION_GROUPS: ModelSuggestionGroup[] = [
   {
     label: 'Anthropic',
-    protocol: 'anthropic',
     models: [
       'claude-opus-4-7',
       'claude-sonnet-4-6',
@@ -163,7 +164,6 @@ const MODEL_SUGGESTION_GROUPS: ModelSuggestionGroup[] = [
   },
   {
     label: 'OpenAI',
-    protocol: 'openai',
     models: [
       'gpt-5.4',
       'gpt-5.4-mini',
@@ -179,7 +179,6 @@ const MODEL_SUGGESTION_GROUPS: ModelSuggestionGroup[] = [
   },
   {
     label: 'Google Gemini',
-    protocol: 'openai',
     models: [
       'gemini-3.1-pro-preview',
       'gemini-3.1-pro-preview-customtools',
@@ -194,34 +193,25 @@ const MODEL_SUGGESTION_GROUPS: ModelSuggestionGroup[] = [
   },
   {
     label: 'Zhipu / GLM',
-    protocol: 'openai',
     models: ['glm-5.1', 'glm-5', 'glm-5-turbo'],
   },
   {
     label: 'Kimi (Moonshot)',
-    protocol: 'openai',
     models: ['kimi-k2.6'],
   },
   {
     label: 'Qwen (DashScope)',
-    protocol: 'openai',
     models: ['qwen3.6-max-preview', 'qwen3.6-plus', 'qwen3.6-flash'],
   },
   {
     label: 'MiniMax',
-    protocol: 'openai',
     models: ['MiniMax-M2.7', 'MiniMax-M2.7-highspeed', 'MiniMax-M2.5'],
   },
   {
     label: 'DeepSeek',
-    protocol: 'openai',
     models: ['deepseek-v4-pro', 'deepseek-v4-flash'],
   },
 ]
-
-function suggestionsFor(protocol: 'anthropic' | 'openai'): ModelSuggestionGroup[] {
-  return MODEL_SUGGESTION_GROUPS.filter((g) => g.protocol === protocol)
-}
 
 // =============================================================================
 // Model Bubble Tag Input
@@ -903,7 +893,7 @@ export function ProviderSettings() {
                 <ModelBubbleInput
                   models={formModels}
                   onChange={setFormModels}
-                  suggestions={suggestionsFor(showForm)}
+                  suggestions={MODEL_SUGGESTION_GROUPS}
                 />
               </div>
               <button onClick={handleAddProtocol} disabled={formAdding || !formKey.trim()}
@@ -1012,9 +1002,6 @@ export function ProviderSettings() {
       {(() => {
         const prov = editingProviderId ? providers[editingProviderId] : null
         if (!prov) return null
-        const proto = prov.protocol === 'anthropic' || prov.protocol === 'openai'
-          ? prov.protocol
-          : null
         return (
           <Dialog
             isOpen={!!prov}
@@ -1030,7 +1017,7 @@ export function ProviderSettings() {
               <ModelBubbleInput
                 models={editModels}
                 onChange={setEditModels}
-                suggestions={proto ? suggestionsFor(proto) : undefined}
+                suggestions={MODEL_SUGGESTION_GROUPS}
               />
               {editError && (
                 <p className="mt-3 text-sm text-[var(--color-error)]">{editError}</p>
