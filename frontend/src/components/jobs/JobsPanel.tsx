@@ -28,7 +28,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge, KPICard } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge, KPICard, useConfirm } from '@/components/ui';
 import { useConfigStore, usePreloadStore } from '@/stores';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
@@ -89,6 +89,7 @@ export function JobsPanel() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
   const [failedExpanded, setFailedExpanded] = useState(false);
+  const { confirm, alert, dialog: confirmDialog } = useConfirm();
 
   const { agentId, userId } = useConfigStore();
   const {
@@ -133,9 +134,14 @@ export function JobsPanel() {
   const handleCancelJob = async (e: React.MouseEvent, jobId: string) => {
     e.stopPropagation();
 
-    if (!confirm('Are you sure you want to cancel this job? This action cannot be undone.')) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Cancel job',
+      message: 'Are you sure you want to cancel this job? This action cannot be undone.',
+      confirmText: 'Cancel job',
+      cancelText: 'Keep running',
+      danger: true,
+    });
+    if (!ok) return;
 
     setCancellingJobId(jobId);
     try {
@@ -143,11 +149,19 @@ export function JobsPanel() {
       if (res.success) {
         refreshJobs(agentId, userId);
       } else {
-        alert(res.error || 'Failed to cancel job');
+        await alert({
+          title: 'Cancel failed',
+          message: res.error || 'Failed to cancel job',
+          danger: true,
+        });
       }
     } catch (err) {
       console.error('Cancel job error:', err);
-      alert('Failed to cancel job. Please try again.');
+      await alert({
+        title: 'Cancel failed',
+        message: 'Failed to cancel job. Please try again.',
+        danger: true,
+      });
     } finally {
       setCancellingJobId(null);
     }
@@ -159,6 +173,7 @@ export function JobsPanel() {
 
   return (
     <Card variant="glass" className="flex flex-col h-full">
+      {confirmDialog}
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[var(--color-warning)]/10 flex items-center justify-center">

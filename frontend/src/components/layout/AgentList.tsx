@@ -18,7 +18,7 @@ import {
   Trash2,
   Loader2,
 } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, useConfirm } from '@/components/ui';
 import { useConfigStore, useChatStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -39,6 +39,7 @@ export function AgentList({ collapsed }: AgentListProps) {
   const location = useLocation();
   const { userId, agentId, agents, setAgentId, setAgents, refreshAgents } = useConfigStore();
   const { setActiveAgent, clearAgent, isAgentStreaming, completedAgentIds } = useChatStore();
+  const { confirm, alert, dialog: confirmDialog } = useConfirm();
 
   // Fetch agents on mount
   useEffect(() => {
@@ -154,9 +155,13 @@ export function AgentList({ collapsed }: AgentListProps) {
 
   const handleDeleteAgent = async (agent: typeof agents[0], e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`Delete agent "${agent.name || agent.agent_id}"? This will permanently remove all related data (narratives, events, instances, jobs, etc.).`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Delete agent',
+      message: `Delete agent "${agent.name || agent.agent_id}"? This will permanently remove all related data (narratives, events, instances, jobs, etc.).`,
+      confirmText: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
 
     setDeletingAgentId(agent.agent_id);
     try {
@@ -175,11 +180,19 @@ export function AgentList({ collapsed }: AgentListProps) {
         }
       } else {
         console.error('Failed to delete agent:', res.error);
-        alert(`Failed to delete agent: ${res.error}`);
+        await alert({
+          title: 'Delete failed',
+          message: `Failed to delete agent: ${res.error}`,
+          danger: true,
+        });
       }
     } catch (err) {
       console.error('Error deleting agent:', err);
-      alert('Error deleting agent. Please try again.');
+      await alert({
+        title: 'Delete failed',
+        message: 'Error deleting agent. Please try again.',
+        danger: true,
+      });
     } finally {
       setDeletingAgentId(null);
     }
@@ -259,6 +272,7 @@ export function AgentList({ collapsed }: AgentListProps) {
   // Expanded mode: full agent list
   return (
     <div className="p-3">
+      {confirmDialog}
       <div className="flex items-center justify-between mb-3 px-1">
         <span className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-[0.15em] font-[family-name:var(--font-mono)]">
           Agents

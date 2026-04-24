@@ -24,7 +24,7 @@ import {
   KeyRound,
   CircleAlert,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge, useConfirm } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { useConfigStore } from '@/stores/configStore';
@@ -197,6 +197,7 @@ export function SkillsPanel() {
   const [configuringSkill, setConfiguringSkill] = useState<SkillInfo | null>(null);
   const [showDisabled, setShowDisabled] = useState(false);
   const [studyingSkillName, setStudyingSkillName] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   // ── Queries ──────────────────────────────────────────────────────────────
   const { data: skills = [], isLoading, error, refetch } = useSkillsList(showDisabled);
@@ -230,10 +231,14 @@ export function SkillsPanel() {
     toggleSkill.mutate({ name: skill.name, disabled: skill.disabled });
   };
 
-  const handleRemove = (skill: SkillInfo) => {
-    if (!confirm(`Are you sure you want to remove "${skill.name}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleRemove = async (skill: SkillInfo) => {
+    const ok = await confirm({
+      title: 'Remove skill',
+      message: `Are you sure you want to remove "${skill.name}"? This action cannot be undone.`,
+      confirmText: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     removeSkill.mutate(skill.name);
   };
 
@@ -248,6 +253,7 @@ export function SkillsPanel() {
 
   return (
     <Card variant="glass" className="flex flex-col h-full">
+      {confirmDialog}
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[var(--accent-secondary)]/10 flex items-center justify-center">

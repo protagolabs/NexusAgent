@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Upload, Trash2, RefreshCw, Database, CheckCircle, AlertCircle, Loader2, FileText, X } from 'lucide-react';
-import { Button, Badge } from '@/components/ui';
+import { Button, Badge, useConfirm } from '@/components/ui';
 import { useConfigStore, usePreloadStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -65,6 +65,7 @@ export function RAGUpload() {
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   // Text input modal state
   const [showTextModal, setShowTextModal] = useState(false);
@@ -168,7 +169,13 @@ export function RAGUpload() {
   // Handle file deletion
   const handleDelete = async (filename: string) => {
     if (!agentId || !userId) return;
-    if (!confirm(`Delete ${filename}? Note: This will remove the local file but the content may still be in the RAG store.`)) return;
+    const ok = await confirm({
+      title: 'Delete file',
+      message: `Delete ${filename}?\n\nNote: This will remove the local file but the content may still be in the RAG store.`,
+      confirmText: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
 
     try {
       const res = await api.deleteRAGFile(agentId, userId, filename);
@@ -232,6 +239,7 @@ export function RAGUpload() {
 
   return (
     <section className="space-y-2">
+      {confirmDialog}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)] font-medium uppercase tracking-wider">
           <Database className="w-3 h-3" />

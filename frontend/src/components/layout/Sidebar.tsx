@@ -18,7 +18,7 @@ import {
   RotateCcw,
   LayoutDashboard,
 } from 'lucide-react';
-import { Button, ThemeToggle } from '@/components/ui';
+import { Button, ThemeToggle, useConfirm } from '@/components/ui';
 import { useConfigStore, useChatStore, useRuntimeStore, usePreloadStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,7 @@ export function Sidebar() {
   const { clearAll: clearChat } = useChatStore();
   const { mode, features, setMode, setCloudApiUrl } = useRuntimeStore();
   const clearPreload = usePreloadStore((s) => s.clearAll);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   /**
    * Wipe all session + cached data before leaving the current mode.
@@ -103,14 +104,26 @@ export function Sidebar() {
     window.location.href = '/mode-select';
   };
 
-  const handleLogout = () => {
-    if (!confirm('Are you sure you want to logout?')) return;
+  const handleLogout = async () => {
+    const ok = await confirm({
+      title: 'Log out',
+      message: 'Are you sure you want to logout?',
+      confirmText: 'Log out',
+      danger: true,
+    });
+    if (!ok) return;
     wipeAllSessionData();
     window.location.href = '/login';
   };
 
   const handleClearHistory = async () => {
-    if (!confirm('Clear all conversation history?')) return;
+    const ok = await confirm({
+      title: 'Clear history',
+      message: 'Clear all conversation history?',
+      confirmText: 'Clear',
+      danger: true,
+    });
+    if (!ok) return;
 
     if (agentId) {
       try {
@@ -136,6 +149,8 @@ export function Sidebar() {
         collapsed ? 'w-[72px]' : 'w-72'
       )}
     >
+      {confirmDialog}
+
       {/* Gradient edge glow */}
       <div className="absolute top-0 right-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[var(--accent-primary)]/20 to-transparent" />
 

@@ -22,7 +22,7 @@ import {
   Power,
   AlertCircle,
 } from 'lucide-react';
-import { Button, Badge } from '@/components/ui';
+import { Button, Badge, useConfirm } from '@/components/ui';
 import { useConfigStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -192,6 +192,7 @@ export function MCPManager() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   // Fetch MCPs on mount
   const fetchMCPs = useCallback(async () => {
@@ -289,7 +290,13 @@ export function MCPManager() {
   // Delete MCP
   const handleDelete = async (mcpId: string) => {
     if (!agentId || !userId) return;
-    if (!confirm('Delete this MCP?')) return;
+    const ok = await confirm({
+      title: 'Delete MCP',
+      message: 'Delete this MCP?',
+      confirmText: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
 
     try {
       const res = await api.deleteMCP(agentId, userId, mcpId);
@@ -364,6 +371,7 @@ export function MCPManager() {
 
   return (
     <section className="space-y-2">
+      {confirmDialog}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)] font-medium uppercase tracking-wider">
           <Server className="w-3 h-3" />

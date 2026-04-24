@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageSquare, Link, Unlink, ExternalLink, Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Input } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Input, useConfirm } from '@/components/ui';
 import { useConfigStore } from '@/stores';
 import { api } from '@/lib/api';
 import type { LarkCredentialData } from '@/types';
@@ -37,6 +37,7 @@ export function LarkConfig() {
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const fetchCredential = useCallback(async () => {
     if (!agentId) return;
@@ -167,7 +168,13 @@ export function LarkConfig() {
   // Unbind bot
   const handleUnbind = async () => {
     if (!agentId) return;
-    if (!window.confirm('Unbind this Lark bot? This will remove all Lark inbox data for this agent.')) return;
+    const ok = await confirm({
+      title: 'Unbind Lark bot',
+      message: 'Unbind this Lark bot? This will remove all Lark inbox data for this agent.',
+      confirmText: 'Unbind',
+      danger: true,
+    });
+    if (!ok) return;
     setActionLoading(true);
     setError('');
     try {
@@ -196,6 +203,7 @@ export function LarkConfig() {
 
   return (
     <Card>
+      {confirmDialog}
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4" />
