@@ -31,6 +31,37 @@ mkdir -p "$PROJ_DIR"
 mkdir -p "$NODE_DIR"
 echo "Clean done"
 
+# ────────────────────────────────────────────────────────────────────────
+# verify_sha256 <file> <expected_hex>
+#
+# Uses shasum (macOS default) — `-a 256` gives SHA-256. We don't depend on
+# sha256sum / openssl because both introduce host variance. The two-column
+# `shasum -c` idiom expects "<hex>  <file>" on stdin; we feed it from a
+# heredoc and let it abort if mismatch.
+#
+# On mismatch we delete the downloaded file before exiting so a retry
+# doesn't accidentally pick up a tampered cached copy.
+# ────────────────────────────────────────────────────────────────────────
+verify_sha256() {
+    local file="$1"
+    local expected="$2"
+    if [ -z "$expected" ]; then
+        echo "    ERROR: no expected SHA-256 configured for this (version, arch) — refusing to use unverified download"
+        rm -f "$file"
+        exit 1
+    fi
+    if ! printf '%s  %s\n' "$expected" "$file" | shasum -a 256 -c --status -; then
+        echo "    ERROR: SHA-256 mismatch for $file"
+        echo "    expected: $expected"
+        echo "    actual:   $(shasum -a 256 "$file" | awk '{print $1}')"
+        echo "    Bump the expected value in scripts/build-desktop.sh only after verifying the"
+        echo "    new upstream release signature — do not paste the computed hash blindly."
+        rm -f "$file"
+        exit 1
+    fi
+    echo "    SHA-256 OK: $expected"
+}
+
 # Step 1: Build frontend
 echo ""
 echo "--- Step 1: Building frontend ---"
@@ -42,14 +73,24 @@ echo "Frontend build complete"
 # Step 2: Download standalone Python
 echo ""
 echo "--- Step 2: Downloading standalone Python ---"
+# Pinned expected SHA-256 for python-build-standalone 20260325 Darwin installers.
+# Source: https://github.com/astral-sh/python-build-standalone/releases/download/20260325/SHA256SUMS
+# If you bump the Python release tag above, REPLACE these hashes — do not
+# paste the computed-after-download hash blindly.
+PYTHON_SHA256_ARM64="688da81bcaa6ed91792397c7d5433b13a4f02f021f940637c3972639bc516dca"
+PYTHON_SHA256_X64="7411e47939783708381017a90944a69641ac84d43f74fb6e2d52576c599a2717"
+
 ARCH=$(uname -m)
 if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
     PYTHON_URL="https://github.com/astral-sh/python-build-standalone/releases/download/20260325/cpython-3.13.12%2B20260325-aarch64-apple-darwin-install_only.tar.gz"
+    PYTHON_SHA256="$PYTHON_SHA256_ARM64"
 else
     PYTHON_URL="https://github.com/astral-sh/python-build-standalone/releases/download/20260325/cpython-3.13.12%2B20260325-x86_64-apple-darwin-install_only.tar.gz"
+    PYTHON_SHA256="$PYTHON_SHA256_X64"
 fi
 
-curl -L -o /tmp/python-standalone.tar.gz "$PYTHON_URL"
+curl -L --fail -o /tmp/python-standalone.tar.gz "$PYTHON_URL"
+verify_sha256 /tmp/python-standalone.tar.gz "$PYTHON_SHA256"
 tar xzf /tmp/python-standalone.tar.gz -C "$PYTHON_DIR" --strip-components=1
 rm /tmp/python-standalone.tar.gz
 echo "Python downloaded: $("$PYTHON_DIR/bin/python3" --version)"
@@ -103,10 +144,33 @@ if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
 else
     NODE_ARCH="x64"
 fi
+# Pinned expected SHA-256 for the two Darwin Node.js binaries of $NODE_VERSION.
+# Source: https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt
+# If you bump NODE_VERSION above, REPLACE these hashes from the new release's
+# SHASUMS256.txt — do not paste the computed-after-download hash blindly.
+# (A mismatched NODE_VERSION vs hash aborts the build at verify_sha256.)
+case "$NODE_VERSION" in
+    v22.11.0)
+        NODE_SHA256_ARM64="2e89afe6f4e3aa6c7e21c560d8a0453d84807e97850bbb819b998531a22bdfde"
+        NODE_SHA256_X64="668d30b9512137b5f5baeef6c1bb4c46efff9a761ba990a034fb6b28b9da2465"
+        ;;
+    *)
+        NODE_SHA256_ARM64=""
+        NODE_SHA256_X64=""
+        ;;
+esac
+
+if [ "$NODE_ARCH" = "arm64" ]; then
+    NODE_SHA256="$NODE_SHA256_ARM64"
+else
+    NODE_SHA256="$NODE_SHA256_X64"
+fi
+
 NODE_TARBALL="node-${NODE_VERSION}-darwin-${NODE_ARCH}.tar.gz"
 NODE_URL="https://nodejs.org/dist/${NODE_VERSION}/${NODE_TARBALL}"
 
 curl -L --fail -o "/tmp/$NODE_TARBALL" "$NODE_URL"
+verify_sha256 "/tmp/$NODE_TARBALL" "$NODE_SHA256"
 tar xzf "/tmp/$NODE_TARBALL" -C "$NODE_DIR" --strip-components=1
 rm "/tmp/$NODE_TARBALL"
 echo "Node.js downloaded: $("$NODE_DIR/bin/node" --version)"
@@ -174,26 +238,30 @@ echo "  Node bin shims verified: npm $("$NODE_DIR/bin/npm" --version), npx $("$N
 # installs during build.
 echo ""
 echo "--- Step 3.6: Installing bundled CLIs (claude-code + lark-cli) ---"
-cat > "$NODE_DIR/package.json" <<'NODEPKG'
-{
-  "name": "narranexus-bundled-clis",
-  "private": true,
-  "version": "0.0.0",
-  "description": "Bundled CLI runtime for NarraNexus desktop — not published.",
-  "dependencies": {
-    "@anthropic-ai/claude-code": "latest",
-    "@larksuite/cli": "latest"
-  }
-}
-NODEPKG
+# Use the committed package.json + package-lock.json so the build is
+# reproducible. Anything under scripts/desktop-bundle/ is the SOURCE OF
+# TRUTH for the bundled CLI versions — to bump:
+#   1. Edit scripts/desktop-bundle/package.json (exact versions, no ranges)
+#   2. cd scripts/desktop-bundle && npm install --package-lock-only
+#   3. Commit both files together.
+# npm ci refuses to run without a lockfile and will error if package.json
+# and the lockfile disagree — that's the reproducibility guard we want.
+BUNDLE_MANIFEST_DIR="$SCRIPT_DIR/desktop-bundle"
+if [ ! -f "$BUNDLE_MANIFEST_DIR/package.json" ] \
+   || [ ! -f "$BUNDLE_MANIFEST_DIR/package-lock.json" ]; then
+    echo "ERROR: missing bundle manifest at $BUNDLE_MANIFEST_DIR"
+    echo "       expected package.json + package-lock.json committed in repo"
+    exit 1
+fi
+cp "$BUNDLE_MANIFEST_DIR/package.json"      "$NODE_DIR/package.json"
+cp "$BUNDLE_MANIFEST_DIR/package-lock.json" "$NODE_DIR/package-lock.json"
 
-# Use the bundled npm + node exclusively by prepending $NODE_DIR/bin to PATH
-# and pointing npm's prefix at $NODE_DIR itself. --omit=dev is belt-and-braces
-# (no devDeps declared) and --no-audit/--no-fund shave a chunk of startup.
+# npm ci installs strictly from the lockfile, fails if it's out of sync, and
+# wipes node_modules first — exactly what we want for a reproducible bundle.
 (
     cd "$NODE_DIR"
     PATH="$NODE_DIR/bin:$PATH" \
-    "$NODE_DIR/bin/npm" install \
+    "$NODE_DIR/bin/npm" ci \
         --omit=dev --no-audit --no-fund --loglevel=error \
         2>&1 | tail -10
 )
@@ -512,30 +580,52 @@ if [ "$IS_REAL_SIGN" -eq 1 ]; then
     # Sign inner Mach-O files first. find -perm +111 catches every
     # executable (Python, node, codesign hates when a parent is signed
     # before its children for hardened runtime).
+    #
+    # Fail-fast policy: any Mach-O that codesign refuses is a hard stop.
+    # Previously we swallowed failures with `|| echo (warn)` and only
+    # discovered them at notarization — Apple's rejection messages are
+    # far less useful than codesign's own stderr. Abort here so the build
+    # log points at the exact binary.
+    INNER_SIGN_LOG="$STAGE_DIR/inner-codesign.log"
+    : > "$INNER_SIGN_LOG"
+    inner_fail=0
     while IFS= read -r -d '' target; do
         # Skip symlinks (codesign follows them and may double-sign).
         [ -L "$target" ] && continue
         # Only try to sign Mach-O binaries / dylibs; text scripts and
         # data files are covered by the outer bundle seal.
         if file "$target" 2>/dev/null | grep -qE 'Mach-O|dynamically linked'; then
-            codesign --force --timestamp --options runtime \
-                --entitlements "$ENTITLEMENTS_PLIST" \
-                --sign "$APPLE_SIGNING_IDENTITY" "$target" \
-                2>/dev/null || echo "    (warn) could not sign $target"
+            if ! codesign --force --timestamp --options runtime \
+                    --entitlements "$ENTITLEMENTS_PLIST" \
+                    --sign "$APPLE_SIGNING_IDENTITY" "$target" \
+                    >> "$INNER_SIGN_LOG" 2>&1; then
+                echo "    ERROR: codesign failed on $target"
+                tail -20 "$INNER_SIGN_LOG" | sed 's/^/      /'
+                inner_fail=1
+            fi
         fi
     done < <(find "$STAGE_APP/Contents/Resources" -type f -print0 2>/dev/null)
+    if [ "$inner_fail" -ne 0 ]; then
+        echo "  At least one inner Mach-O failed to sign. Full log: $INNER_SIGN_LOG"
+        echo "  This would be rejected by notarization — aborting now."
+        exit 1
+    fi
 
     # Seal the outer bundle.
     codesign --force --deep --timestamp --options runtime \
         --entitlements "$ENTITLEMENTS_PLIST" \
         --sign "$APPLE_SIGNING_IDENTITY" "$STAGE_APP"
 
-    codesign --verify --verbose=2 "$STAGE_APP" 2>&1 | head -5 || true
-    # `spctl` checks Gatekeeper's view of the signature. Expected to fail
-    # until notarization runs ("source=No Matching DeveloperID"); that's
-    # just information, not a build failure.
-    spctl --assess --verbose=4 --type execute "$STAGE_APP" 2>&1 | head -2 || true
-    echo "  Developer-ID signing OK"
+    # Strict bundle-level verify. --deep walks every nested Mach-O so we
+    # catch any one that somehow slipped past the inner loop above.
+    codesign --verify --deep --strict --verbose=4 "$STAGE_APP"
+
+    # Full pre-notarize audit: exhaustive per-binary codesign verify,
+    # entitlements dump, xattr audit, inventory. Non-zero exit here is a
+    # guaranteed Apple-notary rejection, so it MUST block the build.
+    "$SCRIPT_DIR/pre-notarize-audit.sh" "$STAGE_APP"
+
+    echo "  Developer-ID signing + audit OK"
 else
     # Ad-hoc sign.
     echo "  Ad-hoc signing staged .app..."
@@ -609,15 +699,95 @@ if [ "$IS_REAL_SIGN" -eq 1 ] \
    && [ -n "${APPLE_TEAM_ID:-}" ]; then
     echo ""
     echo "--- Step 8: Notarizing DMG ---"
+
+    # Final pre-submit xattr audit of the DMG. hdiutil / cp can reintroduce
+    # xattrs on the DMG even when the source was clean. Non-empty → abort.
+    DMG_XATTR=$(xattr -lr "$STAGE_DMG" 2>/dev/null | grep -v '^$' || true)
+    if [ -n "$DMG_XATTR" ]; then
+        echo "  ERROR: STAGE_DMG carries extended attributes — Apple will reject."
+        echo "$DMG_XATTR" | head -10 | sed 's/^/    /'
+        echo "  Aborting before submission."
+        exit 1
+    fi
+
+    # Submit -> capture submission ID -> poll -> on failure auto-dump log.
+    #
+    # Why not `--wait`: --wait alone prints a final status line but gives
+    # you no submission ID on stdout you can reliably parse, so if you
+    # later want `notarytool log <id>` you're stuck hunting through
+    # ~/Library/Logs. `--output-format json` + a separate wait/info step
+    # keeps the ID available for manual re-queries. We also persist it
+    # to a file next to the DMG so the developer can run
+    #   xcrun notarytool log <id> --keychain-profile ... <outfile>
+    # anytime after the build.
+    SUBMIT_OUT="$STAGE_DIR/notarytool-submit.json"
+    NOTARIZE_ID_FILE="$DMG_DIR/notarize-submission-id.txt"
+    NOTARIZE_LOG_FILE="$DMG_DIR/notarize-latest.log"
+    : > "$NOTARIZE_ID_FILE"
+    : > "$NOTARIZE_LOG_FILE"
+
     echo "  Submitting $STAGE_DMG to Apple notary service..."
-    # --wait blocks until notarization finishes (typ. 1-5 min). --output-format
-    # json would let us machine-parse, but for human-driven builds the plain
-    # output is more informative when things go wrong.
-    xcrun notarytool submit "$STAGE_DMG" \
+    if ! xcrun notarytool submit "$STAGE_DMG" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --output-format json \
+            > "$SUBMIT_OUT"; then
+        echo "  ERROR: notarytool submit itself failed (network? auth?). Raw response:"
+        sed 's/^/    /' "$SUBMIT_OUT" || true
+        exit 1
+    fi
+
+    # notarytool's JSON is shaped {"id":"...", "status":"In Progress", ...}.
+    # We use python3 (always available on macOS since 10.15) rather than
+    # jq — one fewer host dep.
+    SUBMISSION_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("id",""))' "$SUBMIT_OUT")
+    if [ -z "$SUBMISSION_ID" ]; then
+        echo "  ERROR: could not extract submission ID from notarytool response:"
+        sed 's/^/    /' "$SUBMIT_OUT"
+        exit 1
+    fi
+    echo "$SUBMISSION_ID" > "$NOTARIZE_ID_FILE"
+    echo "  submission id: $SUBMISSION_ID  (saved to $NOTARIZE_ID_FILE)"
+
+    echo "  Waiting for notarization to finish (polling)..."
+    if ! xcrun notarytool wait "$SUBMISSION_ID" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"; then
+        echo "  notarytool wait returned non-zero — fetching log before aborting..."
+    fi
+
+    # Pull info for final status. `notarytool info` prints structured output;
+    # we re-query with --output-format json to parse status reliably.
+    INFO_OUT="$STAGE_DIR/notarytool-info.json"
+    xcrun notarytool info "$SUBMISSION_ID" \
         --apple-id "$APPLE_ID" \
         --password "$APPLE_APP_SPECIFIC_PASSWORD" \
         --team-id "$APPLE_TEAM_ID" \
-        --wait
+        --output-format json > "$INFO_OUT" || true
+    STATUS=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("status",""))' "$INFO_OUT" 2>/dev/null || echo '?')
+    echo "  final status: $STATUS"
+
+    # Always download the per-submission log — even on success it can be
+    # useful to diff against future failures. The log is what Apple gives
+    # you about why each binary was or wasn't accepted.
+    xcrun notarytool log "$SUBMISSION_ID" \
+        --apple-id "$APPLE_ID" \
+        --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+        --team-id "$APPLE_TEAM_ID" \
+        "$NOTARIZE_LOG_FILE" 2>/dev/null || true
+    if [ -s "$NOTARIZE_LOG_FILE" ]; then
+        echo "  log saved: $NOTARIZE_LOG_FILE"
+    fi
+
+    if [ "$STATUS" != "Accepted" ]; then
+        echo "  ERROR: notarization status = '$STATUS' (expected 'Accepted')."
+        echo "  Full log above. Keep submission id $SUBMISSION_ID for re-queries:"
+        echo "    xcrun notarytool log $SUBMISSION_ID --apple-id ... --password ... --team-id ..."
+        exit 1
+    fi
+
     echo "  Stapling ticket to DMG..."
     xcrun stapler staple "$STAGE_DMG"
     xcrun stapler validate "$STAGE_DMG"
