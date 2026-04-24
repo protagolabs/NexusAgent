@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ArrowRight, ArrowLeft, Sparkles, UserPlus, Cloud } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
+import { useTheme } from '@/hooks';
 import { useConfigStore, useRuntimeStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -19,6 +20,7 @@ export function LoginPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const { login, setAgents, setAgentId } = useConfigStore();
   const mode = useRuntimeStore((s) => s.mode);
   const setMode = useRuntimeStore((s) => s.setMode);
@@ -98,7 +100,7 @@ export function LoginPage() {
         {/* Document header — archive style */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-6 h-6 bg-[var(--text-primary)]" />
+            <img src={isDark ? '/logo-dark.png' : '/logo-light.png'} alt="NarraNexus" className="h-8 w-auto object-contain" />
             <span className="text-[10px] font-[family-name:var(--font-mono)] uppercase tracking-[0.22em] text-[var(--text-tertiary)]">
               NetMind · Access
             </span>

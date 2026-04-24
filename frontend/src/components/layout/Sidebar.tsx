@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import { Button, ThemeToggle, useConfirm } from '@/components/ui';
+import { useTheme } from '@/hooks';
 import { useConfigStore, useChatStore, useRuntimeStore, usePreloadStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,7 @@ export function Sidebar() {
   const { mode, features, setMode, setCloudApiUrl } = useRuntimeStore();
   const clearPreload = usePreloadStore((s) => s.clearAll);
   const { confirm, dialog: confirmDialog } = useConfirm();
+  const { isDark } = useTheme();
 
   /**
    * Wipe all session + cached data before leaving the current mode.
@@ -158,7 +160,7 @@ export function Sidebar() {
         <div className="flex items-center justify-between gap-2">
           {!collapsed && (
             <img
-              src="/logo.png"
+              src={isDark ? '/logo-dark.png' : '/logo-light.png'}
               alt="NarraNexus"
               className="h-12 w-auto object-contain animate-fade-in"
             />

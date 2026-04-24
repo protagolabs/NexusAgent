@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Sparkles, UserPlus, Cloud, ArrowLeft } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
+import { useTheme } from '@/hooks';
 import { useConfigStore, useRuntimeStore } from '@/stores';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ export function RegisterPage() {
   } | null>(null);
 
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const { login, setAgents, setAgentId } = useConfigStore();
   const mode = useRuntimeStore((s) => s.mode);
   const setMode = useRuntimeStore((s) => s.setMode);
@@ -128,8 +130,8 @@ export function RegisterPage() {
           <div className="relative inline-block mb-5">
             <div className="relative w-20 h-20 rounded-2xl bg-[var(--gradient-primary)] flex items-center justify-center overflow-hidden shadow-[var(--shadow-glow)]">
               <img
-                src="/logo.png"
-                alt="NetMind.AI"
+                src={isDark ? '/logo-dark.png' : '/logo-light.png'}
+                alt="NarraNexus"
                 className="w-14 h-14 object-contain"
               />
               <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[var(--bg-primary)] border-2 border-[var(--accent-primary)] flex items-center justify-center">
