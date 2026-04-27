@@ -541,10 +541,24 @@ class JobTrigger:
         try:
             # Import AgentRuntime lazily to avoid circular imports
             from xyz_agent_context.agent_runtime import AgentRuntime
+            from xyz_agent_context.agent_runtime.logging_service import LoggingService
 
             logger.info(f"[JobTrigger] Starting AgentRuntime for job {job.job_id}")
 
-            runtime = AgentRuntime()
+            # Disable per-agent file logging in the JobTrigger process to match
+            # the convention already established by lark_trigger and
+            # message_bus_trigger. Trigger processes run AgentRuntime in a
+            # tight loop (high-frequency cron jobs spawn dozens of runs per
+            # hour), and `LoggingService.setup()` allocates a loguru handler
+            # backed by `multiprocessing.SimpleQueue` (enqueue=True) per run.
+            # Cleanup is owned by the background hook task; if `setup()` ever
+            # raises (e.g. fd exhaustion) or the BG task is killed, the queue
+            # leaks 2-3 fd. On EC2 this saturated the jobs container at
+            # 1021/1024 fd in 3 days and left every subsequent run failing
+            # with `OSError: [Errno 24] Too many open files` from
+            # logging_service.py:128. stdout loguru output is preserved, so
+            # `docker logs narranexus-jobs` still has full traces.
+            runtime = AgentRuntime(logging_service=LoggingService(enabled=False))
 
             # Execution identity: use related_entity_id (if available) as user_id, otherwise use job.user_id
             # This way Job executes in the target user's context, loading their Narrative and related info

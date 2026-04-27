@@ -1,7 +1,44 @@
 ---
 code_file: src/xyz_agent_context/module/job_module/job_trigger.py
-last_verified: 2026-04-21
+last_verified: 2026-04-27
 ---
+
+## 2026-04-27 — disable per-run file logging (fd-leak fix)
+
+EC2 production observation: `narranexus-jobs` Python process saturated
+file descriptors at 1021 / 1024 limit after ~3 days of uptime, and
+**every subsequent job run failed with `OSError: [Errno 24] Too many
+open files`** thrown from `logging_service.py:128`. Of the 1021 fd, 674
+were `PIPE` — roughly 337 unreclaimed `multiprocessing.SimpleQueue`
+instances created by loguru's `enqueue=True` worker queue.
+
+Root cause: `LoggingService.setup()` calls `logger.add(..., enqueue=True)`,
+which spawns a `multiprocessing.SimpleQueue` (2 pipe fd + 1 lock fd).
+Cleanup is owned by the agent_runtime background hook task; if `setup`
+itself raises (e.g. fd exhaustion), or the BG task is killed before its
+finally clause runs, the queue's fds are never closed. JobTrigger runs
+high-frequency cron jobs (e.g. S&P 500 every 10 min — 144 runs/day),
+so the leak compounds fastest here. `narranexus-backend`, which also
+uses default `LoggingService`, leaks at a much lower rate; `lark_trigger`
+and `message_bus_trigger` already disable file logging entirely.
+
+Fix: pass `LoggingService(enabled=False)` to `AgentRuntime` in
+`_run_agent`, matching the convention already used by `lark_trigger.py`
+(line 1242) and `message_bus_trigger.py` (line 409). With logging
+disabled, `setup()` returns immediately without allocating a loguru
+handler, so the leak path is closed.
+
+Trade-offs:
+- Per-agent log files at `~/.narranexus/logs/agents/<agent_id>_*.log`
+  are no longer written for job-triggered runs. Same trade-off
+  `lark_trigger` and `message_bus_trigger` already accepted.
+- `docker logs narranexus-jobs` still surfaces full loguru output to
+  stdout, so post-incident triage is unaffected. Container log retention
+  is the operational source of truth for trigger-run history.
+- The deeper fix (remove `enqueue=True` from `LoggingService` itself or
+  redesign cleanup ownership) remains open for the architectural
+  TODO list — this fix is the smallest change that aligns the three
+  trigger processes and stops the bleed.
 
 ## 2026-04-20 — runtime consumption via `collect_run` (Bug 2)
 
