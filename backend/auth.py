@@ -28,7 +28,14 @@ from loguru import logger
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-do-not-use-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_DAYS = 7
-INVITE_CODE = os.environ.get("INVITE_CODE", "narranexus2026")
+# No default value: cloud-mode operators MUST set INVITE_CODE in their
+# environment to enable user registration. When unset, INVITE_CODE is None,
+# so the comparison in routes/auth.py (`request.invite_code != INVITE_CODE`)
+# fails for every input and the registration endpoint stays effectively
+# closed — fail-closed is the right posture for a public-facing endpoint.
+# Local (SQLite) mode bypasses registration entirely; this only affects
+# cloud deployments.
+INVITE_CODE = os.environ.get("INVITE_CODE")
 
 
 def _is_cloud_mode() -> bool:

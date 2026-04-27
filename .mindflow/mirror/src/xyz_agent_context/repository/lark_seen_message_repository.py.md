@@ -10,7 +10,7 @@ stub: false
 
 Lark 的 WebSocket event 投递是 **at-least-once**：客户端 ack 不到位或断连重连，同
 一个 `message_id` 会被服务端再次推送。`LarkTrigger` 原来只靠一个 60 秒 TTL 的进程
-内 set 去重——进程重启就全忘，超过 60 秒的重投也漏。现场表现就是 Xiong 报的"同
+内 set 去重——进程重启就全忘，超过 60 秒的重投也漏。现场表现就是 an operator 报的"同
 一条消息隔了一个小时 agent 又回了一遍"（Bug 27）。
 
 本 repo 提供一个最小闸门：**atomic "是否已见过 message_id"**，落 DB 所以跨进程

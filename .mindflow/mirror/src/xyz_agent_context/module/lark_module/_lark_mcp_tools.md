@@ -33,7 +33,7 @@ reading, per-agent credential management via `lark_setup` /
 The `missing_scope` recovery bullet in the `lark_cli` tool docstring
 previously taught only `auth login --scope X --no-wait` with no mention
 of the follow-up `auth login --device-code D` poll. Agents therefore
-kept re-minting on every turn (xinyao_test_v1 incident 2026-04-22).
+kept re-minting on every turn (demo_user_v1 incident 2026-04-22).
 Rewrote the bullet to (a) reference the fuller "Incremental scope
 authorization" section rendered by `lark_module.get_instructions` and
 (b) summarize the two-step, two-turn rule inline for agents that read

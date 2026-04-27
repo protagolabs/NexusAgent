@@ -18,6 +18,13 @@
 AGENT.md
 /deploy/synapse/
 
+# ── Operator-local probe / benchmark scripts (often hold real API keys) ──
+# These are ad-hoc, single-machine investigations that read live provider
+# credentials inline. Keeping them untracked prevents another accidental
+# `git add -A` from committing a real key.
+/scripts/benchmark_embedding_speed.py
+/scripts/test_netmind_*.py
+
 # ── Superpowers worktrees (must remain untracked) ─────────────────────────
 /.worktrees/
 
