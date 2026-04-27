@@ -958,7 +958,7 @@ async def test_execute_single_job():
         job_id="job_test_" + uuid4().hex[:8],
         title="AI News Summary Test",
         agent_id="agent_ecb12faf",
-        user_id="user_binliang",
+        user_id="user_demo",
         job_type=JobType.ONE_OFF,
         trigger_config=TriggerConfig(run_at=utc_now()),
         description="Test: collect AI domain news and generate summary.",

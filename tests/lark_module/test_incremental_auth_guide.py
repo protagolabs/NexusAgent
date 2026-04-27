@@ -5,7 +5,7 @@
 @description: Prompt-content regression guard for the incremental scope
 authorization guidance.
 
-Context: on 2026-04-22 production user xinyao_test_v1 ran into a Lark
+Context: on 2026-04-22 production user demo_user_v1 ran into a Lark
 `missing_scope: space:document:retrieve` error and the agent looped 6
 times within 13 minutes, each time minting a fresh `auth login --scope X
 --json --no-wait` URL and sending the new verification URL to her, never
@@ -26,7 +26,7 @@ from __future__ import annotations
 def test_guide_teaches_both_no_wait_and_device_code_sides():
     """The guide must mention `--no-wait` (mint side) and `--device-code`
     (poll side). Failure here means the agent is being taught only half
-    the flow — which is exactly the bug that trapped xinyao_test_v1.
+    the flow — which is exactly the bug that trapped demo_user_v1.
     """
     from xyz_agent_context.module.lark_module.lark_module import (
         _INCREMENTAL_AUTH_GUIDE,
@@ -70,7 +70,7 @@ def test_guide_forbids_re_minting_while_url_in_flight():
     """The agent must be told NOT to mint a fresh URL when a recent
     `--no-wait` is still outstanding for the same scope. Pre-fix this
     rule was absent and the agent re-minted on every turn (6 URLs in
-    13 minutes for xinyao).
+    13 minutes for demo_user).
     """
     from xyz_agent_context.module.lark_module.lark_module import (
         _INCREMENTAL_AUTH_GUIDE,
@@ -90,7 +90,7 @@ def test_guide_forbids_re_minting_while_url_in_flight():
     assert any(s in lower for s in signals), (
         "Incremental auth guide must explicitly forbid minting a new URL "
         "when one is already in flight for the scope. Missing this rule "
-        "is what let the agent loop 6 times for xinyao_test_v1."
+        "is what let the agent loop 6 times for demo_user_v1."
     )
 
 

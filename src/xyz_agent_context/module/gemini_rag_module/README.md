@@ -25,14 +25,14 @@ load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))  # Reads GOOGLE_API_KEY from environment
 
-def create_store(display_name: str = "binliang_test_store"):
+def create_store(display_name: str = "demo_test_store"):
     store = client.file_search_stores.create(
         config={"display_name": display_name}
     )
     print("Created FileSearchStore:", store.name)
     return store
 
-store = create_store("binliang_test_store")
+store = create_store("demo_test_store")
 # store.name example: "fileSearchStores/ABCxyz..."
 
 def upload_file_to_store(store, local_file_path: str, chunking_config: dict | None = None):
@@ -53,7 +53,7 @@ upload_file_to_store(store, "./deepseek_v2.pdf")
 # Or specify chunk parameters, e.g.:
 # upload_file_to_store(store, "my_doc.txt", chunking_config={"white_space_config": {"max_tokens_per_chunk": 400, "overlap_tokens": 50}})
 
-store = client.file_search_stores.get(name="fileSearchStores/binliangteststore-c866m4drjbov")
+store = client.file_search_stores.get(name="fileSearchStores/<your-store-id>")
 
 def search_store(store, query: str, top_k: int = 5):
     response = client.models.generate_content(

@@ -131,7 +131,20 @@ async def register(request: RegisterRequest, http_request: Request):
         if not _is_cloud_mode():
             return RegisterResponse(success=False, error="Registration is only available in cloud mode")
 
-        # Validate invite code
+        # Validate invite code. INVITE_CODE has no default — when the
+        # operator hasn't set it, every comparison fails, registration
+        # stays closed. Surface a clearer error so an admin can spot the
+        # missing config quickly instead of debugging "invalid invite
+        # code" reports from real users.
+        if INVITE_CODE is None:
+            logger.warning(
+                "Registration attempted but server has no INVITE_CODE configured. "
+                "Set the INVITE_CODE environment variable to enable registration."
+            )
+            return RegisterResponse(
+                success=False,
+                error="Registration is currently disabled on this server.",
+            )
         if request.invite_code != INVITE_CODE:
             return RegisterResponse(success=False, error="Invalid invite code")
 

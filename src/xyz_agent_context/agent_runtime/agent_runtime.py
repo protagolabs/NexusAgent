@@ -789,7 +789,7 @@ async def test_agent_runtime():
     async with AgentRuntime() as agent_runtime:
         async for response in agent_runtime.run(
             agent_id="agent_ecb12faf",
-            user_id="user_binliang",
+            user_id="user_demo",
             input_content="Do you know what a vector bundle is?",
             working_source=WorkingSource.CHAT,  # Use enum type (also supports string "chat")
         ):

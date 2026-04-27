@@ -15,7 +15,7 @@ throwaway MySQL. Example for the standard local dev container:
     export NARRANEXUS_MYSQL_TEST_URL=\\
         "mysql://root:xyz_root_pass@127.0.0.1:3306/xyz_agent_context"
 
-Context: in prod (2026-04-22) user xinyao_test_v1 sat with
+Context: in prod (2026-04-22) user demo_user_v1 sat with
 used_input_tokens = 999_995 of a 1_000_000 cap. Every subsequent
 atomic_deduct the service issued failed with:
 
@@ -112,7 +112,7 @@ async def test_atomic_deduct_overshoot_does_not_crash_on_unsigned(mysql_repo):
     forever with no accounting."""
     await mysql_repo.create("usr_underflow_deduct_overshoot", 1_000_000, 1_000_000)
     # Bring used up to the cap boundary minus 5, matching the production
-    # xinyao_test_v1 row snapshot.
+    # demo_user_v1 row snapshot.
     await mysql_repo.atomic_deduct("usr_underflow_deduct_overshoot", 999_995, 0)
 
     # Delta of 100 input would make used = 1_000_095 > cap, which triggers
@@ -136,7 +136,7 @@ async def test_atomic_deduct_when_already_at_cap_still_flips_and_increments(
     """Second deduct call after `used` already hit the cap must keep
     working. Pre-fix the first overshooting call raises; the row stays
     `active` with `used == cap`; every further call raises again. That's
-    the xinyao_test_v1 state observed in prod."""
+    the demo_user_v1 state observed in prod."""
     await mysql_repo.create("usr_underflow_deduct_at_cap", 1_000, 1_000)
     await mysql_repo.atomic_deduct("usr_underflow_deduct_at_cap", 1_000, 1_000)
     q = await mysql_repo.get_by_user_id("usr_underflow_deduct_at_cap")

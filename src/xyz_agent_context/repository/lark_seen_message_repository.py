@@ -7,7 +7,7 @@
 The trigger's in-memory set is necessary but not sufficient: on every
 process restart we'd lose it and Lark's at-least-once delivery would
 re-deliver un-acked events, causing the agent to reply to the same user
-message twice — sometimes an hour apart, exactly as Xiong reported.
+message twice — sometimes an hour apart, exactly as an operator reported.
 
 This repository exposes one method per operation the trigger needs:
 

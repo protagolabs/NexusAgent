@@ -37,7 +37,7 @@ test_guide_warns_about_admin_approval_preceding_user_authorization`——
 要把 `device_code`、scope、`verification_url` 显式写进自己的 reasoning
 里，因为 tool-call output 单 turn 就消失。如果不 restate，下一轮 Agent
 拿不到 `device_code` 值，只能重新 mint 一次——orphan 用户刚点过的 URL，
-陷入 xinyao / bin liang 今天经历过的死循环。
+陷入 demo_user / the operator 今天经历过的死循环。
 
 动机：2026-04-23 线上 session `agent_7f357515e25a` 里 Agent **理解**
 机制（它自己诊断出来了），但还是循环，因为 tool output 里的
@@ -71,8 +71,8 @@ duplicate inline.
     `missing_scope` pushed the agent onto the `auth login --scope X
     --no-wait` path, which is a dead end for bot scopes (they must
     be opened at the Lark developer console; the error response
-    usually carries a `console_url`). Xinyao's case happened to be
-    user-scope so this wasn't visible, but a bot-scope Xinyao would
+    usually carries a `console_url`). the operator's case happened to be
+    user-scope so this wasn't visible, but a bot-scope the operator would
     have been stuck minting URLs the user can never redeem.
   - Added "scopes accumulate across logins" — avoids the
     anti-pattern of re-requesting already-granted scopes every
@@ -138,7 +138,7 @@ assertions:
 
 Added `_INCREMENTAL_AUTH_GUIDE` constant and wired it into the
 `stage=="completed"` branch of `get_instructions`. Motivated by the
-xinyao_test_v1 prod incident 2026-04-22 where the agent minted 6
+demo_user_v1 prod incident 2026-04-22 where the agent minted 6
 separate `auth login --scope X --no-wait` URLs inside 13 minutes
 without ever polling the device_code from any of them.
 

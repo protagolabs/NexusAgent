@@ -145,7 +145,7 @@ Implications:
 
 ## 2026-04-21 follow-up — enriched ingress logging ("who sent what to whom")
 
-After another incident review where we needed to know "did Xiong's
+After another incident review where we needed to know "did an operator's
 message actually reach the bot?" and the only audit evidence was
 `event_type=ingress_processed` (no content, no sender info), we
 expanded the ingress path so every incoming Lark message leaves a
@@ -240,7 +240,7 @@ without EC2 shell access.
 Lark delivers events at-least-once: WebSocket reconnects, missed acks,
 or process restarts cause the server to re-push the same `message_id`.
 The previous design (in-memory `dict` with 60s TTL) could not survive
-either scenario — Xiong observed the agent answering the same user
+either scenario — an operator observed the agent answering the same user
 message twice, once right away and once ~an hour later after a restart.
 
 Three-layer defence replacing the single in-memory check:

@@ -225,7 +225,7 @@ class LarkTrigger:
     # than (startup_time - HISTORY_BUFFER_MS) are replays of messages
     # sent before this process started and are dropped outright. 5 min
     # of buffer keeps "user sent a message right before restart" traffic
-    # flowing, while still cutting off the hour-old-event replays Xiong
+    # flowing, while still cutting off the hour-old-event replays an operator
     # reported.
     HISTORY_BUFFER_MS = 5 * 60 * 1000
 

@@ -9,7 +9,7 @@ server doesn't receive our ack in time, the same `message_id` is pushed
 again. Prior to this fix the trigger used an in-memory set with a 60 s
 TTL, so process restarts or re-deliveries over 60 s old slipped through
 and the agent replied to the same message twice (sometimes an hour
-apart — exactly what Xiong reported).
+apart — exactly what an operator reported).
 
 These tests pin three defences in place:
   1. `LarkSeenMessageRepository.mark_seen` is idempotent across calls

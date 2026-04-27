@@ -79,7 +79,7 @@ class SkillInfo(BaseModel):
             "example": {
                 "name": "sales-expert",
                 "description": "Provides professional sales techniques and customer communication skills",
-                "path": "/workspace/agent_001_user_binliang/skills/sales-expert",
+                "path": "/workspace/agent_001_user_demo/skills/sales-expert",
                 "disabled": False
             }
         }

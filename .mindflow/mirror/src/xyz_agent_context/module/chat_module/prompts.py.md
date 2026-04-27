@@ -58,7 +58,7 @@ Self-Check 的设计目的。
 - 末段「silence is fine — but make sure that's a decision, not an oversight」
   闭环重申选择权，同时用 oversight 一词反向施压
 
-这是为了修 Bug T2 (channel-misroute silent turn) 加的：xiong 在 2026-04-27 报告
+这是为了修 Bug T2 (channel-misroute silent turn) 加的：the operator 在 2026-04-27 报告
 EVE agent 在工具链任务（Bash / Read / Write / Glob / lark_status）后，明明
 thinking 里说要 "report back to the user"，最终却用 inline text 收尾，没调
 send_message_to_user_directly，导致 UI 显示 `(Agent decided no response needed)`。
