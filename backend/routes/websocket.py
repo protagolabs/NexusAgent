@@ -121,12 +121,25 @@ async def websocket_agent_run(websocket: WebSocket):
     try:
         # Receive and parse request
         request_data = await websocket.receive_json()
-        logger.info(f"Received request: {request_data}")
+        # NEVER log the raw payload — it contains the JWT token in cloud
+        # mode and the user's input_content (potentially PII). Only log
+        # safe scalar fields here; full DEBUG dump is gated behind redact().
+        if isinstance(request_data, dict):
+            logger.info(
+                "ws.request_received agent_id={a} user_id={u} "
+                "working_source={ws} input_len={n}",
+                a=request_data.get("agent_id"),
+                u=request_data.get("user_id"),
+                ws=request_data.get("working_source", "chat"),
+                n=len(str(request_data.get("input_content", ""))),
+            )
+        else:
+            logger.info("ws.request_received (non-dict payload)")
 
         try:
             request = AgentRunRequest(**request_data)
         except ValidationError as e:
-            logger.error(f"Invalid request: {e}")
+            logger.exception(f"Invalid request: {e}")
             await websocket.send_json({
                 "type": "error",
                 "error_message": f"Invalid request format: {str(e)}",
@@ -284,6 +297,7 @@ async def websocket_agent_run(websocket: WebSocket):
                     working_source=working_source,
                     pass_mcp_urls=mcp_urls,
                     cancellation=cancellation,
+                    trigger_extra_data={"trigger_id": f"ws_{_session_id[:8]}"},
                 ):
                     # Convert message to dict and send
                     if hasattr(message, 'to_dict'):
@@ -305,17 +319,17 @@ async def websocket_agent_run(websocket: WebSocket):
                     if msg_type == 'agent_response':
                         _step3_end = _time.monotonic()  # track last streaming token time
                         preview = message_dict.get('delta', '')[:80]
-                        logger.info(f"  📤 WS [{msg_type}] delta='{preview}'")
+                        logger.debug(f"ws.send type={msg_type} delta='{preview}'")
                     elif msg_type == 'agent_thinking':
                         preview = message_dict.get('thinking_content', '')[:80]
-                        logger.info(f"  📤 WS [{msg_type}] thinking='{preview}'")
+                        logger.debug(f"ws.send type={msg_type} thinking='{preview}'")
                     elif msg_type == 'progress':
                         step = message_dict.get('step', '?')
                         desc = message_dict.get('description', '')[:80]
                         tool = message_dict.get('details', {}).get('tool_name', '') if isinstance(message_dict.get('details'), dict) else ''
-                        logger.info(f"  📤 WS [{msg_type}] step={step} tool={tool} desc='{desc}'")
+                        logger.debug(f"ws.send type={msg_type} step={step} tool={tool} desc='{desc}'")
                     else:
-                        logger.info(f"  📤 WS [{msg_type}] {str(message_dict)[:120]}")
+                        logger.debug(f"ws.send type={msg_type} {str(message_dict)[:120]}")
 
         except CancelledByUser as e:
             logger.info(f"Agent run cancelled: {e.reason}")
@@ -359,8 +373,8 @@ async def websocket_agent_run(websocket: WebSocket):
         logger.info("WebSocket client disconnected")
 
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        logger.error(traceback.format_exc())
+        logger.exception(f"WebSocket error: {e}")
+        logger.exception(traceback.format_exc())
         try:
             await websocket.send_json({
                 "type": "error",

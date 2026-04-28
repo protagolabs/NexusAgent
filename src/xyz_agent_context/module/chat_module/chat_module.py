@@ -722,33 +722,35 @@ class ChatModule(XYZBaseModule):
             f"instance_id={instance_id}, total messages={len(messages)}"
         )
 
-        # ========== 2. Update status report (Report Memory) ==========
-        # Generate status report for Narrative orchestration decision use
-        # Note: Report Memory still uses narrative_id because it is a Narrative-level report
-        if narrative_id:
-            # TODO: This part may need additional LLM processing.
-            total_rounds = len(messages) // 2  # Conversation rounds
-            last_user_msg = params.input_content[:50] + "..." if len(params.input_content) > 50 else params.input_content
-            # Use actual reply content (assistant_content) instead of final_output
-            last_assistant_msg = assistant_content[:50] + "..." if len(assistant_content) > 50 else assistant_content
-
-            report = (
-                f"Conversation rounds: {total_rounds} | "
-                f"Instance: {instance_id} | "
-                f"Latest user message: {last_user_msg} | "
-                f"Latest reply: {last_assistant_msg}"
-            )
-
-            await self.event_memory_module.update_report_memory(
-                narrative_id=narrative_id,
-                module_name=module_name,
-                report_memory=report
-            )
-
-            logger.debug(
-                f"ChatModule.hook_after_event_execution: Status report updated successfully, "
-                f"narrative_id={narrative_id}, instance_id={instance_id}"
-            )
+        # ========== 2. Update status report (Report Memory) — DISABLED ==========
+        # Originally this fed a per-narrative ChatModule status string into
+        # `module_report_memory` so the Narrative could read each module's
+        # current state when deciding whether to keep it active. The reader
+        # half of that contract was never implemented (`get_report_memory`
+        # has no callers anywhere in the codebase as of 2026-04-28), and
+        # the writer was failing in production anyway because the on-disk
+        # table still has a legacy `instance_id NOT NULL` column that the
+        # new schema doesn't fill. We comment out the write rather than
+        # delete the code so reviving the feature is a one-block-change
+        # job; see .mindflow/mirror/.../event_memory_module.py.md for the
+        # full background and the recipe to re-enable.
+        # if narrative_id:
+        #     total_rounds = len(messages) // 2
+        #     last_user_msg = params.input_content[:50] + "..." if len(params.input_content) > 50 else params.input_content
+        #     last_assistant_msg = assistant_content[:50] + "..." if len(assistant_content) > 50 else assistant_content
+        #
+        #     report = (
+        #         f"Conversation rounds: {total_rounds} | "
+        #         f"Instance: {instance_id} | "
+        #         f"Latest user message: {last_user_msg} | "
+        #         f"Latest reply: {last_assistant_msg}"
+        #     )
+        #
+        #     await self.event_memory_module.update_report_memory(
+        #         narrative_id=narrative_id,
+        #         module_name=module_name,
+        #         report_memory=report,
+        #     )
 
         # ========== 3. Embed message pair for Part B retrieval ==========
         try:
