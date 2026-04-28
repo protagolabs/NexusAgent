@@ -13,7 +13,9 @@
 #    bash run.sh          Start all services (backend + frontend)
 #    bash run.sh stop     Stop all NarraNexus processes
 #    bash run.sh status   Show service status
-#    bash run.sh build    Build desktop app (DMG)
+#
+#  Desktop DMG builds are produced by the GitHub Actions release
+#  workflow on tag push (see .github/workflows/), not by this script.
 #
 # ============================================================================
 
@@ -272,9 +274,6 @@ case "${1:-}" in
     ;;
   status)
     status
-    ;;
-  build)
-    exec "$SCRIPT_DIR/scripts/build-desktop.sh"
     ;;
   *)
     check_deps
