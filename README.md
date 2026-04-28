@@ -27,21 +27,39 @@ NarraNexus provides the infrastructure for this: narrative memory that grows acr
 
 ## What Makes NarraNexus Different
 
-### Narrative Memory
+NarraNexus is a modular agent platform designed for long-term memory, contextual awareness, extensibility, and multi-agent collaboration.
 
-Unlike traditional chatbots that treat conversations as isolated sessions, NarraNexus organizes every conversation into **Narratives** -- semantic storylines that persist and grow over time. When you return to a topic days later, the agent picks up right where you left off by matching topic similarity, not timestamps.
+### Long-Term Memory
 
-### Modular & Extensible
+Powered by **EverMemOS**, NarraNexus stores and retrieves memories across MongoDB, Elasticsearch, and Milvus. This allows agents to remember past interactions, retrieve relevant context, and maintain continuity across conversations.
 
-Every capability -- chat, social graph, knowledge base, job scheduling, skills -- runs as an independent **Module**. Modules can be added, removed, or swapped at runtime without affecting the rest of the system. Each module manages its own data, tools, and lifecycle.
+### Context Awareness
+
+The Awareness Module extracts entities, detects intent, identifies topics, and analyzes emotional tone. This context helps other modules retrieve better memories, understand relationships, and decide what information matters.
+
+### Modular Architecture
+
+NarraNexus is built from independent modules, including Chat, Memory, Awareness, Social Network, Jobs, RAG, Skills, Matrix, and Event Memory. Each module manages its own data, tools, and lifecycle, making the platform easy to extend or customize.
 
 ### Agent-to-Agent Communication
 
-Agents don't just talk to users -- they talk to each other. Via the Matrix protocol, agents can create rooms, send messages, @mention peers, and coordinate in group chats, all through natural language.
+Through the Matrix protocol and a Synapse homeserver, agents can communicate with each other, join rooms, send messages, retrieve history, and coordinate multi-agent workflows.
 
-### Framework Agnostic
+### Extensible Skills
 
-NarraNexus is designed to work with multiple LLM providers (Claude, OpenAI, Gemini) through a unified adapter layer. No single framework or model is a hard dependency.
+The Skills Module connects agents to **ClawHub**, where reusable capabilities can be discovered, installed, updated, and removed at runtime.
+
+### Background Jobs
+
+The Jobs Module supports cron, periodic, continuous, and DAG-based workflows, allowing agents to schedule tasks, monitor conditions, and perform asynchronous work.
+
+### Document-Based RAG
+
+The RAG Module uses **Google Gemini File Search** to index uploaded documents and retrieve relevant passages for grounded, source-aware responses.
+
+### Episodic Event Memory
+
+The Event Memory Module stores significant episodes, such as important conversations, decisions, milestones, and meaningful user interactions, helping agents build a more natural sense of continuity.
 
 ## Quick Start
 ### Online Version
@@ -58,7 +76,6 @@ For macOS, choose the file ending with `.dmg`.
 [Download Latest Release](https://github.com/protagolabs/NarraNexus/releases)
 
 ### Install from Source
-## Potential Missing Dependencies
 
 **Windows users**: WSL2 is **required**. Install it first in PowerShell (Admin): `wsl --install`, then run all commands inside WSL2.
 
