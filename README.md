@@ -54,13 +54,22 @@ Download the latest desktop app from GitHub Releases, then choose the file endin
 
 ### Install from Source
 
+#### Prerequisites
+
+| Dependency | Why | Install |
+|------------|-----|---------|
+| **Node.js** (v20+) | Frontend build | Install via [nvm](https://github.com/nvm-sh/nvm) (recommended): `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh \| bash && nvm install 20` |
+| **uv** | Python environment & dependency management | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+
+If either is not detected, `run.sh` will print the install command and exit. Install it, then re-run.
+
 ```bash
 git clone https://github.com/NetMindAI-Open/NarraNexus.git
 cd NarraNexus
 bash run.sh
 ```
 
-The script auto-detects your OS (Linux / macOS / Windows WSL2) and handles everything -- Python, Docker, Node.js, MySQL, dependencies, and configuration. 
+The script auto-detects your OS (Linux / macOS / Windows WSL2) and handles the rest of the dependencies.
 
 After setup, you will see the image below. Then
 1. Open `http://localhost:5173` in your browser
@@ -144,6 +153,45 @@ You can also edit `.evermemos/.env` manually at any time. See the [EverMemOS doc
 <p align="center"><em>NarraNexus in action</em></p>
 
 <br/>
+
+## UI Guide
+
+## Data Directory (`~/.narranexus/`)
+
+NarraNexus stores runtime logs in a user-level directory at `~/.narranexus/`. This directory is created automatically on first run and does not contain any user data or secrets -- only service logs.
+
+```
+~/.narranexus/
+└── logs/
+    ├── backend/                 # FastAPI backend (HTTP + WebSocket)
+    │   └── backend_YYYYMMDD.log
+    ├── mcp/                     # MCP servers (one per Module)
+    │   └── mcp_YYYYMMDD.log
+    ├── module_poller/           # Instance completion poller
+    │   └── module_poller_YYYYMMDD.log
+    ├── job_trigger/             # Job scheduler
+    │   └── job_trigger_YYYYMMDD.log
+    ├── lark_trigger/            # Lark/Feishu IM bot subscriber
+    │   └── lark_trigger_YYYYMMDD.log
+    └── message_bus_trigger/     # Agent-to-agent inbox poller
+        └── message_bus_trigger_YYYYMMDD.log
+```
+
+- **One file per process per day** — daily rotation at midnight, old logs compressed (`.zip`) and retained 30 days. Per-event trace is recovered by grepping across these files for `event_id=evt_…`, `run_id=run_…`, or `trigger_id=lark_…/job_…/ws_…/bus_…/a2a_…`
+- **Configuration via env**: `NEXUS_LOG_LEVEL` (default `INFO`; raise to `DEBUG` or `TRACE` to inspect bodies / SQL), `NEXUS_LOG_FORMAT` (`text` default, `json` for jq-friendly cloud deploys), `NEXUS_LOG_DIR` (override the root path)
+- **Operator HTTP API**: `/api/admin/logs/services` lists what's available, `/api/admin/logs/<service>/tail?n=&level=` tails, `/api/admin/logs/event/<event_id>` greps for one event's full trace
+- **Frontend SystemPage** has a built-in viewer over the same endpoints, including a search box for trace identifiers
+- **Safe to delete**: the entire `~/.narranexus/` directory can be safely removed at any time -- it will be recreated on next run
+- **Desktop app**: uses the same `~/.narranexus/` path (on macOS: `~/.narranexus/`, not inside `~/Library/Application Support/`); the Tauri sidecar drains each subprocess's stdout/stderr into the same files, so behavior matches `bash run.sh`
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [`.nac_doc/_overview.md`](./.nac_doc/_overview.md) | Documentation system entry point with project overview and reading path |
+| `CLAUDE.md` | Ironclad rules, architecture, module creation steps, coding standards |
+| [`.nac_doc/README.md`](./.nac_doc/README.md) | NAC Doc methodology (three-tier documentation system) |
+| [`.nac_doc/project/`](./.nac_doc/project/) | Deep references and task playbooks (Tier-3) |
 
 ## Star History
 
