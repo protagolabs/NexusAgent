@@ -61,7 +61,18 @@ class TauriBridge implements PlatformBridge {
   async getLogs(serviceId?: string): Promise<LogEntry[]> {
     // Wired to the Rust command in tauri/src-tauri/src/commands/health.rs
     // (registered as `get_logs` in lib.rs's invoke_handler).
-    const { invoke } = await import('@tauri-apps/api/core');
+    // @tauri-apps/api is a desktop-only optional runtime dep, intentionally
+    // not declared in package.json. This branch only runs when
+    // window.__TAURI__ is present (i.e. inside the Tauri webview); the cloud
+    // `tsc -b && vite build` skips type resolution (@ts-expect-error) and
+    // static bundling (@vite-ignore).
+    type TauriCore = {
+      invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
+    };
+    // Indirect through a variable so Rollup can't statically resolve the
+    // module (combined with @vite-ignore to silence Vite's plugin warning).
+    const tauriCorePath = '@tauri-apps/api/core';
+    const { invoke } = (await import(/* @vite-ignore */ tauriCorePath)) as TauriCore;
     type RustLogEntry = {
       service_id: string;
       timestamp: number;
