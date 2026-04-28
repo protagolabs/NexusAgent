@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xyz-agent-context"
-version = "1.1.0"
+version = "1.2.3"
 description = "XYZ Agent Context Framework for multi-agent systems"
 readme = "README.md"
 license = {text = "CC-BY-NC-4.0"}
@@ -30,6 +30,8 @@ dependencies = [
     "httpx[socks]",
     "bcrypt>=5.0.0",
     "pyjwt>=2.10.1",
+    "lark-oapi>=1.4.0,<2.0.0",
+    "ddgs>=9.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]
