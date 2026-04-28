@@ -12,7 +12,7 @@ import { useState, useCallback, useRef } from 'react';
 import type { ChatMessage } from '@/types';
 import type { EventLogToolCall, EventLogResponse } from '@/types';
 import { cn, formatTime } from '@/lib/utils';
-import { Markdown } from '@/components/ui';
+import { Markdown, ScrollArea } from '@/components/ui';
 import { api } from '@/lib/api';
 
 interface MessageBubbleProps {
@@ -126,7 +126,7 @@ export function MessageBubble({ message, isStreaming = false, eventId, agentId }
         className={cn(
           'w-8 h-8 flex items-center justify-center shrink-0 transition-colors duration-150',
           isUser
-            ? 'bg-[var(--bg-tertiary)] border border-[var(--rule)] text-[var(--text-secondary)]'
+            ? 'bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] text-[var(--text-secondary)]'
             // Bot avatar uses text-primary → bg-inverse so it inverts automatically.
             : 'bg-[var(--text-primary)] text-[var(--text-inverse)]'
         )}
@@ -188,14 +188,16 @@ export function MessageBubble({ message, isStreaming = false, eventId, agentId }
                     <span>Loading...</span>
                   </div>
                 ) : thinking ? (
-                  <div className={cn(
-                    'mt-2 p-3 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-[300px] overflow-y-auto',
+                  <ScrollArea className={cn(
+                    'mt-2 max-h-[300px]',
                     isUser
                       ? 'bg-[rgb(255_255_255_/_0.1)] opacity-80 dark:bg-[rgb(17_18_20_/_0.08)]'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--rule)]'
-                  )}>
-                    {thinking}
-                  </div>
+                      : 'bg-[var(--bg-sunken)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
+                  )} viewportClassName="p-3">
+                    <div className="text-xs font-mono whitespace-pre-wrap leading-relaxed">
+                      {thinking}
+                    </div>
+                  </ScrollArea>
                 ) : null
               )}
             </div>
@@ -355,7 +357,7 @@ function ToolCallItem({ tool, isUser }: { tool: { tool_name: string; tool_input:
         // Outside: normal secondary background.
         isUser
           ? 'bg-[color-mix(in_srgb,currentColor_10%,transparent)]'
-          : 'bg-[var(--bg-secondary)] border border-[var(--rule)]'
+          : 'bg-[var(--bg-sunken)] border border-[var(--border-subtle)]'
       )}
     >
       <div className={cn(
@@ -372,9 +374,11 @@ function ToolCallItem({ tool, isUser }: { tool: { tool_name: string; tool_input:
         isUser ? 'opacity-60' : 'text-[var(--text-tertiary)]'
       )}>
         {expanded || !isLong ? (
-          <pre className="whitespace-pre-wrap break-all max-h-[200px] overflow-y-auto">
-            {JSON.stringify(tool.tool_input, null, 2)}
-          </pre>
+          <ScrollArea className="max-h-[200px]">
+            <pre className="whitespace-pre-wrap break-all">
+              {JSON.stringify(tool.tool_input, null, 2)}
+            </pre>
+          </ScrollArea>
         ) : (
           <span className="truncate block">{inputStr.slice(0, 120)}...</span>
         )}

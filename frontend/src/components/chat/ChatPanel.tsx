@@ -14,7 +14,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Send, Square, Loader2, Sparkles, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { flushSync } from 'react-dom';
-import { Card, Button, Textarea } from '@/components/ui';
+import { Card, Button, Textarea, ScrollArea } from '@/components/ui';
 import { useChatStore, useConfigStore } from '@/stores';
 import { useAgentWebSocket } from '@/hooks';
 import { cn } from '@/lib/utils';
@@ -480,11 +480,18 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
       {/* Embedding rebuild warning banner */}
       <EmbeddingBanner />
 
-      {/* Messages area — single unified timeline */}
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0"
-        onScroll={(e) => {
+      {/* Messages area — single unified timeline.
+          Wrapped in <ScrollArea> so the scrollbar is JS-rendered (Radix) and
+          cannot be hijacked by macOS's "always show scrollbars" AppKit
+          fallback that ignores ::-webkit-scrollbar. The viewport ref is
+          forwarded so existing scroll logic (auto-scroll-to-bottom, history
+          load on scroll-top, anchor preservation) reads/writes the SAME
+          element it always did. */}
+      <ScrollArea
+        className="flex-1 min-h-0"
+        viewportRef={scrollContainerRef}
+        viewportClassName="p-5"
+        onViewportScroll={(e) => {
           const el = e.currentTarget;
           if (el.scrollTop < 50 && !isLoadingMore && historyMessages.length < historyTotalCount) {
             loadMoreHistory();
@@ -494,6 +501,7 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
           shouldAutoScrollRef.current = isAtBottom;
         }}
       >
+      <div className="space-y-4">
         {/* Loading more (top) */}
         {isLoadingMore && (
           <div className="flex items-center justify-center gap-2 py-2">
@@ -626,7 +634,8 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
                     <Loader2 className="w-4 h-4 text-[var(--accent-primary)] animate-spin" />
                     <div className="absolute inset-0 bg-[var(--accent-primary)] blur-md opacity-30" />
                   </div>
-                  <div className="flex-1 overflow-y-auto space-y-2" style={{ maxHeight: '200px' }}>
+                  <ScrollArea className="flex-1" style={{ maxHeight: '200px' }}>
+                    <div className="space-y-2">
                     {hasThinking && (
                       <div className="text-sm italic text-[var(--text-tertiary)] whitespace-pre-wrap leading-relaxed">
                         {currentThinking || currentAssistantMessage}
@@ -650,7 +659,8 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
                         )}
                       </div>
                     ))}
-                  </div>
+                    </div>
+                  </ScrollArea>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
@@ -667,6 +677,7 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
 
         <div ref={messagesEndRef} />
       </div>
+      </ScrollArea>
 
       {/* Input area */}
       <div className="px-5 py-4 border-t border-[var(--rule)]">
@@ -682,9 +693,12 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
               placeholder={!agentId ? 'Select an agent first…' : 'Type your message…'}
               disabled={isLoading || !agentId}
               className={cn(
-                // Flatten to a fixed 52px row by default; multi-line growth
-                // is handled by rows auto-expanding rather than min/max.
-                'h-[52px] min-h-[52px] max-h-[160px] py-[15px] leading-[22px] resize-none',
+                // Auto-resizing textarea: min-h sets the empty-state height,
+                // max-h caps growth. The Textarea component manages
+                // `style.height` based on scrollHeight on every input.
+                // Padding 14 + line-height 24 + padding 14 = 52px exactly,
+                // matching the send-button height next to it.
+                'min-h-[52px] max-h-[160px] py-[14px] leading-[24px] resize-none',
                 isLoading && 'opacity-60'
               )}
               rows={1}
