@@ -157,7 +157,7 @@ async def add_provider(req: AddProviderRequest, request: Request, user_id: Optio
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"[add_provider] Error: {e}", exc_info=True)
+        logger.exception(f"[add_provider] Error: {e}", exc_info=True)
         return {"success": False, "detail": str(e)}
 
 

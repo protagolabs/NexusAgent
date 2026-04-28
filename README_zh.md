@@ -154,22 +154,26 @@ NarraNexus 在用户目录下的 `~/.narranexus/` 存储运行时日志。该目
 ```
 ~/.narranexus/
 └── logs/
-    ├── agents/              # Agent 执行日志（每次运行一个文件）
-    │   ├── agent_<id>_<timestamp>.log.zip
-    │   └── ...
-    ├── job_trigger/         # 任务调度器日志（每日轮转）
-    │   └── job_trigger_YYYYMMDD.log
-    ├── matrix_trigger/      # Matrix 通信触发器日志
-    │   └── matrix_trigger_YYYYMMDD.log
-    ├── mcp/                 # MCP 服务器日志
+    ├── backend/                 # FastAPI 后端（HTTP + WebSocket）
+    │   └── backend_YYYYMMDD.log
+    ├── mcp/                     # 各 Module 对应的 MCP 服务进程
     │   └── mcp_YYYYMMDD.log
-    └── module_poller/       # Module Poller 日志
-        └── module_poller_YYYYMMDD.log
+    ├── module_poller/           # Instance 完成检测轮询
+    │   └── module_poller_YYYYMMDD.log
+    ├── job_trigger/             # 定时任务调度器
+    │   └── job_trigger_YYYYMMDD.log
+    ├── lark_trigger/            # 飞书 IM 接收订阅
+    │   └── lark_trigger_YYYYMMDD.log
+    └── message_bus_trigger/     # Agent 之间的 inbox 轮询
+        └── message_bus_trigger_YYYYMMDD.log
 ```
 
-- **日志轮转**：每天午夜轮转，旧日志压缩为 `.zip` 并保留 7 天
+- **每个进程每天一份文件**：午夜滚动，旧文件 zip 压缩、保留 30 天。要追单条用户消息的完整链路，按 `event_id=evt_…` / `run_id=run_…` / `trigger_id=lark_…/job_…/ws_…/bus_…/a2a_…` 直接 grep 即可
+- **环境变量配置**：`NEXUS_LOG_LEVEL`（默认 `INFO`；想看 body/SQL 用 `DEBUG` 或 `TRACE`）、`NEXUS_LOG_FORMAT`（`text` 默认，`json` 用于云部署 + jq）、`NEXUS_LOG_DIR`（覆盖根目录）
+- **运维 HTTP API**：`/api/admin/logs/services` 列出所有服务、`/api/admin/logs/<service>/tail?n=&level=` 拉取最新 N 行、`/api/admin/logs/event/<event_id>` 拉取单事件全链路
+- **前端 SystemPage** 自带日志查看器，走的是上面这些接口，带 trace ID 搜索框
 - **可安全删除**：整个 `~/.narranexus/` 目录可以随时删除，下次运行时会自动重建
-- **桌面版**：使用相同的 `~/.narranexus/` 路径（macOS 下为 `~/.narranexus/`，不在 `~/Library/Application Support/` 内）
+- **桌面版**：使用相同的 `~/.narranexus/` 路径；Tauri 内部把每个子进程的 stdout/stderr 也写入同一目录，与 `bash run.sh` 行为一致
 
 ## 文档
 
