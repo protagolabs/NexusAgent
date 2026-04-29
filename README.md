@@ -83,7 +83,7 @@ After setup, you will see the image below. Then
 <br/>
 
 <p align="center">
-  <img src="docs/images/install-interface-v2.png" alt="Install Interface" />
+  <img src="docs/images/install-interface.png" alt="Install Interface" />
 </p>
 
 <p align="center">
