@@ -364,9 +364,24 @@ class ApiClient {
     return response.json();
   }
 
-  /** Build the absolute URL the frontend uses to render an attachment inline. */
-  attachmentRawUrl(agentId: string, userId: string, fileId: string): string {
-    return `${getApiBaseUrl()}/api/agents/${encodeURIComponent(agentId)}/attachments/${encodeURIComponent(fileId)}/raw?user_id=${encodeURIComponent(userId)}`;
+  /**
+   * Fetch a JWT-protected attachment as a Blob.
+   *
+   * Used by `useAttachmentBlobUrl` to build a browser-local `blob:` URL
+   * that <img>/<a> can consume without sending an Authorization header
+   * (which the HTML elements can't attach themselves). Bypasses the
+   * shared `request<T>` because the response body is binary.
+   */
+  async fetchAttachmentBlob(agentId: string, userId: string, fileId: string): Promise<Blob> {
+    const url = `${getApiBaseUrl()}/api/agents/${encodeURIComponent(agentId)}/attachments/${encodeURIComponent(fileId)}/raw?user_id=${encodeURIComponent(userId)}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+    return response.blob();
   }
 
   async deleteFile(agentId: string, userId: string, filename: string): Promise<FileDeleteResponse> {

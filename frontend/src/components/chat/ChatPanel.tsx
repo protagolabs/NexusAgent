@@ -20,6 +20,7 @@ import { useAgentWebSocket } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { MessageBubble } from './MessageBubble';
+import { AttachmentImage } from './AttachmentImage';
 import { EmbeddingBanner } from '@/components/ui/EmbeddingBanner';
 import type { Attachment, SimpleChatMessage } from '@/types';
 
@@ -813,17 +814,17 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
           <div className="mb-2.5 flex flex-wrap gap-2">
             {pendingAttachments.map((att) => {
               const isImage = att.category === 'image';
-              const previewUrl = isImage && agentId && userId
-                ? api.attachmentRawUrl(agentId, userId, att.file_id)
-                : null;
+              const canPreview = isImage && !!agentId && !!userId;
               return (
                 <div
                   key={att.file_id}
                   className="relative flex items-center gap-2 rounded-md border border-[var(--rule)] bg-[var(--bg-tertiary)]/60 pr-7 pl-1.5 py-1 max-w-[240px]"
                 >
-                  {previewUrl ? (
-                    <img
-                      src={previewUrl}
+                  {canPreview ? (
+                    <AttachmentImage
+                      agentId={agentId!}
+                      userId={userId!}
+                      fileId={att.file_id}
                       alt={att.original_name}
                       className="w-9 h-9 rounded object-cover shrink-0"
                     />

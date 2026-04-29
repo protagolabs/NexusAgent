@@ -15,6 +15,7 @@ import { cn, formatTime } from '@/lib/utils';
 import { Markdown, ScrollArea } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useConfigStore } from '@/stores';
+import { AttachmentImage } from './AttachmentImage';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -274,31 +275,25 @@ export function MessageBubble({ message, isStreaming = false, eventId, agentId }
           )}
 
           {/* Attachments — rendered above text content. Image attachments
-              are loaded via the /raw endpoint; non-image attachments show a
-              file chip so the user sees what was uploaded even though the
-              agent currently cannot read it. */}
+              are loaded via the /raw endpoint through an authed fetch +
+              blob URL (see AttachmentImage); non-image attachments show
+              a file chip so the user sees what was uploaded even though
+              the agent currently cannot read it. */}
           {message.attachments && message.attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {message.attachments.map((att: Attachment) => {
-                const previewUrl =
-                  att.category === 'image' && agentId && userId
-                    ? api.attachmentRawUrl(agentId, userId, att.file_id)
-                    : null;
-                if (previewUrl) {
+                const isImage = att.category === 'image' && !!agentId && !!userId;
+                if (isImage) {
                   return (
-                    <a
+                    <AttachmentImage
                       key={att.file_id}
-                      href={previewUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
-                      <img
-                        src={previewUrl}
-                        alt={att.original_name}
-                        className="max-h-48 max-w-[280px] rounded border border-[var(--rule)] object-cover"
-                      />
-                    </a>
+                      agentId={agentId!}
+                      userId={userId!}
+                      fileId={att.file_id}
+                      alt={att.original_name}
+                      className="max-h-48 max-w-[280px] rounded border border-[var(--rule)] object-cover"
+                      zoomable
+                    />
                   );
                 }
                 return (
