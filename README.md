@@ -5,7 +5,8 @@
 <br/>
 <br/>
 
-**A framework for building nexuses of agents -- where intelligence emerges from interaction, not isolation.**
+### A framework for building **nexuses of agents**
+*Where intelligence emerges from interaction, not isolation.*
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Docs](https://img.shields.io/badge/Docs-Quick%20Start-blue)](https://website.narra.nexus/docs/getting-started/quick-start)
@@ -15,44 +16,52 @@
 [![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-8B5CF6)](https://modelcontextprotocol.io/)
 
 **English** | [中文](./README_zh.md)
+
 </div>
 
-<br/>
+---
 
-Most agent frameworks focus on making agents *smarter*. NarraNexus focuses on making agents *connected*.
+> Most agent frameworks focus on making agents *smarter*.
+> **NarraNexus focuses on making agents *connected*.**
 
-An agent in isolation is a tool. An agent with memory, identity, relationships, and goals becomes a participant in a **nexus** -- a network where intelligence is a collective property, not just a model property.
+An agent in isolation is a tool. An agent with memory, identity, relationships, and goals becomes a participant in a **nexus** — a network where intelligence is a collective property, not just a model property.
 
 NarraNexus provides the infrastructure for this: persistent memory, relationship-aware context, task scheduling, modular capabilities, and agent-to-agent communication.
+
+---
 
 ## What Makes NarraNexus Different
 
 ### Persistent Context
+*Agents that remember — across sessions, conversations, and relationships.*
 
-NarraNexus agents carry context across conversations through long-term memory, event memory, and relationship-aware retrieval. This allows agents to continue from past interactions instead of starting over every time.
+NarraNexus agents carry context across conversations through long-term memory, event memory, and relationship-aware retrieval. They continue from past interactions instead of starting over every time.
 
 ### Composable Runtime
+*Every capability is a hot-swappable module.*
 
 Core capabilities such as Memory, Awareness, Chat, RAG, Jobs, Skills, Social Network, and Matrix run as independent modules. Each module manages its own tools, data, and lifecycle, making the system easy to extend or customize.
 
 ### Connected Agents
+*Built for collaboration, not just conversation.*
 
 Agents can communicate through Matrix-based messaging and use MCP tools to coordinate with other agents, external tools, and background workflows.
 
+---
+
 ## Quick Start
-### Online Version
 
-Try NarraNexus instantly in the browser:
+### 🌐 Online Version
+*Try NarraNexus instantly in the browser — no install needed.*
 
-> [Launch NarraNexus](https://website.narra.nexus/)
+> **[Launch NarraNexus →](https://website.narra.nexus/)**
 
-### Download the App (MacOS only)
+### 💻 Download the App (macOS only)
+*Native desktop app with auto-updater.*
 
-Download the latest desktop app from GitHub Releases, then choose the file ending with `.dmg`.
+> **[Download Latest Release →](https://github.com/NetMindAI-Open/NarraNexus/releases)** — choose the file ending with `.dmg`.
 
-> [Download Latest Release](https://github.com/NetMindAI-Open/NarraNexus/releases)
-
-### Install from Source
+### 🛠️ Install from Source
 
 #### Prerequisites
 
@@ -61,7 +70,8 @@ Download the latest desktop app from GitHub Releases, then choose the file endin
 | **Node.js** (v20+) | Frontend build | Install via [nvm](https://github.com/nvm-sh/nvm) (recommended): `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh \| bash && nvm install 20` |
 | **uv** | Python environment & dependency management | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 
-If either is not detected, `run.sh` will print the install command and exit. Install it, then re-run.
+> [!TIP]
+> If either dependency is missing, `run.sh` will print the install command and exit. Install it, then re-run.
 
 ```bash
 git clone https://github.com/NetMindAI-Open/NarraNexus.git
@@ -71,50 +81,52 @@ bash run.sh
 
 The script auto-detects your OS (Linux / macOS / Windows WSL2) and handles the rest of the dependencies.
 
-After setup, you will see the image below. Then
-1. Open `http://localhost:5173` in your browser
+**Once setup completes:**
 
-    a. Choose **Local** or **Cloud (Coming soon)** mode to register an account.
+1. Open **`http://localhost:5173`** in your browser
+   - Choose **Local** or **Cloud (Coming soon)** mode to register an account
+   - Follow the on-screen instructions to set up the API key — see [LLM Provider Configuration](#llm-provider-configuration)
+   - Start chatting!
+2. Open **`http://localhost:8000/docs`** for API Docs
 
-    b. Follow the on-screen instructions to set up the API key. For details, see [LLM Provider Configuration](#llm-provider-configuration).
-
-    c. Start chat!
-2. Open `http://localhost:8000/docs` for API Docs.
 <br/>
 
 <p align="center">
   <img src="docs/images/install-interface.png" alt="Install Interface" />
 </p>
 
-<p align="center">
-  <em>Setup complete — ready to open the interface</em>
-</p>
+<p align="center"><em>Setup complete — ready to open the interface</em></p>
 
-For more details, see the [installation instructions](https://website.narra.nexus/docs/getting-started/quick-start) in the docs.
+> [!NOTE]
+> For more details, see the [installation instructions](https://website.narra.nexus/docs/getting-started/quick-start) in the docs.
+
+---
 
 ## LLM Provider Configuration
 
-NarraNexus uses a **three-slot** architecture for LLM access:
+NarraNexus uses a **three-slot architecture** for LLM access:
 
 | Slot | Protocol | Purpose |
 |------|----------|---------|
-| **Agent** | Anthropic | Core reasoning -- powers the agent's thinking, tool use, and multi-turn conversations |
+| **Agent** | Anthropic | Core reasoning — powers thinking, tool use, and multi-turn conversations |
 | **Embedding** | OpenAI | Converts text to vectors for narrative matching and semantic search |
-| **Helper LLM** | OpenAI | Lightweight tasks -- entity extraction, summarization, module decisions |
+| **Helper LLM** | OpenAI | Lightweight tasks — entity extraction, summarization, module decisions |
 
 ### Setup Options
 
 | Option | What you need | Result |
 |--------|--------------|--------|
-| **[NetMind.AI Power](https://www.netmind.ai/)** | One API key | Covers all 3 slots. Quickest setup. |
+| **[NetMind.AI Power](https://www.netmind.ai/)** | One API key | Covers all 3 slots — quickest setup |
 | **Claude Code Login + OpenAI** | Claude Code CLI login + OpenAI API key | Agent via OAuth (free tier available), rest via OpenAI |
 | **Anthropic + OpenAI** | Anthropic API key + OpenAI API key | Full control over both providers |
-| **Custom endpoints** | Any Anthropic/OpenAI compatible URL | For proxies, self-hosted models, or alternatives |
+| **Custom endpoints** | Any Anthropic/OpenAI-compatible URL | For proxies, self-hosted models, or alternatives |
 
-> **Note**: Currently only **OpenAI official API** and **NetMind.AI Power** are supported for embedding. More providers coming soon.
+> [!IMPORTANT]
+> Currently only **OpenAI official API** and **NetMind.AI Power** are supported for embedding. More providers coming soon.
 
-Configure through the setup wizard (desktop app) or the LLM Providers panel (web UI, click the CPU icon in the header). Config is stored at `~/.nexusagent/llm_config.json`.
+Configure through the **setup wizard** (desktop app) or the **LLM Providers panel** (web UI — click the CPU icon in the header). Config is stored at `~/.nexusagent/llm_config.json`.
 
+---
 
 ## Key Features
 
@@ -122,23 +134,23 @@ Configure through the setup wizard (desktop app) or the LLM Providers panel (web
 |---------|-------------|
 | **Narrative Memory** | Conversations routed into semantic storylines, retrieved by topic similarity across sessions |
 | **Hot-Swappable Modules** | Standalone capabilities (chat, social graph, RAG, jobs, skills) with their own DB, tools, and hooks |
-| **Inter-Agent Communication** | Agents coordinate via Matrix protocol -- rooms, messages, @mentions, group chats |
+| **Inter-Agent Communication** | Agents coordinate via Matrix protocol — rooms, messages, @mentions, group chats |
 | **Skill Marketplace** | Browse and install skills from ClawHub via natural language |
 | **Social Network** | Entity graph tracking people, relationships, expertise, and interaction history |
 | **Job Scheduling** | One-shot, cron, periodic, and continuous tasks with dependency DAGs |
 | **RAG Knowledge Base** | Document indexing and semantic retrieval via Gemini File Search |
 | **Long-term Memory** | Episodic memory powered by EverMemOS (MongoDB + Elasticsearch + Milvus) |
 | **Cost Tracking** | Real-time metering of every LLM call with per-model cost breakdowns |
-| **Execution Transparency** | Every pipeline step visible in real time -- what the agent decided, why, and what changed |
+| **Execution Transparency** | Every pipeline step visible in real time — what the agent decided, why, and what changed |
 | **Multi-LLM Support** | Claude, OpenAI, and Gemini via unified adapter layer |
-| **Desktop App** | Desktop application with auto-updater and one-click service orchestration |
+| **Desktop App** | Native desktop application with auto-updater and one-click service orchestration |
 
 <br/>
 
 ![Feature Showcase](docs/images/showcase-weather.gif)
 <p align="center"><em>NarraNexus in action</em></p>
 
-<br/>
+---
 
 ## Star History
 
@@ -150,11 +162,15 @@ Configure through the setup wizard (desktop app) or the LLM Providers panel (web
  </picture>
 </a>
 
+---
+
 ## Acknowledgments
 
-NarraNexus's long-term memory system is built on [EverMemOS](https://github.com/EverMind-AI/EverMemOS), a self-organizing memory operating system for structured long-horizon reasoning. We thank the EverMemOS team for their foundational work.
+NarraNexus's long-term memory system is built on **[EverMemOS](https://github.com/EverMind-AI/EverMemOS)**, a self-organizing memory operating system for structured long-horizon reasoning. We thank the EverMemOS team for their foundational work.
 
 > Chuanrui Hu, Xingze Gao, Zuyi Zhou, Dannong Xu, Yi Bai, Xintong Li, Hui Zhang, Tong Li, Chong Zhang, Lidong Bing, Yafeng Deng. *EverMemOS: A Self-Organizing Memory Operating System for Structured Long-Horizon Reasoning.* arXiv:2601.02163, 2026. [[Paper]](https://arxiv.org/abs/2601.02163)
+
+---
 
 ## Citation
 
@@ -169,6 +185,8 @@ If you find NarraNexus useful, please cite it as:
   license      = {CC-BY-NC-4.0}
 }
 ```
+
+---
 
 ## License
 
