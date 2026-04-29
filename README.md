@@ -51,17 +51,17 @@ Agents can communicate through Matrix-based messaging and use MCP tools to coord
 
 ## Quick Start
 
-### 🌐 Online Version
+###  Online Version
 *Try NarraNexus instantly in the browser — no install needed.*
 
 > **[Launch NarraNexus →](https://website.narra.nexus/)**
 
-### 💻 Download the App (macOS only)
+###  Download the App (macOS only)
 *Native desktop app with auto-updater.*
 
 > **[Download Latest Release →](https://github.com/NetMindAI-Open/NarraNexus/releases)** — choose the file ending with `.dmg`.
 
-### 🛠️ Install from Source
+###  Install from Source
 
 #### Prerequisites
 
