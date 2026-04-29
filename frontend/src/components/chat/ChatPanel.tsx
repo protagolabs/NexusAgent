@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Send, Square, Loader2, Sparkles, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { Send, Square, Loader2, Sparkles, MessageSquare, CheckCircle2, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { flushSync } from 'react-dom';
 import { Card, Button, Textarea } from '@/components/ui';
 import { useChatStore, useConfigStore } from '@/stores';
@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { MessageBubble } from './MessageBubble';
 import { EmbeddingBanner } from '@/components/ui/EmbeddingBanner';
-import type { SimpleChatMessage } from '@/types';
+import type { Attachment, SimpleChatMessage } from '@/types';
 
 // Must match BOOTSTRAP_GREETING in src/xyz_agent_context/bootstrap/template.py
 const BOOTSTRAP_GREETING =
@@ -43,6 +43,7 @@ interface TimelineItem {
   eventId?: string;               // Associated Event ID (for loading event_log on demand)
   thinking?: string;              // Reasoning content (from session messages)
   toolCalls?: import('@/types').AgentToolCall[];  // Tool calls (from session messages)
+  attachments?: Attachment[];     // User-uploaded files referenced by this message
 }
 
 interface ChatPanelProps {
@@ -52,6 +53,13 @@ interface ChatPanelProps {
 
 export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
   const [input, setInput] = useState('');
+  // Attachments uploaded for the next message but not yet sent. Each entry
+  // is the server-acknowledged metadata returned by uploadAttachment.
+  const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
+  // Tracks how many uploads are in-flight so the send button can wait.
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isComposingRef = useRef(false);
   const compositionEndTimeRef = useRef(0);
@@ -243,6 +251,7 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
         messageType: msg.message_type,
         workingSource: msg.working_source,
         eventId: msg.event_id,
+        attachments: msg.attachments,
       });
     }
 
@@ -308,6 +317,7 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
         source: 'session',
         thinking: msg.thinking,
         toolCalls: msg.toolCalls,
+        attachments: msg.attachments,
       });
     }
 
@@ -380,12 +390,114 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
     if (isStreaming) shouldAutoScrollRef.current = true;
   }, [isStreaming]);
 
+  // ── Attachment handlers ──────────────────────────────
+  const uploadAttachments = useCallback(
+    async (files: File[]) => {
+      if (!agentId || !userId || files.length === 0) return;
+      setUploadingCount((n) => n + files.length);
+      for (const file of files) {
+        try {
+          const resp = await api.uploadAttachment(agentId, userId, file);
+          if (resp.success && resp.file_id && resp.mime_type && resp.category) {
+            setPendingAttachments((prev) => [
+              ...prev,
+              {
+                file_id: resp.file_id!,
+                mime_type: resp.mime_type!,
+                original_name: resp.original_name ?? file.name,
+                size_bytes: resp.size_bytes ?? file.size,
+                category: resp.category!,
+              },
+            ]);
+          } else {
+            console.error('Attachment upload failed:', resp.error);
+          }
+        } catch (e) {
+          console.error('Attachment upload error:', e);
+        } finally {
+          setUploadingCount((n) => Math.max(0, n - 1));
+        }
+      }
+    },
+    [agentId, userId],
+  );
+
+  const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = ''; // allow re-selecting the same file
+    if (files.length) uploadAttachments(files);
+  };
+
+  const handleRemoveAttachment = (fileId: string) => {
+    setPendingAttachments((prev) => prev.filter((a) => a.file_id !== fileId));
+  };
+
+  // Drag handlers are typed loosely (HTMLElement) because they're attached
+  // to BOTH the outer wrapper div (visual highlight) AND the <Textarea>
+  // itself (where the native default-text-insert lives). Both call sites
+  // need preventDefault on dragover (to opt the element in as a drop
+  // target) and on drop (to cancel the textarea's default).
+  const handleDragOver = (e: React.DragEvent<HTMLElement>) => {
+    if (!agentId) return;
+    // Only treat the drag as an attachment intent if it actually carries
+    // files — typing-style drags (selected text from another tab) should
+    // still fall through to the textarea's normal text-paste behavior.
+    const types = e.dataTransfer?.types;
+    if (!types || !Array.from(types).includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragging(true);
+  };
+  const handleDragLeave = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    // dragleave fires when the cursor crosses any child boundary, not just
+    // when truly leaving the bound element. relatedTarget is the element
+    // the cursor moved to — if it's still inside us, ignore.
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
+    setIsDragging(false);
+  };
+  const handleDrop = (e: React.DragEvent<HTMLElement>) => {
+    if (!agentId) return;
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (files.length === 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    uploadAttachments(files);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!agentId) return;
+    // Walk clipboard items; collect anything the OS hands us as a File
+    // (covers OS screenshot → image/png, "Copy image" from a browser, and
+    // copying a file in the file manager). If the user just copied text,
+    // there are no file-kind items and we fall through to default paste.
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length === 0) return;
+    e.preventDefault();
+    uploadAttachments(files);
+  };
+
   // ── Handlers ────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!input.trim() || isLoading || !agentId || !userId) return;
+    const trimmed = input.trim();
+    const hasContent = trimmed.length > 0 || pendingAttachments.length > 0;
+    if (!hasContent || isLoading || !agentId || !userId || uploadingCount > 0) return;
 
-    const content = input.trim();
+    const content = trimmed;
+    const attachmentsToSend = pendingAttachments;
     setInput('');
+    setPendingAttachments([]);
     shouldAutoScrollRef.current = true;
     // Bug 15: snap to bottom for the user's freshly-sent bubble before
     // streaming starts. The streaming effect takes over from there.
@@ -414,12 +526,12 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
       }));
     }
 
-    addUserMessage(agentId, content);
+    addUserMessage(agentId, content, attachmentsToSend.length ? attachmentsToSend : undefined);
     startStreaming(agentId);
 
     try {
       const agentName = currentAgent?.name || agentId;
-      run(agentId, userId, content, agentName);
+      run(agentId, userId, content, agentName, attachmentsToSend.length ? attachmentsToSend : undefined);
     } catch (error) {
       console.error('Failed to run agent:', error);
     }
@@ -449,7 +561,20 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
 
   // ── Render ──────────────────────────────────────────
   return (
-    <Card className="flex flex-col h-full overflow-hidden">
+    <Card
+      // Make the entire chat panel a drop target — users naturally drag
+      // files anywhere in the conversation surface, not just the input
+      // box. Native default-prevention still has to live on the textarea
+      // itself (see onDragOver/onDrop there) because <textarea> processes
+      // drop synchronously into its value before bubbling.
+      className={cn(
+        'flex flex-col h-full overflow-hidden transition-colors',
+        isDragging && 'ring-2 ring-inset ring-[var(--accent-primary)]'
+      )}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Header — archive document caption */}
       <div className="px-5 flex items-center justify-between border-b border-[var(--rule)] min-h-[48px]">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -570,6 +695,7 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
                   timestamp: item.timestamp,
                   thinking: item.thinking,
                   toolCalls: item.toolCalls,
+                  attachments: item.attachments,
                 }}
                 eventId={item.eventId}
                 agentId={agentId}
@@ -668,9 +794,81 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input area */}
+      {/* Input area — drop is handled at the Card root, so this wrapper
+          no longer needs its own onDragOver/onDragLeave/onDrop. */}
       <div className="px-5 py-4 border-t border-[var(--rule)]">
+        {/* Pending attachments preview row */}
+        {(pendingAttachments.length > 0 || uploadingCount > 0) && (
+          <div className="mb-2.5 flex flex-wrap gap-2">
+            {pendingAttachments.map((att) => {
+              const isImage = att.category === 'image';
+              const previewUrl = isImage && agentId && userId
+                ? api.attachmentRawUrl(agentId, userId, att.file_id)
+                : null;
+              return (
+                <div
+                  key={att.file_id}
+                  className="relative flex items-center gap-2 rounded-md border border-[var(--rule)] bg-[var(--bg-tertiary)]/60 pr-7 pl-1.5 py-1 max-w-[240px]"
+                >
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt={att.original_name}
+                      className="w-9 h-9 rounded object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded bg-[var(--bg-secondary)] flex items-center justify-center shrink-0">
+                      {isImage ? (
+                        <ImageIcon className="w-4 h-4 text-[var(--text-tertiary)]" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-[var(--text-tertiary)]" />
+                      )}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <div className="text-xs truncate">{att.original_name}</div>
+                    <div className="text-[10px] text-[var(--text-tertiary)] font-[family-name:var(--font-mono)] uppercase tracking-[0.1em]">
+                      {att.category} · {Math.max(1, Math.round(att.size_bytes / 1024))} KB
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAttachment(att.file_id)}
+                    className="absolute right-1 top-1 p-0.5 rounded hover:bg-[var(--bg-secondary)]"
+                    title="Remove"
+                  >
+                    <X className="w-3 h-3 text-[var(--text-tertiary)]" />
+                  </button>
+                </div>
+              );
+            })}
+            {uploadingCount > 0 && (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-dashed border-[var(--rule)] text-[10px] text-[var(--text-tertiary)] font-[family-name:var(--font-mono)] uppercase tracking-[0.1em]">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Uploading {uploadingCount}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex gap-2.5 items-stretch">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFilePick}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!agentId || isLoading}
+            className="shrink-0 h-[52px] w-[52px]"
+            title="Attach file"
+          >
+            <Paperclip className="w-4 h-4" />
+          </Button>
           <div className="flex-1 relative">
             <Textarea
               value={input}
@@ -679,7 +877,25 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
               onCompositionStart={handleCompositionStart}
               onCompositionUpdate={handleCompositionUpdate}
               onCompositionEnd={handleCompositionEnd}
-              placeholder={!agentId ? 'Select an agent first…' : 'Type your message…'}
+              // Drag handlers MUST live on the textarea itself, not just on
+              // a parent. Otherwise the browser's native textarea behavior
+              // (drop file → insert file path as text) wins, because the
+              // <textarea> element processes the drop default before the
+              // bubbled React event reaches the parent's preventDefault.
+              // Same reasoning for onPaste — clipboard items with kind=file
+              // (e.g. OS screenshot) need to be intercepted at the textarea
+              // before the default text-paste path strips them.
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onPaste={handlePaste}
+              placeholder={
+                !agentId
+                  ? 'Select an agent first…'
+                  : isDragging
+                    ? 'Drop file to attach…'
+                    : 'Type your message… (drag files here to attach)'
+              }
               disabled={isLoading || !agentId}
               className={cn(
                 // Flatten to a fixed 52px row by default; multi-line growth
@@ -705,7 +921,12 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
               variant="accent"
               size="icon"
               onClick={handleSubmit}
-              disabled={!input.trim() || isLoading || !agentId}
+              disabled={
+                (!input.trim() && pendingAttachments.length === 0)
+                || isLoading
+                || !agentId
+                || uploadingCount > 0
+              }
               className="shrink-0 h-[52px] w-[52px]"
               title="Send"
             >
@@ -717,6 +938,8 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
           <kbd className="font-[family-name:var(--font-mono)]">Enter</kbd> to send
           <span className="opacity-40 mx-2">·</span>
           <kbd className="font-[family-name:var(--font-mono)]">Shift + Enter</kbd> new line
+          <span className="opacity-40 mx-2">·</span>
+          <kbd className="font-[family-name:var(--font-mono)]">Drop</kbd> to attach
         </p>
       </div>
     </Card>

@@ -34,6 +34,7 @@ from xyz_agent_context.schema import (
     ModuleConfig,
     MCPServerConfig,
 )
+from xyz_agent_context.schema.attachment_schema import Attachment
 
 # Utils
 from xyz_agent_context.utils import DatabaseClient, utc_now
@@ -81,6 +82,39 @@ _FAILED_TURN_ANNOTATION_TEMPLATE = (
     "An error ({error_type}) occurred and no reply was given. "
     "Do NOT retry this question — focus on the current user input.]"
 )
+
+
+def _synthesize_attachment_markers(
+    attachments: Optional[List[Dict[str, Any]]],
+    agent_id: str,
+    user_id: str,
+) -> str:
+    """Render a list of attachment dicts as natural-language markers.
+
+    Used by hook_data_gathering when assembling chat_history for the LLM —
+    the persisted message keeps its `content` as the user's original text,
+    and the markers (which carry the resolved absolute path on disk) are
+    appended only into the in-memory copy fed to the next turn's prompt.
+    Invalid entries are skipped silently rather than failing the whole
+    turn (defensive: the dict shape is data we control, but a future
+    schema change shouldn't crash old conversations).
+
+    Path resolution requires the workspace owner's identity, so
+    `agent_id` and `user_id` are threaded through; for orphaned uploads
+    (file deleted) the marker still reports `path=<unavailable>`.
+    """
+    if not attachments:
+        return ""
+    lines: List[str] = []
+    for att in attachments:
+        try:
+            marker = Attachment.model_validate(att).synthesize_marker(
+                agent_id=agent_id, user_id=user_id,
+            )
+            lines.append(marker)
+        except Exception as e:
+            logger.warning(f"Skipping malformed attachment in chat history: {e}")
+    return "\n".join(lines)
 
 
 def _detect_error_in_agent_loop(agent_loop_response: List[Any]) -> Optional[Dict[str, str]]:
@@ -347,6 +381,30 @@ class ChatModule(XYZBaseModule):
                         if working_source != "chat" and msg.get("role") != "assistant":
                             continue
 
+                        # If the user attached files in this turn, append
+                        # natural-language markers to the in-memory copy of
+                        # the message. Markers carry the resolved absolute
+                        # path so the agent can call its built-in `Read`
+                        # tool directly. Persisted `content` is left
+                        # untouched.
+                        attachments = msg.get("attachments")
+                        if attachments:
+                            markers = _synthesize_attachment_markers(
+                                attachments,
+                                agent_id=self.agent_id,
+                                user_id=self.user_id or "",
+                            )
+                            if markers:
+                                original_content = msg.get("content") or ""
+                                msg = {
+                                    **msg,
+                                    "content": (
+                                        f"{original_content}\n{markers}"
+                                        if original_content
+                                        else markers
+                                    ),
+                                }
+
                         long_term_messages.append(msg)
                     logger.debug(
                         f"[ChatHistory-A] Instance {instance_id}: {len(messages)} messages loaded"
@@ -491,6 +549,30 @@ class ChatModule(XYZBaseModule):
                     msg["meta_data"] = {}
                 msg["meta_data"]["instance_id"] = instance.instance_id
                 msg["meta_data"]["memory_type"] = "short_term"
+
+                # Append attachment markers for the in-memory chat-history
+                # copy without touching the persisted content. Path is
+                # resolved against the *current* agent's workspace — that's
+                # where the file actually lives even when this short-term
+                # message was authored under a different Narrative.
+                attachments = msg.get("attachments")
+                if attachments:
+                    markers = _synthesize_attachment_markers(
+                        attachments,
+                        agent_id=self.agent_id,
+                        user_id=self.user_id or "",
+                    )
+                    if markers:
+                        original_content = msg.get("content") or ""
+                        msg = {
+                            **msg,
+                            "content": (
+                                f"{original_content}\n{markers}"
+                                if original_content
+                                else markers
+                            ),
+                        }
+
                 short_term_messages.append(msg)
 
         # Sort by time, limit count
@@ -676,9 +758,20 @@ class ChatModule(XYZBaseModule):
         assistant_content = self._extract_user_visible_response(params.agent_loop_response)
         is_no_response = assistant_content == "(Agent decided no response needed)"
 
+        # Attachments forwarded by the trigger (WebSocket / Lark / etc.)
+        # land in ctx_data.extra_data via context_runtime's
+        # trigger_extra_data merge. We persist them on the user message
+        # row so that hook_data_gathering can synthesize markers when this
+        # turn is replayed in future prompts.
+        turn_attachments: List[Dict[str, Any]] = []
+        if params.ctx_data and params.ctx_data.extra_data:
+            raw = params.ctx_data.extra_data.get("attachments")
+            if isinstance(raw, list):
+                turn_attachments = [a for a in raw if isinstance(a, dict)]
+
         if error_signal is not None:
             # Failed turn: preserve user question (for reference), skip assistant.
-            messages.append({
+            user_msg = {
                 "role": "user",
                 "content": params.input_content,
                 "meta_data": {
@@ -686,14 +779,20 @@ class ChatModule(XYZBaseModule):
                     "status": "failed",
                     "error_type": error_signal["error_type"],
                 },
-            })
+            }
+            if turn_attachments:
+                user_msg["attachments"] = turn_attachments
+            messages.append(user_msg)
         elif working_source == "chat" or not is_no_response:
             # Normal conversation: store user message + assistant reply
-            messages.append({
+            user_msg = {
                 "role": "user",
                 "content": params.input_content,
                 "meta_data": {**user_meta},
-            })
+            }
+            if turn_attachments:
+                user_msg["attachments"] = turn_attachments
+            messages.append(user_msg)
             messages.append({
                 "role": "assistant",
                 "content": assistant_content,

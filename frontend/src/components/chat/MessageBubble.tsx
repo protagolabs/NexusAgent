@@ -7,13 +7,14 @@
  * 2. History: lazy-loaded via event_id → GET /event-log/{event_id} (on-demand)
  */
 
-import { User, Bot, ChevronDown, ChevronRight, Wrench, Sparkles, AlertTriangle, Copy, Download, Check, Loader2 } from 'lucide-react';
+import { User, Bot, ChevronDown, ChevronRight, Wrench, Sparkles, AlertTriangle, Copy, Download, Check, Loader2, FileText, Image as ImageIcon } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
-import type { ChatMessage } from '@/types';
+import type { Attachment, ChatMessage } from '@/types';
 import type { EventLogToolCall, EventLogResponse } from '@/types';
 import { cn, formatTime } from '@/lib/utils';
 import { Markdown } from '@/components/ui';
 import { api } from '@/lib/api';
+import { useConfigStore } from '@/stores';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -26,6 +27,7 @@ export function MessageBubble({ message, isStreaming = false, eventId, agentId }
   const [showThinking, setShowThinking] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [copied, setCopied] = useState(false);
+  const userId = useConfigStore((s) => s.userId);
   const isUser = message.role === 'user';
 
   // Lazy-loaded event log state
@@ -266,6 +268,58 @@ export function MessageBubble({ message, isStreaming = false, eventId, agentId }
                   {eventLogLoading ? 'Loading details...' : 'View reasoning & tools'}
                 </span>
               </button>
+            </div>
+          )}
+
+          {/* Attachments — rendered above text content. Image attachments
+              are loaded via the /raw endpoint; non-image attachments show a
+              file chip so the user sees what was uploaded even though the
+              agent currently cannot read it. */}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {message.attachments.map((att: Attachment) => {
+                const previewUrl =
+                  att.category === 'image' && agentId && userId
+                    ? api.attachmentRawUrl(agentId, userId, att.file_id)
+                    : null;
+                if (previewUrl) {
+                  return (
+                    <a
+                      key={att.file_id}
+                      href={previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <img
+                        src={previewUrl}
+                        alt={att.original_name}
+                        className="max-h-48 max-w-[280px] rounded border border-[var(--rule)] object-cover"
+                      />
+                    </a>
+                  );
+                }
+                return (
+                  <div
+                    key={att.file_id}
+                    className="flex items-center gap-2 rounded-md border border-[var(--rule)] bg-[var(--bg-tertiary)]/40 px-2 py-1.5 max-w-[280px]"
+                  >
+                    <div className="w-8 h-8 rounded bg-[var(--bg-secondary)] flex items-center justify-center shrink-0">
+                      {att.category === 'image' ? (
+                        <ImageIcon className="w-4 h-4 text-[var(--text-tertiary)]" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-[var(--text-tertiary)]" />
+                      )}
+                    </div>
+                    <div className="min-w-0 leading-tight">
+                      <div className="text-xs truncate">{att.original_name}</div>
+                      <div className="text-[10px] text-[var(--text-tertiary)] font-mono uppercase tracking-[0.1em]">
+                        {att.category} · {Math.max(1, Math.round(att.size_bytes / 1024))} KB
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 

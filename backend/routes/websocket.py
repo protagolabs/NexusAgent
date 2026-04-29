@@ -53,6 +53,11 @@ class AgentRunRequest(BaseModel):
     user_id: str
     input_content: str
     working_source: Optional[str] = "chat"
+    # Optional list of attachments uploaded for this turn. Each entry is the
+    # JSON form of `xyz_agent_context.schema.Attachment` and is forwarded to
+    # the runtime via trigger_extra_data → ctx_data.extra_data["attachments"]
+    # so ChatModule's hooks can persist + reference them.
+    attachments: Optional[list[dict]] = None
     # JWT token — required in cloud mode, ignored in local mode.
     # Sent in the first WS message because browser WebSocket API cannot
     # set arbitrary Authorization headers.
@@ -297,7 +302,14 @@ async def websocket_agent_run(websocket: WebSocket):
                     working_source=working_source,
                     pass_mcp_urls=mcp_urls,
                     cancellation=cancellation,
-                    trigger_extra_data={"trigger_id": f"ws_{_session_id[:8]}"},
+                    trigger_extra_data={
+                        "trigger_id": f"ws_{_session_id[:8]}",
+                        **(
+                            {"attachments": request.attachments}
+                            if request.attachments
+                            else {}
+                        ),
+                    },
                 ):
                     # Convert message to dict and send
                     if hasattr(message, 'to_dict'):

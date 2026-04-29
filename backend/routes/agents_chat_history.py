@@ -484,6 +484,7 @@ async def get_simple_chat_history(
                             "working_source": working_source,
                             "message_type": message_type,
                             "event_id": meta_data.get("event_id"),
+                            "attachments": msg.get("attachments"),
                             "_sort_key": timestamp or ""
                         })
 
@@ -520,6 +521,7 @@ async def get_simple_chat_history(
                 working_source=msg.get("working_source"),
                 message_type=msg.get("message_type"),
                 event_id=msg.get("event_id"),
+                attachments=msg.get("attachments"),
             )
             for msg in all_messages
         ]
