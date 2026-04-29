@@ -135,7 +135,7 @@ Configure through the setup wizard (desktop app) or the LLM Providers panel (web
 
 <br/>
 
-![Feature Showcase](docs/images/FeatureShowcase.gif)
+![Feature Showcase](docs/images/showcase-weather.gif)
 <p align="center"><em>NarraNexus in action</em></p>
 
 <br/>
