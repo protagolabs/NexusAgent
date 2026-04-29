@@ -8,7 +8,7 @@
 **A framework for building nexuses of agents -- where intelligence emerges from interaction, not isolation.**
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
-[![Docs](https://img.shields.io/badge/Docs-Quick%20Start-blue)](https://www.narranexus-agent.ai/docs/getting-started/quick-start)
+[![Docs](https://img.shields.io/badge/Docs-Quick%20Start-blue)](https://website.narra.nexus/docs/getting-started/quick-start)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -40,17 +40,17 @@ Core capabilities such as Memory, Awareness, Chat, RAG, Jobs, Skills, Social Net
 Agents can communicate through Matrix-based messaging and use MCP tools to coordinate with other agents, external tools, and background workflows.
 
 ## Quick Start
-### Online Version (Coming soon)
+### Online Version
 
 Try NarraNexus instantly in the browser:
 
-> [Launch NarraNexus](https://www.narranexus-agent.ai/)
+> [Launch NarraNexus](https://website.narra.nexus/)
 
 ### Download the App (MacOS only)
 
 Download the latest desktop app from GitHub Releases, then choose the file ending with `.dmg`.
 
-> [Download Latest Release](https://github.com/protagolabs/NarraNexus/releases)
+> [Download Latest Release](https://github.com/NetMindAI-Open/NarraNexus/releases)
 
 ### Install from Source
 
@@ -90,7 +90,7 @@ After setup, you will see the image below. Then
   <em>Setup complete — ready to open the interface</em>
 </p>
 
-For more details, see the [installation instructions](https://www.narranexus-agent.ai/docs/getting-started/quick-start) in the docs.
+For more details, see the [installation instructions](https://website.narra.nexus/docs/getting-started/quick-start) in the docs.
 
 ## LLM Provider Configuration
 
@@ -114,20 +114,6 @@ NarraNexus uses a **three-slot** architecture for LLM access:
 > **Note**: Currently only **OpenAI official API** and **NetMind.AI Power** are supported for embedding. More providers coming soon.
 
 Configure through the setup wizard (desktop app) or the LLM Providers panel (web UI, click the CPU icon in the header). Config is stored at `~/.nexusagent/llm_config.json`.
-
-### Optional API Keys
-
-#### Configure Long-term Memory (EverMemOS) (Coming soon)
-
-EverMemOS gives the agent long-term episodic memory.
-
-| What you configure | Result |
-|--------------------|--------|
-| **Nothing** | Agent works normally, memory features disabled |
-| **LLM key only** | Memory extraction enabled, semantic search needs additional keys |
-| **All keys** | Full long-term memory -- cloud-based, no GPU required **(recommended)** |
-
-You can also edit `.evermemos/.env` manually at any time. See the [EverMemOS documentation](https://github.com/EverMind-AI/EverMemOS) for details.
 
 
 ## Key Features
