@@ -240,7 +240,7 @@ function ModelBubbleInput({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {models.map((m) => (
-          <span key={m} className="inline-flex items-center gap-1.5 px-2 py-1 text-[12px] font-[family-name:var(--font-mono)] bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--rule)] whitespace-nowrap">
+          <span key={m} className="inline-flex items-center gap-1.5 px-2 py-1 text-[12px] font-[family-name:var(--font-mono)] bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-subtle)] whitespace-nowrap">
             {m}
             <button
               onClick={() => onChange(models.filter((x) => x !== m))}

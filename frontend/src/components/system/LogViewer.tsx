@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { ArrowDownToLine, Search } from 'lucide-react';
-import { Card, CardHeader, CardTitle, Button } from '@/components/ui';
+import { Card, CardHeader, CardTitle, Button, ScrollArea } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import type { LogEntry } from '@/types/platform';
@@ -153,11 +153,12 @@ export function LogViewer({
       )}
 
       {/* Log content */}
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="h-72 overflow-y-auto p-4 font-mono text-xs leading-relaxed"
-      >
+      <ScrollArea
+        className="h-72"
+        viewportRef={containerRef}
+        onViewportScroll={handleScroll}
+        viewportClassName="p-4 font-mono text-xs leading-relaxed"
+      ><div>
         {visibleLogs.length === 0 ? (
           <p className="text-[var(--text-tertiary)] text-center py-8">
             No log entries
@@ -190,7 +191,7 @@ export function LogViewer({
           ))
         )}
         <div ref={bottomRef} />
-      </div>
+      </div></ScrollArea>
     </Card>
   );
 }
