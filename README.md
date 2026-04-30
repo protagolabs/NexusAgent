@@ -100,8 +100,9 @@ bash run.sh
 > For more details, see the [installation instructions](https://website.narra.nexus/docs/getting-started/quick-start) in the docs.
 
 ---
-
 ## LLM Provider Configuration
+
+The agent uses three functional LLM slots:
 
 | Slot | Protocol | Purpose |
 |------|----------|---------|
@@ -109,14 +110,41 @@ bash run.sh
 | **Embedding** | OpenAI | Converts text to vectors for narrative matching and semantic search |
 | **Helper LLM** | OpenAI | Lightweight tasks — entity extraction, summarization, module decisions |
 
-### Setup Options
+
+### Setup
+
+Configuration is done in two steps:
+
+1. **Add a provider**
+2. **Assign a model to each slot**
+
+### Add Providers
+
+Use **Quick Add — Preset Provider** to select a provider and paste your API key. Preset providers such as **NetMind.AI Power** can automatically create both Anthropic-compatible and OpenAI-compatible endpoints from one API key.
+
+You can also configure:
 
 | Option | What you need | Result |
 |--------|--------------|--------|
-| **[NetMind.AI Power](https://www.netmind.ai/)** | One API key | Covers all 3 slots — quickest setup |
-| **Claude Code Login + OpenAI** | Claude Code CLI login + OpenAI API key | Agent via OAuth (free tier available), rest via OpenAI |
-| **Anthropic + OpenAI** | Anthropic API key + OpenAI API key | Full control over both providers |
-| **Custom endpoints** | Any Anthropic/OpenAI-compatible URL | For proxies, self-hosted models, or alternatives |
+| **NetMind.AI Power** | One API key | Creates both Anthropic and OpenAI endpoints automatically |
+| **OpenRouter / Yunwu** | One API key | Adds supported endpoints and available models |
+| **Claude Code Login** | Claude Code CLI login | Enables Claude models for the Agent slot through OAuth |
+| **Custom Anthropic** | Compatible URL and API key | Adds a custom Anthropic endpoint |
+| **Custom OpenAI** | Compatible URL and API key | Adds a custom OpenAI endpoint |
+
+Use **Update Available Models** to refresh the default model list for preset providers. Existing model entries are kept, and only missing models are added.
+
+### Assign Models
+
+After adding providers, go to **Model Assignment** and select a provider and model for each slot:
+
+| Slot | Example |
+|------|---------|
+| **Agent** | NetMind Anthropic + DeepSeek V4 Pro(more available), or Claude Code + Claude model |
+| **Embedding** | NetMind OpenAI + embedding model |
+| **Helper LLM** | NetMind OpenAI + DeepSeek V4 Pro(more available) |
+
+All three slots must be configured before the agent can work.
 
 > [!NOTE]
 > For updating LLM configuration, click **Setting** see the [installation instructions](https://website.narra.nexus/docs/getting-started/quick-start) in the docs.
