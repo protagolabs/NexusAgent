@@ -51,7 +51,7 @@ Agents can communicate through Matrix-based messaging and use MCP tools to coord
 
 ## Quick Start
 
-###  Online Version
+###  Online Version (Coming soon)
 *Try NarraNexus instantly in the browser — no install needed.*
 
 > **[Launch NarraNexus →](https://website.narra.nexus/)**
@@ -65,13 +65,10 @@ Agents can communicate through Matrix-based messaging and use MCP tools to coord
 
 #### Prerequisites
 
-| Dependency | Why | Install |
-|------------|-----|---------|
-| **Node.js** (v20+) | Frontend build | Install via [nvm](https://github.com/nvm-sh/nvm) (recommended): `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh \| bash && nvm install 20` |
-| **uv** | Python environment & dependency management | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-
-> [!TIP]
-> If either dependency is missing, `run.sh` will print the install command and exit. Install it, then re-run.
+| Dependency | Install |
+|------------|---------|
+| **Node.js** (v20+) | Install via [nvm](https://github.com/nvm-sh/nvm) (recommended): `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh \| bash && nvm install 20` |
+| **uv** | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 
 ```bash
 git clone https://github.com/NetMindAI-Open/NarraNexus.git
@@ -79,13 +76,15 @@ cd NarraNexus
 bash run.sh
 ```
 
-The script auto-detects your OS (Linux / macOS / Windows WSL2) and handles the rest of the dependencies.
+> [!TIP]
+> The script auto-detects your OS (Linux / macOS / Windows WSL2) and handles the rest of the dependencies. If either dependency is missing, `run.sh` will print the install command and exit. Install it, then re-run.
+
 
 **Once setup completes:**
 
 1. Open **`http://localhost:5173`** in your browser
-   - Choose **Local** or **Cloud (Coming soon)** mode to register an account
-   - Follow the on-screen instructions to set up the API key — see [LLM Provider Configuration](#llm-provider-configuration)
+   - Choose **LOCAL** or **CLOUD (Coming soon)** mode to create an account and log in
+   - Click **SETTING** on the left panel to set up the API key — see [LLM Provider Configuration](#llm-provider-configuration)
    - Start chatting!
 2. Open **`http://localhost:8000/docs`** for API Docs
 
@@ -104,8 +103,6 @@ The script auto-detects your OS (Linux / macOS / Windows WSL2) and handles the r
 
 ## LLM Provider Configuration
 
-NarraNexus uses a **three-slot architecture** for LLM access:
-
 | Slot | Protocol | Purpose |
 |------|----------|---------|
 | **Agent** | Anthropic | Core reasoning — powers thinking, tool use, and multi-turn conversations |
@@ -121,10 +118,8 @@ NarraNexus uses a **three-slot architecture** for LLM access:
 | **Anthropic + OpenAI** | Anthropic API key + OpenAI API key | Full control over both providers |
 | **Custom endpoints** | Any Anthropic/OpenAI-compatible URL | For proxies, self-hosted models, or alternatives |
 
-> [!IMPORTANT]
-> Currently only **OpenAI official API** and **NetMind.AI Power** are supported for embedding. More providers coming soon.
-
-Configure through the **setup wizard** (desktop app) or the **LLM Providers panel** (web UI — click the CPU icon in the header). Config is stored at `~/.nexusagent/llm_config.json`.
+> [!NOTE]
+> For updating LLM configuration, click **Setting** see the [installation instructions](https://website.narra.nexus/docs/getting-started/quick-start) in the docs.
 
 ---
 
