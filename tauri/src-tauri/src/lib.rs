@@ -27,6 +27,8 @@ pub fn run() {
             commands::health::get_health_status,
             commands::health::get_logs,
             commands::tray::set_tray_badge,
+            commands::auth::trigger_claude_login,
+            commands::auth::get_claude_login_status,
         ])
         .setup(|app| {
             // Port-conflict preflight. Must run before anything else: if a

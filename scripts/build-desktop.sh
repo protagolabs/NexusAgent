@@ -15,6 +15,41 @@ NODE_DIR="$RESOURCES_DIR/nodejs"
 # Override via env if you need to test a different version.
 NODE_VERSION="${NODE_VERSION:-v22.11.0}"
 
+# ────────────────────────────────────────────────────────────────────────
+# CLI flags
+# ────────────────────────────────────────────────────────────────────────
+SKIP_SIGNING="${SKIP_SIGNING:-0}"
+
+for arg in "$@"; do
+    case "$arg" in
+        --skip-signing)
+            SKIP_SIGNING=1
+            ;;
+        --help|-h)
+            echo "Usage: bash scripts/build-desktop.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --skip-signing    Skip code signing and notarization (ad-hoc only)."
+            echo "                    Produces an unsigned DMG for local testing."
+            echo "                    Equivalent to: SKIP_SIGNING=1"
+            echo ""
+            echo "Environment variables:"
+            echo "  SKIP_SIGNING=1              Same as --skip-signing"
+            echo "  SKIP_LARK_SKILLS=1          Skip bundling Lark skill pack"
+            echo "  APPLE_SIGNING_IDENTITY=...  Developer ID for real signing"
+            echo "  NODE_VERSION=v22.x.x        Override bundled Node.js version"
+            exit 0
+            ;;
+    esac
+done
+
+if [ "$SKIP_SIGNING" = "1" ]; then
+    # Force ad-hoc signing; clear notarization credentials so step 8 is skipped.
+    export APPLE_SIGNING_IDENTITY='-'
+    unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID 2>/dev/null || true
+    echo "*** --skip-signing: ad-hoc sign only, no notarization ***"
+fi
+
 echo "=== NarraNexus Desktop Build ==="
 echo "Project root: $PROJECT_ROOT"
 echo ""

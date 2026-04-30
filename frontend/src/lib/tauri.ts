@@ -80,3 +80,33 @@ export async function listenTauri(
     return null;
   }
 }
+
+/**
+ * Trigger Claude Code OAuth login from the desktop app.
+ * Spawns `claude auth login` which opens the system browser for OAuth.
+ * Returns the result string on success, or throws on failure.
+ * No-op (returns null) if not running in Tauri.
+ */
+export async function triggerClaudeLogin(): Promise<string | null> {
+  if (!isTauri()) return null;
+  const invoke = _getInvoke();
+  if (!invoke) return null;
+  return (await invoke('trigger_claude_login')) as string;
+}
+
+/**
+ * Check Claude Code login status from the Tauri side.
+ * Returns { cli_installed, logged_in } or null if not in Tauri.
+ */
+export async function getClaudeLoginStatus(): Promise<{
+  cli_installed: boolean;
+  logged_in: boolean;
+} | null> {
+  if (!isTauri()) return null;
+  const invoke = _getInvoke();
+  if (!invoke) return null;
+  return (await invoke('get_claude_login_status')) as {
+    cli_installed: boolean;
+    logged_in: boolean;
+  };
+}

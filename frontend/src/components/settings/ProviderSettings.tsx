@@ -30,6 +30,7 @@ import { getApiBaseUrl } from '@/stores/runtimeStore'
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui'
 import { QuotaPanel } from './QuotaPanel'
 import { api } from '@/lib/api'
+import { isTauri, triggerClaudeLogin } from '@/lib/tauri'
 
 /** fetch wrapper that injects JWT auth header when available (cloud mode) */
 function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -383,6 +384,7 @@ export function ProviderSettings() {
   const [officialBaseUrls, setOfficialBaseUrls] = useState<Record<string, string[]>>({})
   const [error, setError] = useState('')
   const [claudeStatus, setClaudeStatus] = useState<{ cli_installed: boolean; logged_in: boolean; expires_at: string | null } | null>(null)
+  const [claudeLoggingIn, setClaudeLoggingIn] = useState(false)
 
   // Quick Add (preset provider)
   const [selectedPreset, setSelectedPreset] = useState<string>(PRESET_PROVIDERS[0].id)
@@ -489,6 +491,19 @@ export function ProviderSettings() {
 
   const handleAddClaudeOAuth = async () => {
     await addProvider({ card_type: 'claude_oauth' })
+  }
+
+  const handleClaudeLogin = async () => {
+    setClaudeLoggingIn(true)
+    try {
+      await triggerClaudeLogin()
+      // After login completes, refresh to pick up the new status
+      await refreshConfig()
+    } catch (e) {
+      console.error('Claude login failed:', e)
+    } finally {
+      setClaudeLoggingIn(false)
+    }
   }
 
   const handleAddProtocol = async () => {
@@ -908,11 +923,23 @@ export function ProviderSettings() {
                     Add as Provider
                   </button>
                 )}
-                {!claudeStatus.logged_in && (
+                {!claudeStatus.logged_in && claudeStatus.cli_installed && isTauri() && (
+                  <button onClick={handleClaudeLogin}
+                    disabled={claudeLoggingIn}
+                    className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:opacity-90 transition-colors disabled:opacity-50">
+                    {claudeLoggingIn ? 'Logging in... (check your browser)' : 'Login with Claude Code'}
+                  </button>
+                )}
+                {!claudeStatus.logged_in && !isTauri() && (
                   <p className="text-sm text-[var(--text-tertiary)]">
                     {claudeStatus.cli_installed
                       ? 'Run "claude login" in your terminal first, then refresh this page.'
                       : 'Install Claude Code CLI first, then run "claude login" in your terminal.'}
+                  </p>
+                )}
+                {!claudeStatus.logged_in && !claudeStatus.cli_installed && isTauri() && (
+                  <p className="text-sm text-[var(--text-tertiary)]">
+                    Claude Code CLI not found in bundle. Please rebuild the app.
                   </p>
                 )}
               </div>
