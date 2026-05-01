@@ -151,6 +151,9 @@ class AgentRuntime:
         forced_narrative_id: Optional[str] = None,
         trigger_extra_data: Optional[Dict[str, Any]] = None,
         cancellation: Optional[CancellationToken] = None,
+        read_only: bool = False,
+        skip_modules: Optional[set] = None,
+        skip_narrative_prompt: bool = False,
     ) -> AsyncGenerator:
         """
         Execute the main flow of the Agent runtime
@@ -266,6 +269,9 @@ class AgentRuntime:
             forced_narrative_id=forced_narrative_id,
             trigger_extra_data=trigger_extra_data or {},
             cancellation=cancellation,
+            read_only=read_only,
+            skip_modules=skip_modules or set(),
+            skip_narrative_prompt=skip_narrative_prompt,
         )
 
         # =============================================================================

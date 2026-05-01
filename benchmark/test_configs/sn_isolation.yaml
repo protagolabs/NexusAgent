@@ -1,0 +1,12 @@
+# SocialNetwork isolation test.
+#
+# Test SN's ability to retrieve people / relations from its own storage
+# alone, without leaking from chat history, memory, or narrative summary.
+
+sources:
+  ChatModule: no_qa      # chat history written in replay, hidden in QA
+  MemoryModule: no_qa    # EverMemOS written in replay, hidden in QA
+  Narrative: no_qa       # narrative selected, but summary hidden in QA
+  # SocialNetworkModule defaults to "active" — what we test.
+
+use_agent_loop: true     # need agent loop so SN's MCP tools fire

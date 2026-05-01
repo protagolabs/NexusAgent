@@ -1,0 +1,13 @@
+# Memory (EverMemOS) isolation test.
+#
+# Test long-term semantic memory recall. Memory writes are hook-only —
+# the LLM doesn't actively call memory MCP tools — so we don't need
+# the agent loop during replay.
+
+sources:
+  SocialNetworkModule: off    # ablation: SN never touches the data
+  ChatModule: no_qa
+  Narrative: no_qa
+  # MemoryModule defaults to "active".
+
+use_agent_loop: false         # hook-only replay is enough

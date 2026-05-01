@@ -11,7 +11,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .test_config import BenchmarkConfig
 
 
 @dataclass
@@ -39,6 +42,8 @@ class ReplayConfig:
     user_name: str = ""
     inter_turn_delay: float = 0.3
     dump_file: Optional[str] = None
+    use_agent_loop: bool = False  # Legacy; ignored when ``test_config`` is set
+    test_config: Optional["BenchmarkConfig"] = None
 
 
 class DataAdapter(ABC):

@@ -74,6 +74,9 @@ class RunContext:
     job_instance_id: Optional[str] = None  # Instance ID when executing a Job
     forced_narrative_id: Optional[str] = None  # Forced Narrative ID (used for Job triggers)
     trigger_extra_data: Dict[str, Any] = field(default_factory=dict)  # Trigger 层传入的附加数据（如 channel_tag）
+    read_only: bool = False  # QA evaluation mode: retrieve/respond without persistence side effects
+    skip_modules: set = field(default_factory=set)  # Module class names to exclude from context data gathering
+    skip_narrative_prompt: bool = False  # Skip narrative summary in system prompt
 
     # ===== Cancellation =====
     cancellation: Optional["CancellationToken"] = None  # Cooperative cancellation token

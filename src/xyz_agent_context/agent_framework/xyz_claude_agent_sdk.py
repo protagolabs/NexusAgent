@@ -57,6 +57,7 @@ class ClaudeAgentSDK:
         streaming: bool = True,  # Whether to use streaming output
         extra_env: dict[str, str] | None = None,  # Additional env vars (e.g., skill-configured API keys)
         cancellation: Any | None = None,  # CancellationToken for cooperative cancellation
+        read_only: bool = False,  # QA mode: block mutating MCP tools via disallowed_tools
         **kwargs: Any,
         ) -> AsyncGenerator[dict[str, Any], None]:
 
@@ -226,6 +227,24 @@ class ClaudeAgentSDK:
         disallowed_tools: list[str] = []
         if not supports_server_tools:
             disallowed_tools.append("WebSearch")
+
+        # Read-only QA mode: block mutating MCP tools at the CLI level while
+        # keeping send_message_to_user_directly and read-only query tools.
+        if read_only:
+            disallowed_tools.extend([
+                "mcp__*__extract_*",
+                "mcp__*__create_*",
+                "mcp__*__update_*",
+                "mcp__*__delete_*",
+                "mcp__*__save_*",
+                "mcp__*__schedule_*",
+                "mcp__*__add_*",
+                "mcp__*__remove_*",
+                "mcp__*__set_*",
+                "mcp__*__upload_*",
+                "mcp__*__write_*",
+            ])
+            logger.info(f"🔒 Read-only mode: {len(disallowed_tools)} tool patterns blocked")
 
         # Build ClaudeAgentOptions; only pass model when explicitly configured
         options_kwargs: dict[str, Any] = dict(

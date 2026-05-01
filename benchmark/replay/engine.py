@@ -247,6 +247,21 @@ class ReplayEngine:
         logger.success(f"=== Session {session.session_id} done: {processed} rounds ===")
         return processed
 
+    def _resolve_use_agent_loop(self) -> bool:
+        """BenchmarkConfig overrides the legacy ReplayConfig flag if set."""
+        if self.config.test_config is not None:
+            return self.config.test_config.use_agent_loop
+        return self.config.use_agent_loop
+
+    def _hook_module_list(self) -> List:
+        """Filter `_module_list` by BenchmarkConfig's `replay_off_modules`."""
+        if self.config.test_config is None:
+            return self._module_list
+        off = self.config.test_config.replay_off_modules()
+        if not off:
+            return self._module_list
+        return [m for m in self._module_list if type(m).__name__ not in off]
+
     async def _replay_round(
         self,
         rnd: ReplayRound,
@@ -255,7 +270,16 @@ class ReplayEngine:
         session: ReplaySession,
         dump_records: Optional[List[Dict]],
     ) -> None:
-        """Replay a single round through Step 1 → Step 4 → Step 5."""
+        """Replay a single round.
+
+        Default path: Step 1 → Step 4 → Step 5 (no LLM dialogue).
+        When agent-loop mode is on, runs the full AgentRuntime so the
+        agent can call MCP tools (extract_entity_info, etc.).
+        """
+        if self._resolve_use_agent_loop():
+            await self._replay_round_agent_loop(rnd, round_idx, session, dump_records)
+            return
+        # Fast path below — Step 1 → Step 4 → Step 5
         from xyz_agent_context.narrative import Event, TriggerType
         from xyz_agent_context.schema import (
             HookAfterExecutionParams,
@@ -324,7 +348,7 @@ class ReplayEngine:
         )
         try:
             await self._hook_manager.hook_after_event_execution(
-                self._module_list, hook_params
+                self._hook_module_list(), hook_params
             )
         except Exception as exc:
             logger.warning(f"  Hook error (round {round_idx}): {exc}")
@@ -349,3 +373,52 @@ class ReplayEngine:
         conv_session.current_narrative_id = narrative.id
         conv_session.last_query_time = datetime.now(timezone.utc)
         await self._session_service.save_session(conv_session)
+
+    async def _replay_round_agent_loop(
+        self,
+        rnd: ReplayRound,
+        round_idx: int,
+        session: ReplaySession,
+        dump_records: Optional[List[Dict]],
+    ) -> None:
+        """Replay via full AgentRuntime — agent sees the user message and
+        can call MCP tools.  The pre-recorded agent_response is NOT used
+        as the reply (the LLM generates its own), but it IS appended to
+        the dump record for comparison."""
+        from xyz_agent_context.agent_runtime import AgentRuntime
+        from xyz_agent_context.schema import WorkingSource, ProgressMessage
+
+        agent_answer = ""
+        try:
+            async with AgentRuntime() as runtime:
+                async for msg in runtime.run(
+                    agent_id=self.config.agent_id,
+                    user_id=self.config.user_id,
+                    input_content=rnd.user_input,
+                    working_source=WorkingSource.CHAT,
+                ):
+                    if isinstance(msg, ProgressMessage):
+                        tn = (getattr(msg, "details", None) or {}).get("tool_name", "")
+                        if tn.endswith("send_message_to_user_directly"):
+                            c = msg.details.get("arguments", {}).get("content", "")
+                            if c:
+                                agent_answer += c
+        except Exception as exc:
+            logger.warning(f"  Agent loop error (round {round_idx}): {exc}")
+            agent_answer = f"[ERROR] {exc}"
+
+        logger.info(
+            f"  Round {round_idx} agent-loop done: "
+            f"answer={len(agent_answer)} chars"
+        )
+
+        if dump_records is not None:
+            dump_records.append({
+                "session_id": session.session_id,
+                "round_idx": round_idx,
+                "user_input": rnd.user_input,
+                "expected_response": rnd.agent_response,
+                "agent_answer": agent_answer,
+                "mode": "agent_loop",
+                "metadata": rnd.metadata,
+            })

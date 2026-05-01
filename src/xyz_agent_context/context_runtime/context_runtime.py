@@ -88,6 +88,8 @@ class ContextRuntime:
         created_job_ids: Optional[List[str]] = None,
         trigger_extra_data: Optional[Dict[str, Any]] = None,
         relevant_episodes: Optional[List] = None,  # EverMemOS episodes (fetched in parallel upstream)
+        skip_modules: Optional[set] = None,  # Module class names to exclude from hook_data_gathering
+        skip_narrative_prompt: bool = False,  # Skip narrative summary in system prompt
     ) -> ContextRuntimeOutput:
         logger.info("    ┌─ ContextRuntime.run() started")
         logger.info(f"    │ Narratives: {len(narrative_list)}, Instances: {len(active_instances)}")
@@ -126,6 +128,10 @@ class ContextRuntime:
         logger.info("    │ Step 1-2: Gathering information from Module Instances")
         # Extract the list of module objects (for hook_data_gathering)
         module_list = [inst.module for inst in active_instances if inst.module is not None]
+        if skip_modules:
+            before = len(module_list)
+            module_list = [m for m in module_list if type(m).__name__ not in skip_modules]
+            logger.info(f"    │ skip_modules={skip_modules}: {before} → {len(module_list)} modules for data gathering")
         ctx_data = await self.hook_manager.hook_data_gathering(module_list, ctx_data)
 
         # Get chat_history from chat_module. Since Chat Module may not be loaded, there will be no interaction history if it is not loaded.
@@ -139,6 +145,13 @@ class ContextRuntime:
         seen_module_classes = set()
 
         for inst in active_instances:
+            # Skip building instructions for modules whose hook_data_gathering
+            # was skipped — their instruction templates expect ctx_data fields
+            # that hook_data_gathering normally populates (e.g.
+            # social_network_current_entity), and format() would raise KeyError.
+            if skip_modules and inst.module_class in skip_modules:
+                logger.debug(f"    │   Skipped instructions for {inst.module_class} (in skip_modules)")
+                continue
             if inst.module_class not in seen_module_classes and inst.module is not None:
                 module_instructions = await self.build_module_instructions(inst.module, ctx_data)
                 module_instructions_list.append(module_instructions)
@@ -150,11 +163,11 @@ class ContextRuntime:
         # Step 4: Build the complete System Prompt (including Narrative + Relevant Memory + Modules)
         logger.info("    │ Step 1-4: Building Complete System Prompt")
         system_prompt = await self.build_complete_system_prompt(
-            narrative_list=narrative_list,
+            narrative_list=narrative_list if not skip_narrative_prompt else [],
             selected_events=selected_events,
             module_instructions_list=module_instructions_list,
             ctx_data=ctx_data,
-            relevant_episodes=relevant_episodes,
+            relevant_episodes=relevant_episodes if not skip_modules else None,
         )
         logger.success(f"    │ ✅ System Prompt built: {len(system_prompt)} characters")
 

@@ -1,0 +1,7 @@
+# Full integration test — everything participates, nothing hidden.
+#
+# Use this to test how all modules behave together in a realistic
+# production-like setup. No isolation, no ablation.
+
+sources: {}              # empty → all sources default to "active"
+use_agent_loop: true

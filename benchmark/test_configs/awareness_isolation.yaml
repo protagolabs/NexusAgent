@@ -1,0 +1,18 @@
+# Awareness isolation test.
+#
+# Verify the agent retrieves user preferences / communication style
+# from the AwarenessModule alone.
+#
+# NOTE: Awareness updates happen via the agent calling the
+# update_awareness MCP tool — there is NO automatic hook that extracts
+# preferences from conversation. So agent-loop replay is REQUIRED;
+# fast replay won't populate awareness data.
+
+sources:
+  ChatModule: no_qa
+  MemoryModule: no_qa
+  SocialNetworkModule: no_qa
+  Narrative: no_qa
+  # AwarenessModule defaults to "active".
+
+use_agent_loop: true

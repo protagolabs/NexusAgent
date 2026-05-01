@@ -101,6 +101,8 @@ async def step_3_agent_loop(
         created_job_ids=ctx.created_job_ids,
         trigger_extra_data=ctx.trigger_extra_data,
         relevant_episodes=relevant_episodes,
+        skip_modules=ctx.skip_modules or None,
+        skip_narrative_prompt=ctx.skip_narrative_prompt,
     )
     substeps.append(
         f"[3.2] ✓ Context build complete: {len(context.messages)} messages, "
@@ -119,6 +121,17 @@ async def step_3_agent_loop(
     # ------------- 3.3: Extract messages and MCP URLs -------------
     logger.info("  📤 Step 3.3: Extracting messages and MCP URLs")
     messages = context.messages
+    if ctx.read_only:
+        messages.insert(0, {
+            "role": "system",
+            "content": (
+                "READ-ONLY QA MODE: answer the user's question using existing context only.\n"
+                "BLOCKED actions: create, update, delete, schedule, extract_entity_info, "
+                "save, persist, upload, write — do NOT call any tool that does these.\n"
+                "REQUIRED: you MUST call mcp__chat_module__send_message_to_user_directly to deliver your answer."
+            ),
+        })
+        substeps.append("[3.3.ro] 🔒 Read-only tool-use guard injected")
     ctx.mcp_urls.update(context.mcp_urls)
     substeps.append(
         f"[3.3] ✓ Extraction complete: {len(messages)} messages, {len(ctx.mcp_urls)} MCP servers"
@@ -167,6 +180,7 @@ async def step_3_agent_loop(
             mcp_server_urls=ctx.mcp_urls,
             extra_env=skill_env_vars or None,
             cancellation=ctx.cancellation,
+            read_only=ctx.read_only,
         ):
             # Use ResponseProcessor to process responses
             result = response_processor.process(response, state)

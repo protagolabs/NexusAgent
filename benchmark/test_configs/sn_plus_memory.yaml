@@ -1,0 +1,11 @@
+# Cross-module test: SN + Memory together.
+#
+# Agent can use both SN's structured tools (extract_entity_info,
+# search_social_network) and recall memories from EverMemOS.
+
+sources:
+  ChatModule: no_qa
+  Narrative: no_qa
+  # SocialNetworkModule and MemoryModule both default to "active".
+
+use_agent_loop: true
