@@ -106,6 +106,12 @@ export interface Attachment {
   original_name: string;
   size_bytes: number;
   category: AttachmentCategory;
+  // Whisper-transcribed text for audio/* uploads. Forwarded through the
+  // WebSocket payload so the agent's attachment marker carries the
+  // transcript and the LLM reads it directly without a Read tool round
+  // trip. None for non-audio uploads or when transcription was
+  // unavailable / failed.
+  transcript?: string;
 }
 
 // Chat message for display

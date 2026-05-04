@@ -46,6 +46,15 @@ class AttachmentUploadResponse(BaseModel):
     original_name: str | None = None
     size_bytes: int | None = None
     category: str | None = None
+    # Audio transcription fields. Both populated only for audio/* MIME.
+    # `transcript` is the actual Whisper output (None if transcription
+    # was skipped or failed). `transcription_available` tells the
+    # frontend whether the user *could* use transcription at all
+    # (i.e. has any OpenAI-protocol provider configured) — used to
+    # show a "voice unavailable" toast when relevant. Stays None for
+    # non-audio uploads so the frontend doesn't show a toast for PNGs.
+    transcript: str | None = None
+    transcription_available: bool | None = None
     error: str | None = None
 
 
@@ -122,6 +131,30 @@ async def upload_attachment(
             f"size={len(raw_bytes)} path={on_disk}"
         )
 
+        # Best-effort audio transcription (audio/* only). Routed through
+        # the same provider system that powers chat / embedding, so any
+        # user with an OpenAI-protocol provider (OpenAI / NetMind / Yunwu /
+        # OpenRouter / self-hosted) gets transcription "for free" — no
+        # separate Whisper key required. Failures must not break the
+        # upload — see audio_transcription docstring's never-raise contract.
+        transcript: str | None = None
+        transcription_available: bool | None = None
+        if mime_type.startswith("audio/"):
+            from xyz_agent_context.utils.audio_transcription import (
+                transcribe_audio,
+                is_transcription_available,
+            )
+            transcription_available = await is_transcription_available(user_id)
+            if transcription_available:
+                transcript = await transcribe_audio(
+                    file_path=str(on_disk), user_id=user_id,
+                )
+                if transcript:
+                    logger.info(
+                        f"Attachment transcribed: file_id={file_id} "
+                        f"chars={len(transcript)}"
+                    )
+
         return AttachmentUploadResponse(
             success=True,
             file_id=file_id,
@@ -129,6 +162,8 @@ async def upload_attachment(
             original_name=file.filename or "upload",
             size_bytes=len(raw_bytes),
             category=category.value,
+            transcript=transcript,
+            transcription_available=transcription_available,
         )
 
     except ValueError as e:

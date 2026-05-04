@@ -1,6 +1,6 @@
 ---
 code_file: backend/routes/agents_attachments.py
-last_verified: 2026-04-29
+last_verified: 2026-05-02
 stub: false
 ---
 
@@ -14,6 +14,18 @@ frontend uses to render image thumbnails inline. Kept separate from
 `agents_files.py` because chat attachments have a different storage
 shape (date-partitioned subdirs + sidecar index) and a different
 access pattern (referenced by `file_id`, not browsed by name).
+
+For `audio/*` MIME types, the upload route also synchronously transcribes
+the audio via Whisper (best-effort) and returns the text in the response
+so the frontend can display it and the agent receives it through the
+attachment marker. Transcription is routed through the same
+OpenAI-protocol provider system that powers chat (`UserProviderService`
+→ `SystemProviderService` → `settings.openai_api_key`), so any user
+with a configured OpenAI / NetMind / Yunwu / OpenRouter / self-hosted
+provider gets transcription "for free". Transcription failures never
+break the upload — they degrade to `transcript=null` and the response
+also exposes `transcription_available` so the frontend can surface a
+"voice unavailable" toast for users with only Anthropic configured.
 
 ## Upstream / Downstream
 
@@ -30,6 +42,9 @@ Downstream:
   re-resolves on `/raw` requests with the workspace sandbox check
 - `xyz_agent_context.schema.attachment_schema.derive_category_from_mime`
   classifies the upload so the frontend can render an icon vs a thumbnail
+- `xyz_agent_context.utils.audio_transcription.transcribe_audio` /
+  `is_transcription_available` — called only on `audio/*` uploads, with
+  the request's `user_id` so per-user provider lookup works
 
 Mounted under `/api/agents` via `backend/routes/agents.py`.
 

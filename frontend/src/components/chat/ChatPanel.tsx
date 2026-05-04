@@ -57,6 +57,11 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
   // Attachments uploaded for the next message but not yet sent. Each entry
   // is the server-acknowledged metadata returned by uploadAttachment.
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
+  // Banner above the input when an audio upload comes back with
+  // transcription_available=false. Cleared on next successful audio
+  // upload or when user dismisses. Plain string so we don't need a
+  // toast library — keeps the UI consistent with the rest of the panel.
+  const [transcriptionNotice, setTranscriptionNotice] = useState<string | null>(null);
   // Tracks how many uploads are in-flight so the send button can wait.
   const [uploadingCount, setUploadingCount] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -408,8 +413,26 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
                 original_name: resp.original_name ?? file.name,
                 size_bytes: resp.size_bytes ?? file.size,
                 category: resp.category!,
+                // Whisper transcript for audio uploads — must be forwarded
+                // through pendingAttachment → WS payload → ChatModule so
+                // synthesize_marker can inject it into the agent prompt.
+                // Without this, the agent never sees the transcribed text
+                // and tries to Read the binary mp3 instead.
+                transcript: resp.transcript ?? undefined,
               },
             ]);
+            // Audio uploaded but no compatible transcription provider
+            // configured — surface a clear notice rather than letting
+            // the user wonder why the agent can't "hear" the message.
+            const isAudio = (resp.mime_type ?? '').startsWith('audio/');
+            if (isAudio && resp.transcription_available === false) {
+              setTranscriptionNotice(
+                '音频已上传，但语音转文字未启用。请到 Settings → Providers 添加 OpenAI。',
+              );
+            } else if (isAudio && resp.transcript) {
+              // New successful audio → clear any stale notice
+              setTranscriptionNotice(null);
+            }
           } else {
             console.error('Attachment upload failed:', resp.error);
           }
@@ -809,6 +832,21 @@ export function ChatPanel({ onAgentComplete }: ChatPanelProps = {}) {
       {/* Input area — drop is handled at the Card root, so this wrapper
           no longer needs its own onDragOver/onDragLeave/onDrop. */}
       <div className="px-5 py-4 border-t border-[var(--rule)]">
+        {/* Audio transcription unavailable notice — only shown when an
+            audio upload returned transcription_available=false. */}
+        {transcriptionNotice && (
+          <div className="mb-2.5 flex items-start gap-2 rounded-md border border-[var(--rule)] bg-[var(--bg-tertiary)]/60 px-3 py-2 text-xs text-[var(--text-secondary)]">
+            <span className="flex-1">{transcriptionNotice}</span>
+            <button
+              type="button"
+              onClick={() => setTranscriptionNotice(null)}
+              className="p-0.5 rounded hover:bg-[var(--bg-secondary)]"
+              title="Dismiss"
+            >
+              <X className="w-3 h-3 text-[var(--text-tertiary)]" />
+            </button>
+          </div>
+        )}
         {/* Pending attachments preview row */}
         {(pendingAttachments.length > 0 || uploadingCount > 0) && (
           <div className="mb-2.5 flex flex-wrap gap-2">

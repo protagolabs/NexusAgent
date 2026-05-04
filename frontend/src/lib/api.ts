@@ -345,6 +345,14 @@ class ApiClient {
     original_name?: string;
     size_bytes?: number;
     category?: 'image' | 'document' | 'code' | 'data' | 'media' | 'other';
+    // Audio-only fields (populated when mime starts with audio/).
+    // `transcript` carries the Whisper output; null/undefined means
+    // transcription was unavailable or failed.
+    // `transcription_available` is the per-user capability check —
+    // false means the user has no compatible OpenAI-protocol provider
+    // configured, so the UI should prompt them to add one.
+    transcript?: string | null;
+    transcription_available?: boolean | null;
     error?: string;
   }> {
     const formData = new FormData();
