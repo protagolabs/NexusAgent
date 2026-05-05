@@ -12,6 +12,8 @@
 /logs/
 /logs_*/
 /sessions/
+/data/
+agent_workspace/agent_*/
 
 # ── Reference & internal docs ─────────────────────────────────────────────
 /reference/
