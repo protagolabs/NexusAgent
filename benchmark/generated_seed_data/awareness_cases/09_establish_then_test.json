@@ -1,0 +1,51 @@
+{
+  "sample_id": "awareness_establish_then_test_v1",
+  "seed": {
+    "preset_name": "awareness_establish_then_test",
+    "seed_type": "establish_then_test",
+    "description": "Direct read-after-write test. A communication-style preference (bullet lists for any structured response) is established at turn 5. Subsequent open-ended questions (turns 13, 16, 19) probe whether the agent actually applies the preference in its replies, not just whether it wrote it to the profile."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {"turn_index": 1, "user_message": "Walk me through how to set up a CI pipeline.", "agent_reply": "Sure. Which platform — GitHub Actions, GitLab, CircleCI?", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 2, "user_message": "GitHub Actions.", "agent_reply": "OK, GitHub Actions it is.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 3, "user_message": "What goes in the workflow file?", "agent_reply": "A workflow file lives in .github/workflows/. It defines triggers (push, PR, schedule), jobs (groups of steps run on a runner), and steps (individual commands or actions).", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 4, "user_message": "What runners are available?", "agent_reply": "GitHub provides ubuntu-latest, windows-latest, and macos-latest by default. You can also use self-hosted runners.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 5, "user_message": "Quick style preference for everything we do: when you give me anything structured — steps, options, comparisons, lists — always use bullet lists. Don't give me prose paragraphs for structured info.", "agent_reply": "Got it — bullet lists for any structured info from now on.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 6, "user_message": "What are the key parts of a workflow step?", "agent_reply": "- name: descriptive label\n- uses: action reference\n- run: shell command\n- with: action inputs\n- env: env vars", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 7, "user_message": "How does caching work?", "agent_reply": "- actions/cache@v4 stores a path keyed by an input\n- Restore key falls back if exact key misses\n- Cache scope is branch + repo", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 8, "user_message": "Common pitfalls?", "agent_reply": "- Cache key not invalidated when deps change\n- Not pinning action versions\n- Secrets leaking via echo or env\n- Slow runners on Windows / macOS\n- Matrix builds blowing up minutes", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 9, "user_message": "Let me see a sample test job.", "agent_reply": "(provides sample yaml)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 10, "user_message": "How does this run on PRs vs push?", "agent_reply": "- on: push triggers on direct push to specified branches\n- on: pull_request triggers on PR open / sync\n- on: pull_request_target runs in base repo's context (security implications)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 11, "user_message": "What about deploying after CI passes?", "agent_reply": "- Use a separate deploy job with `needs: test`\n- Gate on environment with manual approval\n- Use OIDC to AWS / GCP instead of long-lived secrets\n- Lock production deploys to main branch", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 12, "user_message": "How do I debug a failed run?", "agent_reply": "- Open the run page\n- Click the failing step to expand logs\n- Re-run with debug logging via ACTIONS_STEP_DEBUG\n- SSH into runner via tmate action for live debug\n- Compare with the last passing run", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 13, "user_message": "Compare GitHub Actions to GitLab CI for me.", "agent_reply": "PROBE — should reply in bullets, not prose.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "communication", "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 14, "user_message": "What versions of Node should I test against?", "agent_reply": "- Active LTS\n- Previous LTS\n- Current\n- Drop EOL versions", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 15, "user_message": "How do I parallelize tests?", "agent_reply": "- Matrix strategy splits across runners\n- Sharding with --shard flag\n- Test reporters merge results\n- Cap fail-fast to spot all breakages", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 16, "user_message": "Walk me through the security best practices.", "agent_reply": "PROBE — multi-item topic, must be bullets.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "communication", "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 17, "user_message": "Action versioning best practice?", "agent_reply": "- Pin to commit SHA, not tag\n- Tag is mutable, SHA is not\n- Use Dependabot to update SHAs\n- Trust only verified publishers", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 18, "user_message": "How to monitor CI minutes?", "agent_reply": "- Org settings > Actions > Usage\n- Set monthly spending limits\n- Alert on threshold via webhook\n- Optimize by caching deps", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 19, "user_message": "Give me a summary of everything I should keep in mind setting this up.", "agent_reply": "PROBE — open question, structured response, must be bullets.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "communication", "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 20, "user_message": "Thanks.", "agent_reply": "Anytime.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}}
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [1, 1],
+    "expected_profile_must_contain": [
+      {"section": "Communication Style", "phrase_or_synonym": "bullet"}
+    ],
+    "expected_profile_must_not_contain": [],
+    "behavior_probe_turns": [13, 16, 19]
+  },
+  "qa_items": [
+    {
+      "question": "When I ask for structured information, what format do I want?",
+      "tester_hint_answer": "Bullet lists, not prose paragraphs.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [5]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

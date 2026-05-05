@@ -1,0 +1,81 @@
+{
+  "sample_id": "awareness_all_four_dimensions_v1",
+  "seed": {
+    "preset_name": "awareness_all_four_dimensions",
+    "seed_type": "all_four_dimensions",
+    "description": "Tests profile structural coverage across all 4 sections (Narrative, Task, Communication, Role/Identity). Each of the 4 dimensions gets at least one explicit signal. Tests whether the agent (a) writes to the correct section per signal, and (b) doesn't drop any section after multiple updates."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {"turn_index": 1, "user_message": "Onboarding you for ongoing engineering management work. Want to set up our working relationship.", "agent_reply": "Sure — what's the setup you have in mind?", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 2, "user_message": "First role thing: you are my engineering management copilot. Your job is to help me run 1:1s, plan sprints, and write performance feedback. Not coding, not architecture.", "agent_reply": "Understood — engineering management copilot, focused on 1:1s, sprint planning, and performance feedback. No coding or architecture.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "role", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 3, "user_message": "On organization: I run things in 2-week sprints with separate weekly threads for each direct report. Always organize our conversations along those lines — sprint thread, then per-person threads.", "agent_reply": "Got it — sprint thread + per-person weekly threads, kept separate.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "narrative", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 4, "user_message": "When you draft any feedback, always do it as: behavior, impact, suggestion. Never just dump observations without all three.", "agent_reply": "Confirmed — feedback drafts always follow the behavior/impact/suggestion structure.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "task", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 5, "user_message": "Communication: keep things direct and use first names of my reports, never titles. Casual but not sloppy.", "agent_reply": "Direct, first names, casual but not sloppy. Got it.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 6, "user_message": "Let's start. Sprint planning — what's typically in a 2-week sprint?", "agent_reply": "(walks through typical sprint contents)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 7, "user_message": "I have 5 directs: Maya, Theo, Ravi, Aiko, Jin.", "agent_reply": "Noted.", "signal_annotation": {"signal_type": "none", "module_scope": "social", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 8, "user_message": "Maya needs growth feedback — she's stuck at senior. Draft it.", "agent_reply": "(drafts feedback in behavior/impact/suggestion format using first name)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 9, "user_message": "On task style: never give me feedback drafts longer than 200 words — I'll edit if I want more.", "agent_reply": "Got it — feedback drafts capped at 200 words.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "task", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 10, "user_message": "Theo's 1:1 prep — what should I focus on?", "agent_reply": "(suggests focus areas)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 11, "user_message": "Important narrative rule: if a topic spans multiple people (like 'the team's deploy reliability'), give it its own thread, separate from per-person threads.", "agent_reply": "Confirmed — cross-cutting topics get their own thread, parallel to per-person threads.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "narrative", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 12, "user_message": "Ravi promotion case — draft.", "agent_reply": "(drafts case in behavior/impact/suggestion, under 200 words, first name only)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 13, "user_message": "Aiko sprint commit — what should the team commit to this sprint?", "agent_reply": "(suggests commitments)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 14, "user_message": "Quick role clarification — on hiring, you're hands-off. I'll handle hiring with my recruiter.", "agent_reply": "Got it — hiring is out of scope for our copilot relationship.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "role", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 15, "user_message": "Jin's promotion blocker — he's strong technically but struggles with communication. Help me think through how to coach him.", "agent_reply": "(walks through coaching plan)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 16, "user_message": "Communication preference reminder — when you draft me anything for forwarding to my directs, always run a tone-check first and flag anything that might come across as harsh.", "agent_reply": "Confirmed — tone-check before sending anything to directs, flag potential harshness.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 17, "user_message": "Wrap up — give me a snapshot of our working agreement so far.", "agent_reply": "PROBE — should recall preferences across all 4 dimensions.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 18, "user_message": "Good. Let's go.", "agent_reply": "Ready.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}}
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [3, 7],
+    "expected_profile_must_contain": [
+      {"section": "Narrative Management", "phrase_or_synonym": "sprint thread"},
+      {"section": "Narrative Management", "phrase_or_synonym": "per-person"},
+      {"section": "Narrative Management", "phrase_or_synonym": "cross-cutting"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "behavior, impact, suggestion"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "200 words"},
+      {"section": "Communication Style", "phrase_or_synonym": "first names"},
+      {"section": "Communication Style", "phrase_or_synonym": "tone-check"},
+      {"section": "Role and Identity", "phrase_or_synonym": "engineering management"},
+      {"section": "Role and Identity", "phrase_or_synonym": "hiring is out of scope"}
+    ],
+    "expected_profile_must_not_contain": [
+      "Maya",
+      "Theo",
+      "Ravi",
+      "Aiko",
+      "Jin"
+    ],
+    "behavior_probe_turns": [17]
+  },
+  "qa_items": [
+    {
+      "question": "What's your role in our work together?",
+      "tester_hint_answer": "Engineering management copilot — 1:1s, sprint planning, performance feedback. Not coding or architecture. Hiring is also out of scope.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [2, 14]
+    },
+    {
+      "question": "How should you organize our conversations?",
+      "tester_hint_answer": "Sprint thread plus per-person weekly threads, kept separate. Cross-cutting topics get their own dedicated thread.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [3, 11]
+    },
+    {
+      "question": "What's the structure for any feedback drafts you write?",
+      "tester_hint_answer": "Behavior, impact, suggestion — always all three. Capped at 200 words.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [4, 9]
+    },
+    {
+      "question": "What's my preferred communication style?",
+      "tester_hint_answer": "Direct, casual but not sloppy, use first names of reports never titles, and run tone-check before sending anything to directs.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [5, 16]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

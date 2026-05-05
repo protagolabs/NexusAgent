@@ -1,0 +1,127 @@
+{
+  "sample_id": "awareness_paraphrase_robustness_v1",
+  "seed": {
+    "preset_name": "awareness_paraphrase_robustness",
+    "seed_type": "paraphrase_robustness",
+    "description": "Tests semantic generalization: the SAME preference (concise responses) is expressed in 6 different phrasings that progressively deviate from the prompt's canonical examples. Tests whether the agent recognizes the underlying preference even when the exact strings 'I prefer' / 'Please always' don't appear."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "Hey, going to start working with you regularly. Quick thing first — I prefer concise responses.",
+      "agent_reply": "Got it.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "communication",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 2,
+      "user_message": "What's the deal with retrieval-augmented generation?",
+      "agent_reply": "RAG: retrieve relevant docs, ground LLM answer on them. Reduces hallucination.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Can you keep it short? I don't need a textbook every time.",
+      "agent_reply": "Will do.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "communication",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 4,
+      "user_message": "How about agentic loops?",
+      "agent_reply": "Agent calls tools iteratively, observes results, plans next step. Stops on success or budget.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 5,
+      "user_message": "TL;DR, please. I want one line if possible.",
+      "agent_reply": "Loop until task done or budget hit.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "communication",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Long answers waste my time — I'm a skim-reader.",
+      "agent_reply": "Understood.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "communication",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Anyway, brief me on tool-use safety.",
+      "agent_reply": "Sandbox tools, validate inputs, avoid destructive ops without confirmation.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Less is more — keep doing that.",
+      "agent_reply": "Got it.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "communication",
+        "signal_strength": "weak",
+        "expected_action": "observe"
+      }
+    }
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [1, 4],
+    "expected_profile_must_contain": [
+      {"section": "Communication Style", "phrase_or_synonym": "concise"}
+    ],
+    "expected_profile_must_not_contain": [],
+    "behavior_probe_turns": []
+  },
+  "qa_items": [
+    {
+      "question": "What kind of response length do I want?",
+      "tester_hint_answer": "Concise / short / brief — I'm a skim-reader and dislike long answers.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [1, 3, 5, 6, 8]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

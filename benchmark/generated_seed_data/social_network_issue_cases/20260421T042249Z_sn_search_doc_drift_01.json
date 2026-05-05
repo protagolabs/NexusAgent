@@ -1,0 +1,282 @@
+{
+  "sample_id": "sn_search_doc_drift_01_20260421T042249Z",
+  "dialogue_seed": "The user introduces several contacts, including Bob Martin, a data engineer who helped with warehouse migration. Later the user asks the agent to help remember Bob by name, without giving any special identifier. The dialogue should make the user expect ordinary name-based recall to work.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Bob Martin\" and \"warehouse migration\". The questions should ask who he is and what project he helped with, using ordinary name-based wording.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I want to use you a bit like a lightweight people notebook. I’m meeting a bunch of folks this month and I want help keeping them straight.",
+      "agent_reply": "Absolutely — I can help you keep a clear running memory of who’s who, what they do, and why they matter to you. If you give me each person’s name plus a few details like role, company, how you know them, and any follow-up you owe, I’ll organize it in a way that’s easy to recall later."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Great. First one: Bob Martin. He’s a data engineer at Northstar Analytics. He helped our team with the warehouse migration last quarter and was especially useful on the Snowflake side.",
+      "agent_reply": "Got it: Bob Martin is a data engineer at Northstar Analytics, and he helped your team with last quarter’s warehouse migration, especially with Snowflake work. That gives you a solid hook for remembering him. If you want, I can also track whether he was a vendor contact, collaborator, or someone you may work with again."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Yes, track him as an external collaborator. We worked with him through Northstar, and my main contact there was actually Dana Ruiz, their solutions lead.",
+      "agent_reply": "Noted. Relationship-wise: Bob Martin is an external collaborator connected to your team through Northstar Analytics, and Dana Ruiz is your main contact there in her role as solutions lead. That also suggests Bob likely worked under Dana’s broader engagement with your organization."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Add Dana too. Dana Ruiz, solutions lead at Northstar Analytics. Her email is dana.ruiz@northstar-analytics.com and she coordinated the migration timeline.",
+      "agent_reply": "Added Dana Ruiz: solutions lead at Northstar Analytics, email dana.ruiz@northstar-analytics.com, and she coordinated the migration timeline. So within Northstar Analytics, Dana appears to be the primary coordination contact, while Bob Martin handled technical implementation support on the data engineering side."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Another person: Priya Shah. She’s a product manager at Lattice Health, and she used to work with my former coworker Melissa Chen. Priya wants to reconnect in May about analytics dashboards.",
+      "agent_reply": "Recorded: Priya Shah is a product manager at Lattice Health. She has a connection to your former coworker Melissa Chen, and Priya wants to reconnect with you in May about analytics dashboards. That gives you both a professional context and a relationship bridge through Melissa Chen."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Can you summarize the people so far in a compact way?",
+      "agent_reply": "Sure — here’s a compact summary:\n\n- Bob Martin — Data Engineer, Northstar Analytics; external collaborator who helped your team with the warehouse migration last quarter, especially on Snowflake.\n- Dana Ruiz — Solutions Lead, Northstar Analytics; primary contact there, coordinated the migration timeline; email: dana.ruiz@northstar-analytics.com.\n- Priya Shah — Product Manager, Lattice Health; connected through your former coworker Melissa Chen; wants to reconnect in May about analytics dashboards.\n- Melissa Chen — Former coworker of yours; relationship link to Priya Shah.\n\nIf you’d like, I can also keep a short “how to remember them” line for each person."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Yes, do that. For Bob, the memory hook is basically: warehouse migration, Snowflake, Northstar. For Dana: timeline coordinator at Northstar. For Priya: May follow-up, dashboards, knows Melissa.",
+      "agent_reply": "Perfect — I’ve got concise memory hooks for each:\n\n- Bob Martin — warehouse migration, Snowflake, Northstar.\n- Dana Ruiz — timeline coordinator at Northstar.\n- Priya Shah — May follow-up, dashboards, knows Melissa.\n\nThose are exactly the kind of quick cues that make later recall easy."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Nice. I’m going to rely on you for this, so later I may just ask something like “who was Bob again?” and expect you to know who I mean.",
+      "agent_reply": "That works. If you later ask “who was Bob again?”, I’ll use the name and the context you’ve given me here to identify him and summarize the relevant details."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "One more detail on Bob: I think he’s based in Denver, and he mentioned he’d be open to future contract work if we expand the pipeline project.",
+      "agent_reply": "Added that too: Bob Martin is likely based in Denver, and he mentioned being open to future contract work if your team expands the pipeline project. That makes him not just a past collaborator, but also a potential future resource."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Great, that’s enough for now. Just keep Bob, Dana, and Priya handy for later.",
+      "agent_reply": "Understood. I’ll keep Bob Martin, Dana Ruiz, and Priya Shah ready for later recall, along with their roles, organizations, relationship context, and your memory hooks."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Actually, before we move on — who was Bob again?",
+      "agent_reply": "Bob Martin — he’s the data engineer at Northstar Analytics who helped your team with the warehouse migration last quarter, especially on the Snowflake side. You’re tracking him as an external collaborator. Your memory hook for him is: warehouse migration, Snowflake, Northstar. You also noted he’s likely based in Denver and may be open to future contract work if the pipeline project expands."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Perfect. Add one more person: Elena Torres. She’s a recruiter at BlueHarbor Labs and got introduced through Priya Shah.",
+      "agent_reply": "Added Elena Torres: recruiter at BlueHarbor Labs, introduced to you through Priya Shah. That gives her a clear relationship link through Priya, plus an affiliation with BlueHarbor Labs."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Elena emailed me from elena.torres@blueharborlabs.com about a staff analytics role, but I’m not actively looking.",
+      "agent_reply": "Noted. Elena Torres uses elena.torres@blueharborlabs.com and contacted you about a staff analytics role at BlueHarbor Labs. Current status: you’re not actively looking, so she’s more of a warm recruiting contact than an active lead."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Give me a compact list again, now including Elena.",
+      "agent_reply": "Here’s the updated compact list:\n\n- Bob Martin — Data Engineer, Northstar Analytics; external collaborator; helped with warehouse migration, especially Snowflake; likely in Denver; open to possible future contract work on the pipeline project.\n- Dana Ruiz — Solutions Lead, Northstar Analytics; primary contact there; coordinated the migration timeline; email: dana.ruiz@northstar-analytics.com.\n- Priya Shah — Product Manager, Lattice Health; connected through your former coworker Melissa Chen; wants to reconnect in May about analytics dashboards.\n- Elena Torres — Recruiter, BlueHarbor Labs; introduced through Priya Shah; emailed you about a staff analytics role; email: elena.torres@blueharborlabs.com.\n- Melissa Chen — Your former coworker; relationship bridge connecting you to Priya Shah."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Good. For Elena, use the memory hook: recruiter via Priya, BlueHarbor, staff analytics role.",
+      "agent_reply": "Saved Elena’s memory hook as: recruiter via Priya, BlueHarbor, staff analytics role."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "And actually for Priya, note that she’s in New York and prefers email over calls.",
+      "agent_reply": "Added for Priya Shah: she’s based in New York and prefers email over calls. That’s useful both as a location cue and a communication preference."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "If I asked later 'who’s the Northstar timeline person?' you’d know that’s Dana, right?",
+      "agent_reply": "Yes — that would map to Dana Ruiz, the Solutions Lead at Northstar Analytics who coordinated the migration timeline. Her memory hook is essentially your Northstar timeline person."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Nice. What are the quick memory hooks for everyone now?",
+      "agent_reply": "Current quick memory hooks:\n\n- Bob Martin — warehouse migration, Snowflake, Northstar.\n- Dana Ruiz — timeline coordinator at Northstar.\n- Priya Shah — May follow-up, dashboards, knows Melissa.\n- Elena Torres — recruiter via Priya, BlueHarbor, staff analytics role."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "One small correction: Priya doesn’t just know Melissa — they worked together before.",
+      "agent_reply": "Corrected. For Priya Shah, the relationship is stronger than a casual connection: Priya previously worked with your former coworker Melissa Chen."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Great, that’s all. Later I may just say Bob, Dana, Priya, or Elena without repeating details.",
+      "agent_reply": "Understood. I’ll treat Bob Martin, Dana Ruiz, Priya Shah, and Elena Torres as established contacts and use their names alone as enough context to recall the details you’ve already given me."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Okay, quick check: who was Bob?",
+      "agent_reply": "Bob Martin — the data engineer at Northstar Analytics who helped your team with the warehouse migration last quarter, especially on Snowflake. You’re tracking him as an external collaborator through Northstar. You also noted he’s likely based in Denver and could be open to future contract work if the pipeline project expands."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Yep, that’s the one. Also, Dana said Bob was especially good at untangling messy dbt models during the migration. Add that as a note.",
+      "agent_reply": "Added: Dana Ruiz said Bob Martin was especially good at untangling messy dbt models during the migration. That strengthens Bob’s technical memory profile: Snowflake, warehouse migration, and dbt cleanup."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "And for Dana, add that she was the person who pulled in Bob when the timeline started slipping.",
+      "agent_reply": "Noted for Dana Ruiz: she was the one who brought Bob Martin into the engagement when the migration timeline started slipping. That also reinforces Dana’s role as the coordination lead at Northstar Analytics."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Can you give me just the Northstar people together?",
+      "agent_reply": "Sure — the Northstar Analytics contacts are:\n\n- Dana Ruiz — Solutions Lead at Northstar Analytics; your primary contact there; coordinated the migration timeline; brought Bob in when the timeline started slipping; email: dana.ruiz@northstar-analytics.com.\n- Bob Martin — Data Engineer at Northstar Analytics; external collaborator who helped with the warehouse migration, especially Snowflake; strong at untangling messy dbt models; likely based in Denver; potentially open to future contract work.\n\nRelationship-wise, Dana appears to have been the lead contact and Bob the technical implementation support."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "That’s helpful. Separate question: who introduced Elena to me again?",
+      "agent_reply": "Elena Torres was introduced to you through Priya Shah. Elena is the recruiter at BlueHarbor Labs who emailed you about a staff analytics role."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Right. Add one more detail there: Elena said if I’m ever interested, I should reach out directly instead of going through a general application.",
+      "agent_reply": "Added for Elena Torres: if you become interested in the BlueHarbor Labs staff analytics role, she prefers that you reach out to her directly rather than apply through the general process. That makes her a direct recruiting contact, not just an inbound lead."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Now remind me about Priya.",
+      "agent_reply": "Priya Shah — product manager at Lattice Health. She previously worked with your former coworker Melissa Chen, is based in New York, and prefers email over calls. You want to reconnect with her in May about analytics dashboards. Her memory hook is: May follow-up, dashboards, worked with Melissa."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Good. If I just say 'Bob' later, I mean Bob Martin at Northstar, not anyone else.",
+      "agent_reply": "Understood. In this running set of contacts, “Bob” refers to Bob Martin at Northstar Analytics — the data engineer tied to the warehouse migration, Snowflake work, and dbt model cleanup."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Before we stop, give me a one-line memory cue for each of the four main people.",
+      "agent_reply": "Here are one-line memory cues for the four main contacts:\n\n- Bob Martin — Northstar data engineer: warehouse migration, Snowflake, dbt cleanup, possible future contractor.\n- Dana Ruiz — Northstar solutions lead: timeline coordinator who pulled Bob in.\n- Priya Shah — Lattice PM: May dashboards follow-up, worked with Melissa, prefers email.\n- Elena Torres — BlueHarbor recruiter: via Priya, staff analytics role, contact directly if interested."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect, that’s exactly how I want to use this.",
+      "agent_reply": "Glad that format works. I’ll keep those four contacts anchored by name and by their quick cues so you can refer to them naturally later."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Bob Martin",
+        "Dana Ruiz",
+        "Priya Shah",
+        "Melissa Chen",
+        "Elena Torres",
+        "Northstar Analytics",
+        "Lattice Health",
+        "BlueHarbor Labs"
+      ],
+      "relations": [
+        "Bob Martin is a data engineer at Northstar Analytics",
+        "Bob Martin helped the user's team with the warehouse migration last quarter",
+        "Bob Martin is tracked as an external collaborator",
+        "Dana Ruiz is the solutions lead at Northstar Analytics",
+        "Dana Ruiz is the user's main contact at Northstar Analytics",
+        "Dana Ruiz coordinated the migration timeline",
+        "Dana Ruiz pulled Bob Martin in when the timeline started slipping",
+        "Priya Shah is a product manager at Lattice Health",
+        "Priya Shah previously worked with Melissa Chen",
+        "Elena Torres is a recruiter at BlueHarbor Labs",
+        "Elena Torres was introduced through Priya Shah"
+      ],
+      "contact_or_org_details": [
+        "Dana Ruiz email: dana.ruiz@northstar-analytics.com",
+        "Elena Torres email: elena.torres@blueharborlabs.com",
+        "Bob Martin is likely based in Denver",
+        "Priya Shah is based in New York"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is Bob Martin again?",
+      "tester_hint_answer": "He is the Northstar Analytics data engineer and external collaborator who helped the team.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        3,
+        11,
+        21
+      ]
+    },
+    {
+      "question": "What project did Bob Martin help with?",
+      "tester_hint_answer": "He helped with the warehouse migration, especially the Snowflake side.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        6,
+        11,
+        21
+      ]
+    },
+    {
+      "question": "When I ask about Bob by name, who should that refer to in these contacts?",
+      "tester_hint_answer": "It should resolve to Bob Martin at Northstar Analytics.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        8,
+        20,
+        28
+      ]
+    },
+    {
+      "question": "Who at Northstar was the timeline person, and how is that person related to Bob Martin?",
+      "tester_hint_answer": "Dana Ruiz was the timeline lead and she brought Bob in when the schedule slipped.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        17,
+        23,
+        24
+      ]
+    },
+    {
+      "question": "Which Northstar contact helped with the warehouse migration and what was his role there?",
+      "tester_hint_answer": "Bob Martin; he was the data engineer supporting the migration work.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        24,
+        29
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_search_doc_drift_01",
+    "issue": "search_interface_doc_drift",
+    "required_qa_phrases": [
+      "Bob Martin",
+      "warehouse migration"
+    ],
+    "stress_signal": "User expects ordinary name-based recall."
+  }
+}

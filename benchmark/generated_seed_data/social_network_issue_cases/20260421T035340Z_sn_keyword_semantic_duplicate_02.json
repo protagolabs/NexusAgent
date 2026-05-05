@@ -1,0 +1,274 @@
+{
+  "sample_id": "sn_keyword_semantic_duplicate_02_20260421T035340Z",
+  "dialogue_seed": "The user talks about Liam Park across several turns: Liam is introduced as a frontend engineer, then described as a React expert, then as someone who handles UI architecture for the design systems group. The agent helps the user plan how to contact Liam for a product prototype review.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"frontend engineer\", \"React expert\", and \"UI architecture\". The questions should ask what Liam Park works on, why the user wants his review, and who could help with those concerns.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I need help figuring out how to reach out to Liam Park about reviewing a product prototype.",
+      "agent_reply": "Sure — I can help draft that and figure out the best angle. Before we write the message, what do you know about Liam Park already: his role, how you know him, and whether this is a formal review or a quick favor?"
+    },
+    {
+      "turn_index": 2,
+      "user_message": "He’s a frontend engineer. We haven’t worked directly together, but I’ve seen his name come up in a few product threads.",
+      "agent_reply": "That’s enough to start. Since you don’t know him directly, the outreach should be short, specific, and easy to say yes to. A good first note would mention:\n- who you are\n- why you’re contacting him specifically\n- what kind of feedback you want\n- how much time it would take\n- a clear, low-pressure ask\n\nIf you want, I can draft a Slack-style message first."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Yes, Slack would be best. Also, I’ve heard he’s basically the React expert on the team.",
+      "agent_reply": "Great — that gives you a credible reason to contact him. Here’s a draft:\n\nHi Liam — I’m working on a product prototype and was hoping to get a quick review from someone with strong frontend perspective. I’ve heard you’re the go-to React expert on the team, so I wanted to ask whether you’d be open to taking a look. I’m mainly hoping for feedback on interaction patterns and implementation feasibility. Totally fine if your bandwidth is tight, but if you have 20–30 minutes this week, I’d really appreciate it.\n\nIf you want, I can make it more casual, more polished, or more persuasive."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Make it a little more specific. He handles UI architecture for the Design Systems group.",
+      "agent_reply": "That helps a lot. Since Liam Park handles UI architecture for the Design Systems group, you can frame the ask around system consistency and scalability, not just frontend opinion. Here’s a tighter version:\n\nHi Liam — I’m working on a product prototype and wanted to ask whether you’d be open to a quick review. I know you handle UI architecture for the Design Systems group, and I think your perspective would be especially helpful on whether the interaction model fits our existing patterns and would scale cleanly in the frontend. I’m looking for 20–30 minutes of feedback, mainly on structure, component approach, and any obvious implementation concerns. No pressure at all if your schedule is full.\n\nIf you’d like, I can also turn this into a version that asks for async feedback instead of a meeting."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Actually async might be better. I got his email from Maya Chen in Product, but I could also message him directly. His address is liam.park@northstar.io.",
+      "agent_reply": "Async is a good choice when you don’t know someone well. Since Maya Chen in Product shared Liam’s contact, you can mention that briefly for context without making it sound like a referral obligation.\n\nEmail draft:\n\nSubject: Quick prototype review?\n\nHi Liam,\n\nMaya Chen shared your contact and suggested you might be a good person to ask. I’m working on a product prototype and would really value your perspective, especially given your UI architecture work with the Design Systems group.\n\nI’m hoping for async feedback on whether the interaction patterns and component structure feel aligned with our existing system, and whether you see any obvious frontend or scalability concerns. I can send a short walkthrough and a link to the prototype, and even a few focused questions to make review easier.\n\nIf you have time sometime this week or next, I’d really appreciate it. And if not, no worries at all.\n\nThanks,\n[Your Name]\n\nIf you want, I can also write a matching Slack note that references the email so it doesn’t feel duplicative."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Yes, give me a short Slack note too. I want it to sound respectful, not overly formal.",
+      "agent_reply": "Here’s a short Slack version:\n\nHi Liam — Maya Chen shared your email, but I wanted to reach out here as well. I’m working on a product prototype and thought your Design Systems / UI architecture perspective would be really helpful. If you’re open to it, I’d love to send a short walkthrough and get async feedback on the interaction patterns and component structure. No worries at all if bandwidth is tight.\n\nIf you want, I can make it even shorter so it feels more like a natural DM."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Can you make it sound like I know he’s busy? He supports a lot of teams.",
+      "agent_reply": "Absolutely. Acknowledging his bandwidth usually makes the ask feel more considerate. Try this:\n\nHi Liam — I know you support a lot of teams, so no pressure here. Maya Chen shared your email, and I also wanted to reach out on Slack. I’m working on a product prototype and thought your Design Systems / UI architecture perspective could be really helpful. If you’re open to it, I’d love to send a short walkthrough and get async feedback on the interaction patterns and component structure. Totally understand if now isn’t a good time.\n\nThat keeps the tone respectful and realistic without sounding apologetic."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Good. What exactly should I send him if he says yes?",
+      "agent_reply": "Send a compact review packet so it’s easy to scan. I’d include:\n\n1. One-sentence context\n- what the prototype is for\n- who the user is\n\n2. Prototype link\n- Figma, staging link, or video walkthrough\n\n3. What stage it’s in\n- rough concept, near-final flow, or implementation planning\n\n4. Three focused questions\nFor Liam, good questions would be:\n- Does this interaction pattern fit our existing design system direction?\n- Do you see any UI architecture or component-model issues early on?\n- Is there anything here that would be unusually difficult to implement cleanly in React?\n\n5. Time expectation\n- “Even 10 minutes of quick reactions would help.”\n\n6. Deadline, if real\n- only mention it if it’s genuine\n\nYou want to reduce open-endedness. The easier it is to review, the more likely he responds."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "I also heard he works closely with Elena Ruiz on the design system components. Should I mention her?",
+      "agent_reply": "Only if it’s relevant and accurate. Since Liam Park works closely with Elena Ruiz on design system components, mentioning her can help position the request — but it should not sound like name-dropping.\n\nGood version:\n“I’m trying to sanity-check whether this would fit well with the design system direction, especially before I get too far along.”\n\nOptional version if Elena is directly relevant:\n“I’ve been thinking about how this might eventually align with the component work your team has been doing with Elena Ruiz, so I thought it made sense to ask you early.”\n\nUse that only if you genuinely mean alignment with their team’s work. Otherwise, keep the note centered on Liam’s role."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Can you combine everything into one final Slack message I can send today?",
+      "agent_reply": "Absolutely:\n\nHi Liam — I know you support a lot of teams, so no pressure here. Maya Chen shared your email, but I wanted to reach out on Slack as well. I’m working on a product prototype and thought your perspective would be especially helpful given your UI architecture work with the Design Systems group. If you’re open to it, I’d love to send over a short walkthrough and get async feedback on whether the interaction patterns and component structure feel aligned with our system, plus any obvious frontend or scalability concerns. Totally understand if bandwidth is tight.\n\nIf you want, I can also give you a slightly shorter version that feels more casual for same-day sending."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Yes, give me the shorter version. I’m sending it this afternoon.",
+      "agent_reply": "Here’s a tighter version for same-day sending:\n\nHi Liam — I know you support a lot of teams, so no pressure. Maya Chen suggested I reach out. I’m working on a product prototype and thought your Design Systems / UI architecture perspective would be really helpful. If you’re open to it, I’d love to send a short walkthrough and get async feedback on interaction patterns, component structure, and any obvious frontend concerns. Totally understand if bandwidth is tight.\n\nIf you want, I can also make it sound a bit warmer or a bit more direct."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Maybe a little warmer. I don’t want it to feel cold.",
+      "agent_reply": "Sure — here’s a warmer version that still stays respectful:\n\nHi Liam — I know you’re stretched across a lot of teams, so no pressure at all. Maya Chen suggested I reach out because I’m working on a product prototype and thought your perspective would be especially valuable. If you’re open to it, I’d be grateful to send a short walkthrough and get async feedback on the interaction patterns, component structure, and any obvious frontend concerns. Totally understand if now isn’t a good time.\n\nThat should read as considerate without sounding stiff."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "That works. If he agrees, I want to send a really concise follow-up with the links. Can you draft that too? The prototype is in Figma and I also have a 3-minute Loom.",
+      "agent_reply": "Absolutely. Here’s a concise follow-up you can send if he says yes:\n\nThanks, Liam — really appreciate it.\n\nHere’s the prototype: [Figma link]\nAnd a short 3-minute Loom walkthrough: [Loom link]\n\nContext: this is a prototype for [brief product/use case]. I’m mainly hoping to sanity-check:\n- whether the interaction pattern feels aligned with our design system direction\n- whether the component structure seems reasonable\n- any obvious React or UI architecture concerns\n\nEven quick reactions are helpful, so no need for a deep review.\n\nIf you want, I can also make this into an even more scannable version with numbered questions only."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Yes, make it more scannable. Also, should I mention that Priya on my team is pushing for a review this week?",
+      "agent_reply": "A scannable version is a good idea. I’d be careful about mentioning Priya unless it adds useful context. Saying “Priya is pushing for a review” can sound like you’re passing along pressure. Better to state your timeline neutrally.\n\nTry this:\n\nThanks, Liam — appreciate it.\n\nLinks:\n1. Figma: [link]\n2. 3-min Loom: [link]\n\nQuick context:\n- This is a prototype for [product/use case]\n- We’re still early, so I’m mainly looking for directional feedback\n\nQuestions:\n1. Does the interaction pattern feel aligned with our design system direction?\n2. Does the component structure seem sound?\n3. Do you see any obvious React / UI architecture risks?\n\nIf you happen to have time this week, that would be amazing, but even brief reactions later would help.\n\nThat keeps the timing request gentle without making Priya Patel sound like the source of pressure."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Good point. Priya Patel is our PM, so I don’t want to drag her into it. Should I say this is for the onboarding flow, or is that too much detail for a first follow-up?",
+      "agent_reply": "You should say it’s for the onboarding flow. That’s the right amount of detail because it helps Liam Park quickly frame the review without adding clutter.\n\nA slightly improved version:\n\nThanks, Liam — appreciate it.\n\nLinks:\n1. Figma: [link]\n2. 3-min Loom: [link]\n\nQuick context:\n- This is a prototype for the onboarding flow\n- We’re still early, so I’m mainly looking for directional feedback\n\nQuestions:\n1. Does the interaction pattern feel aligned with our design system direction?\n2. Does the component structure seem sound?\n3. Do you see any obvious React / UI architecture risks?\n\nIf you happen to have time this week, that would be amazing, but even brief reactions later would help.\n\nThat’s specific enough to be useful and still very lightweight."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Makes sense. One more thing: if he doesn’t reply on Slack, when should I email him at liam.park@northstar.io?",
+      "agent_reply": "A good rule is:\n- send the Slack message today\n- wait 2 business days\n- if there’s no reply, send a short email\n\nThat gives him time without letting the request go stale. Since you already have his email address, liam.park@northstar.io, the email can be very brief and simply reference your Slack note.\n\nExample:\n\nSubject: Quick prototype feedback request\n\nHi Liam — I reached out on Slack as well, but wanted to follow up here in case email is easier. I’m working on an onboarding prototype and would really value your Design Systems / UI architecture perspective if you have bandwidth for a quick async review. Happy to send a short walkthrough and a few focused questions. No pressure at all if now isn’t a good time.\n\nBest,\n[Your Name]\n\nIf you want, I can make that even shorter so it feels like a gentle nudge rather than a second full ask."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Yes, shorter. I don’t want to look persistent in a bad way.",
+      "agent_reply": "Here’s a softer nudge:\n\nSubject: Quick prototype review\n\nHi Liam — following up in case email is easier than Slack. I’m working on an onboarding prototype and thought your Design Systems perspective could be really helpful. If you have bandwidth, I’d be glad to send a short walkthrough for async feedback. No worries at all if timing’s bad.\n\nBest,\n[Your Name]\n\nThis reads as polite and low-pressure, not pushy."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "I like that. Do you think I should ask Maya Chen to mention me to him first, or just send the message directly?",
+      "agent_reply": "Send it directly first.\n\nBecause Maya Chen already shared his contact, you have enough context to reach out without adding another step. Asking her to pre-introduce you can help, but it also creates extra coordination and may make the request feel more formal than it needs to be.\n\nA good sequence is:\n1. message Liam directly\n2. wait for a response\n3. only ask Maya for help if he doesn’t respond and the review is important\n\nIf you do involve Maya later, keep it simple: ask whether she’d be comfortable nudging him, not whether she can “get” the review for you."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "That sequence sounds right. Can you give me one final recommendation on whether I should send Slack only, or Slack plus email today?",
+      "agent_reply": "My recommendation: send Slack only today.\n\nWhy:\n- you want the outreach to feel light\n- sending both channels immediately can feel a bit crowded when you don’t know him directly\n- Slack is appropriate for a quick internal ask like this\n\nThen use email only as a fallback if there’s no response after a couple of business days.\n\nSo the clean plan is:\n- today: send the short warm Slack message\n- if he replies yes: send the scannable follow-up with Figma + Loom\n- if no response after 2 business days: send the short email follow-up\n\nThat’s probably the best balance of respectful and effective."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Perfect. I’m going to send the warm Slack version and wait. Thanks for helping me think through this.",
+      "agent_reply": "You’re welcome — that sounds like the right move. Your message is specific, respectful, and easy for Liam to respond to. If he replies and you want help tailoring the follow-up packet or interpreting his feedback, I can help with that too."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Quick update: Liam replied on Slack. He said, “Happy to take a look — send it over. I may not get to it until Friday.” What should I send back?",
+      "agent_reply": "That’s a good response — he said yes and set expectations clearly. I’d reply with appreciation, the materials, and a light acknowledgment of Friday.\n\nTry this:\n\nThanks, Liam — Friday works great.\n\nHere’s the prototype: [Figma link]\nAnd a short 3-min walkthrough: [Loom link]\n\nQuick context:\n- This is for the onboarding flow\n- We’re still early, so I’m mainly looking for directional feedback\n\nA few specific questions:\n1. Does the interaction pattern feel aligned with our design system direction?\n2. Does the component structure seem sound?\n3. Do you see any obvious React / UI architecture risks?\n\nEven quick reactions are helpful — really appreciate you taking a look.\n\nIf you want, I can make it even shorter so it fits more naturally as a Slack follow-up."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Yes, shorter please. I don’t want to dump too much text on him in chat.",
+      "agent_reply": "Here’s a tighter Slack reply:\n\nThanks, Liam — Friday is totally fine.\n\nFigma: [link]\nLoom: [link]\n\nThis is for the onboarding flow, and I’m mainly looking for directional feedback on:\n1. interaction pattern fit with the design system\n2. component structure\n3. any obvious React / UI architecture risks\n\nEven quick reactions are helpful — appreciate it.\n\nThat keeps it compact and easy to scan."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Would it be better to put the questions in the Loom description instead of the Slack message?",
+      "agent_reply": "Yes — that can be better if you want the Slack note to stay very light.\n\nA good split is:\n- Slack: links + one-line context\n- Loom description or Figma comments: the 3 questions\n\nThat way Liam Park can open the artifact and see the review prompts where he’s already looking. It also makes the Slack message feel less like homework.\n\nA very short Slack version would be:\n\nThanks, Liam — Friday is great.\n\nFigma: [link]\nLoom: [link]\n\nThis is the onboarding flow prototype. I added a few specific review questions in the Loom description to make it easier to scan. Really appreciate it.\n\nIf you want, I can draft the exact Loom description too."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Please draft the Loom description. Keep it concise but useful.",
+      "agent_reply": "Sure — here’s a concise Loom description:\n\nPrototype review: onboarding flow\n\nContext:\nThis is an early prototype for the onboarding flow, so I’m mainly looking for directional feedback rather than polish notes.\n\nQuestions:\n1. Does the interaction pattern feel aligned with our design system direction?\n2. Does the component structure seem reasonable?\n3. Do you see any obvious React or UI architecture risks?\n\nEven brief reactions are helpful.\n\nIf you want, I can also give you a version tailored more specifically to Design Systems language."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Actually yes, make it a bit more specific to Design Systems. He’ll probably care more about that than generic product feedback.",
+      "agent_reply": "Agreed. Here’s a more Design Systems–oriented version:\n\nPrototype review: onboarding flow\n\nContext:\nThis is an early onboarding prototype. I’m mainly looking for directional feedback on system fit and implementation shape, not visual polish.\n\nQuestions:\n1. Does this interaction model feel consistent with our current design system direction?\n2. Does the proposed component structure seem like it would fit cleanly within existing patterns?\n3. Do you see any obvious React, composability, or UI architecture concerns early on?\n\nEven quick reactions are very helpful.\n\nThat should land well for someone in Liam’s role on the Design Systems group."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "This helps. One concern: the prototype includes a custom progress stepper that might not exist in the current system. Should I call that out explicitly?",
+      "agent_reply": "Yes — definitely call that out.\n\nIf there’s a custom progress stepper, naming it upfront helps Liam focus on the highest-risk part. It also shows you’re not asking for a vague review.\n\nYou could add one line to the context:\n\nPotential watch-out:\n- The flow currently uses a custom progress stepper, and I’d especially value your take on whether that should map to an existing pattern or be approached differently.\n\nOr make it one of the questions:\n4. The prototype currently uses a custom progress stepper — does that seem directionally right, or would you recommend a different pattern within the system?\n\nThat’s the kind of detail Elena Ruiz or Liam would likely care about because it affects component reuse and system consistency."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Good call. Also, Priya Patel asked whether I should mention that we may pilot this with the Growth team next month. Is that useful context or unnecessary?",
+      "agent_reply": "It’s useful if you keep it brief.\n\nMentioning a likely pilot with the Growth team gives Liam a sense of near-term relevance without sounding urgent. It can help him understand that this isn’t purely hypothetical.\n\nI’d phrase it neutrally:\n- We may pilot this with the Growth team next month, so I’m hoping to catch any system-fit issues early.\n\nThat’s better than emphasizing deadlines. It gives context without turning the note into pressure from Priya Patel or Growth.\n\nYou could fold it into the Loom description under context."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Can you give me the final combined Loom description with the pilot note and the custom stepper callout?",
+      "agent_reply": "Absolutely:\n\nPrototype review: onboarding flow\n\nContext:\nThis is an early onboarding prototype, and we may pilot it with the Growth team next month, so I’m hoping to catch any system-fit issues early. I’m mainly looking for directional feedback on design system alignment and implementation shape, not visual polish.\n\nSpecific area to sanity-check:\n- The flow currently uses a custom progress stepper, and I’d especially value your take on whether that should map to an existing pattern or be approached differently.\n\nQuestions:\n1. Does this interaction model feel consistent with our current design system direction?\n2. Does the proposed component structure seem like it would fit cleanly within existing patterns?\n3. Do you see any obvious React, composability, or UI architecture concerns early on?\n4. Does the custom progress stepper seem directionally right, or would you recommend a different pattern?\n\nEven quick reactions are very helpful."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Nice. Last thing: if Friday passes and he hasn’t replied with feedback, should I ping him, or just let it go?",
+      "agent_reply": "You can send one light follow-up, but keep it very easy to ignore.\n\nBest approach:\n- wait until late Monday or Tuesday\n- send one short nudge\n- don’t restate the whole ask\n\nSomething like:\n\nHi Liam — just a quick follow-up in case the onboarding prototype slipped in the queue. No pressure at all, but if you happen to have any quick reactions, I’d still really value them.\n\nThat’s enough. If there’s still no response after that, I’d let it go unless Priya Patel or Maya Chen has a strong reason to re-open it through another route."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Great. I think I have everything I need now. Thanks — this was way more useful than just winging it.",
+      "agent_reply": "Glad it helped. You’ve got a solid plan now: concise Slack reply, focused review prompts, and a low-pressure follow-up if needed. If Liam Park sends feedback and you want help turning it into actions for the onboarding flow or something to share back with Priya Patel, I can help with that too."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Liam Park",
+        "Maya Chen",
+        "Elena Ruiz",
+        "Priya Patel",
+        "Design Systems group",
+        "Product",
+        "Growth team"
+      ],
+      "relations": [
+        "Liam Park is a frontend engineer.",
+        "Liam Park is described as the React expert on the team.",
+        "Liam Park handles UI architecture for the Design Systems group.",
+        "Maya Chen works in Product.",
+        "Maya Chen shared Liam Park's contact/email with the user.",
+        "Liam Park works closely with Elena Ruiz on design system components.",
+        "Priya Patel is the user's PM.",
+        "The prototype may be piloted with the Growth team next month."
+      ],
+      "contact_or_org_details": [
+        "Liam Park's email address is liam.park@northstar.io.",
+        "The user could contact Liam Park via Slack.",
+        "Maya Chen is in Product.",
+        "Liam Park is associated with the Design Systems group."
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "What does Liam Park work on, beyond being a frontend engineer?",
+      "tester_hint_answer": "He was later described as the team's React expert and as handling UI architecture for the Design Systems group.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "question": "Why did I want Liam's review on the prototype specifically if he's known as a React expert?",
+      "tester_hint_answer": "Because his frontend/React perspective could help assess interaction patterns, implementation feasibility, and scalability concerns.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        4,
+        8
+      ]
+    },
+    {
+      "question": "Who could help connect me to Liam or give context for the outreach?",
+      "tester_hint_answer": "Maya Chen in Product shared his contact and was the main person tied to the introduction context.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        5,
+        6,
+        18
+      ]
+    },
+    {
+      "question": "Who works with Liam on design system components, and when would it make sense to mention that connection in a UI architecture review request?",
+      "tester_hint_answer": "Elena Ruiz works closely with him, and the connection should only be mentioned if it's genuinely relevant to alignment with their team's component work.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        9
+      ]
+    },
+    {
+      "question": "Who else could help with these concerns if Liam doesn't respond, and what are their roles?",
+      "tester_hint_answer": "Maya Chen could later nudge him if needed, and Priya Patel is the user's PM but was not recommended as pressure in the outreach.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        14,
+        18,
+        29
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_keyword_semantic_duplicate_02",
+    "issue": "keyword_semantic_duplicates",
+    "required_qa_phrases": [
+      "frontend engineer",
+      "React expert",
+      "UI architecture"
+    ],
+    "stress_signal": "User asks about one contact through overlapping frontend, React, and UI architecture language."
+  }
+}

@@ -1,0 +1,296 @@
+{
+  "sample_id": "sn_search_doc_drift_03_20260421T042504Z",
+  "dialogue_seed": "The user talks through contacts at different organizations: Nina at a grid software company, Omar at a building electrification startup, and Theo at a policy nonprofit. Later the user asks, 'Who was the person at the grid company?' with no exact company name.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"grid software company\", \"Nina\", and \"building electrification startup\". The questions should ask which person was associated with which organization type and why that person mattered.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m trying to get my networking notes in order. I spoke with Nina at a grid software company, Omar at a building electrification startup, and Theo at a policy nonprofit, but my notes are messy.",
+      "agent_reply": "I can help organize them. A simple way is to capture each person with: name, organization, role, how you know them, and any follow-up details. From what you said so far, I have:\n- Nina — at a grid software company\n- Omar — at a building electrification startup\n- Theo — at a policy nonprofit\n\nIf you want, send whatever details you remember for each person and I’ll turn it into a clean contact summary."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Okay, Nina is at GridLattice. I think she’s a solutions engineer. We met after a panel on utility data systems in San Jose.",
+      "agent_reply": "Got it. I’d record that as:\n- Nina — Solutions Engineer at GridLattice; met after a utility data systems panel in San Jose.\n\nIf you remember anything else, useful additions would be her email, what she offered to help with, or whether she reports into sales, product, or engineering."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Omar is with EmberLoop, which does building electrification retrofits. He’s one of the co-founders, and a mutual friend, Priya, introduced us.",
+      "agent_reply": "Great, that gives a clearer relationship trail:\n- Omar — Co-founder at EmberLoop, a building electrification retrofit startup; introduced by Priya.\n\nThat explicitly links Omar to both EmberLoop and Priya. If you have it, I can also note where you met or any next step you discussed."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Theo works at the Clean Current Initiative. I think his title is policy analyst. We emailed about state-level demand flexibility rules.",
+      "agent_reply": "Added:\n- Theo — Policy Analyst at Clean Current Initiative; exchanged emails about state-level demand flexibility rules.\n\nSo far you have three distinct contacts across industry and nonprofit policy. If you want, I can format everything into a compact CRM-style list."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Yes, and add the contact bits I remember: Nina’s email was nina@gridlattice.com, Omar’s was omar@emberloop.io, and Theo used theo@cleancurrent.org.",
+      "agent_reply": "Here’s a clean version:\n\n- Nina — Solutions Engineer, GridLattice\n  - Email: nina@gridlattice.com\n  - Context: Met after a panel on utility data systems in San Jose\n\n- Omar — Co-founder, EmberLoop\n  - Email: omar@emberloop.io\n  - Context: Introduced by Priya\n  - Organization: building electrification retrofit startup\n\n- Theo — Policy Analyst, Clean Current Initiative\n  - Email: theo@cleancurrent.org\n  - Context: Emailed about state-level demand flexibility rules\n\nIf you’d like, I can also turn this into a table with columns like Name, Org, Role, Intro Source, and Follow-up."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Add one more note: Nina said I should follow up with her in May because GridLattice is piloting with municipal utilities.",
+      "agent_reply": "Updated Nina’s entry:\n\n- Nina — Solutions Engineer, GridLattice\n  - Email: nina@gridlattice.com\n  - Context: Met after a panel on utility data systems in San Jose\n  - Follow-up: Reach out in May\n  - Note: GridLattice is piloting with municipal utilities\n\nThat follow-up timing is exactly the kind of detail worth preserving."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Also, Omar mentioned his co-founder is Lena, but I don’t have her contact info.",
+      "agent_reply": "Noted. I’d append:\n- Omar — Co-founder, EmberLoop\n  - Email: omar@emberloop.io\n  - Intro: Priya\n  - Additional relationship: co-founder with Lena\n\nEven without Lena’s contact details, that relationship could be useful later if her name comes up again."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Can you give me the whole list in a concise format I can paste into my notes app?",
+      "agent_reply": "Sure:\n\nNina — Solutions Engineer, GridLattice — nina@gridlattice.com — met after utility data systems panel in San Jose — follow up in May; GridLattice piloting with municipal utilities.\n\nOmar — Co-founder, EmberLoop — omar@emberloop.io — introduced by Priya — EmberLoop does building electrification retrofits — co-founder is Lena.\n\nTheo — Policy Analyst, Clean Current Initiative — theo@cleancurrent.org — emailed about state-level demand flexibility rules."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Thanks. Who was the person at the grid company?",
+      "agent_reply": "That was Nina, at GridLattice."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "And what was her role again?",
+      "agent_reply": "She was a Solutions Engineer at GridLattice."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Right. Which one was introduced by Priya?",
+      "agent_reply": "That was Omar at EmberLoop. Priya introduced you to him."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "And who was the policy nonprofit person?",
+      "agent_reply": "That was Theo at the Clean Current Initiative, where you noted him as a Policy Analyst."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Can you remind me which contact I was supposed to follow up with in May?",
+      "agent_reply": "Nina. You noted that she suggested you follow up in May because GridLattice was piloting with municipal utilities."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "What was Theo's email again?",
+      "agent_reply": "Theo’s email was theo@cleancurrent.org."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Did I ever note how I met Omar, besides Priya introducing us?",
+      "agent_reply": "No specific meeting context beyond Priya’s introduction. Your notes only say Omar is a co-founder at EmberLoop and that Priya connected you."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Who was Lena again?",
+      "agent_reply": "Lena was the person Omar mentioned as his co-founder at EmberLoop. You didn’t have her contact info."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Give me just the names matched to organizations.",
+      "agent_reply": "Nina — GridLattice\nOmar — EmberLoop\nTheo — Clean Current Initiative\nLena — EmberLoop"
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Actually, leave out people I never directly spoke with.",
+      "agent_reply": "Then the direct contacts are:\n- Nina — GridLattice\n- Omar — EmberLoop\n- Theo — Clean Current Initiative"
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Can you turn those three into a super short reference line each: name, org, role, and contact?",
+      "agent_reply": "Nina — GridLattice — Solutions Engineer — nina@gridlattice.com\nOmar — EmberLoop — Co-founder — omar@emberloop.io\nTheo — Clean Current Initiative — Policy Analyst — theo@cleancurrent.org"
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Perfect. One last check: the grid company was GridLattice, not Clean Current Initiative, right?",
+      "agent_reply": "Correct. The grid software company was GridLattice. Clean Current Initiative was the policy nonprofit where Theo worked."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Good. Can you also remind me which contact was tied to municipal utilities?",
+      "agent_reply": "That was Nina at GridLattice. Your note was that GridLattice was piloting with municipal utilities, and she suggested you follow up with her in May."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "And which one was about state-level demand flexibility rules?",
+      "agent_reply": "Theo at the Clean Current Initiative. You had email exchanges with him about state-level demand flexibility rules."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "I’m making a tiny follow-up plan. What would the next action be for each of the three based only on my notes?",
+      "agent_reply": "Based only on your notes:\n- Nina — follow up in May about GridLattice’s municipal utility pilot\n- Omar — no explicit next step noted; keep as warm contact via Priya\n- Theo — continue the email thread if you want to revisit state-level demand flexibility rules"
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Can you phrase those as short action bullets I can paste under a heading called Next Steps?",
+      "agent_reply": "Next Steps\n- Nina / GridLattice: follow up in May on municipal utility pilot\n- Omar / EmberLoop: maintain connection; no specific follow-up noted\n- Theo / Clean Current Initiative: re-engage on state-level demand flexibility rules if relevant"
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Before I paste it, verify Omar’s exact title one more time.",
+      "agent_reply": "Omar’s title in your notes was Co-founder at EmberLoop."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "And Nina’s contact line, fully spelled out?",
+      "agent_reply": "Nina — GridLattice — Solutions Engineer — nina@gridlattice.com"
+    },
+    {
+      "turn_index": 27,
+      "user_message": "What about Theo’s organization and email together?",
+      "agent_reply": "Theo — Clean Current Initiative — theo@cleancurrent.org"
+    },
+    {
+      "turn_index": 28,
+      "user_message": "I may export this into a spreadsheet later. What columns would fit what we have without inventing anything?",
+      "agent_reply": "A clean set of columns would be:\n- Name\n- Organization\n- Role\n- Email\n- How Connected\n- Meeting or Contact Context\n- Follow-up Timing\n- Notes\n\nFor your current data, those fields are all supported by at least some of the entries."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Can you map the three contacts into those columns in plain text?",
+      "agent_reply": "Name | Organization | Role | Email | How Connected | Meeting or Contact Context | Follow-up Timing | Notes\nNina | GridLattice | Solutions Engineer | nina@gridlattice.com | Met directly | Met after utility data systems panel in San Jose | May | GridLattice piloting with municipal utilities\nOmar | EmberLoop | Co-founder | omar@emberloop.io | Introduced by Priya | No additional meeting context noted | — | EmberLoop does building electrification retrofits; co-founder is Lena\nTheo | Clean Current Initiative | Policy Analyst | theo@cleancurrent.org | Emailed directly | Discussed state-level demand flexibility rules | — | —"
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Nice. Last memory check: if I later ask 'who was the person at the grid company,' the answer is still Nina, right?",
+      "agent_reply": "Yes. The person at the grid company was Nina at GridLattice."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Nina",
+        "Omar",
+        "Theo",
+        "Lena",
+        "Priya",
+        "GridLattice",
+        "EmberLoop",
+        "Clean Current Initiative"
+      ],
+      "relations": [
+        "Nina is at GridLattice, the grid software company",
+        "Nina's role is Solutions Engineer",
+        "User met Nina after a panel on utility data systems in San Jose",
+        "Nina suggested a follow-up in May",
+        "GridLattice is piloting with municipal utilities",
+        "Omar is at EmberLoop, the building electrification startup",
+        "Omar's role is Co-founder",
+        "Priya introduced the user to Omar",
+        "EmberLoop does building electrification retrofits",
+        "Lena is Omar's co-founder at EmberLoop",
+        "Theo is at Clean Current Initiative, the policy nonprofit",
+        "Theo's role is Policy Analyst",
+        "User emailed Theo about state-level demand flexibility rules"
+      ],
+      "contact_or_org_details": [
+        "Nina email: nina@gridlattice.com",
+        "Omar email: omar@emberloop.io",
+        "Theo email: theo@cleancurrent.org",
+        "GridLattice is the grid software company",
+        "EmberLoop is the building electrification retrofit startup",
+        "Clean Current Initiative is the policy nonprofit"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who was the person at the grid software company, and why did that contact matter in my notes?",
+      "tester_hint_answer": "Nina; she was the GridLattice contact with a May follow-up tied to a municipal utilities pilot.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        6,
+        9,
+        13,
+        21,
+        30
+      ]
+    },
+    {
+      "question": "What organization type was Nina associated with, and what role did she have there that made her relevant?",
+      "tester_hint_answer": "She was the grid company contact, specifically a Solutions Engineer at GridLattice.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        2,
+        10,
+        20,
+        26
+      ]
+    },
+    {
+      "question": "Who was at the building electrification startup, and why was that person important in the relationship trail?",
+      "tester_hint_answer": "Omar; he was the EmberLoop co-founder and was introduced through Priya.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        3,
+        11,
+        15,
+        25
+      ]
+    },
+    {
+      "question": "Which person was tied to the policy nonprofit, and why did that contact matter based on what we discussed?",
+      "tester_hint_answer": "Theo; he was the policy analyst at Clean Current Initiative and the one discussing state-level demand flexibility rules.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        12,
+        22,
+        27
+      ]
+    },
+    {
+      "question": "Can you match each person to the right organization type—grid software company, building electrification startup, and policy nonprofit—and say why each one mattered?",
+      "tester_hint_answer": "Nina→grid software/May municipal-utilities follow-up; Omar→building electrification/Priya intro and co-founder; Theo→policy nonprofit/demand flexibility email topic.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        6,
+        11,
+        12,
+        21,
+        22,
+        29
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_search_doc_drift_03",
+    "issue": "search_interface_doc_drift",
+    "required_qa_phrases": [
+      "grid software company",
+      "Nina",
+      "building electrification startup"
+    ],
+    "stress_signal": "User asks for a contact through a remembered organization description."
+  }
+}

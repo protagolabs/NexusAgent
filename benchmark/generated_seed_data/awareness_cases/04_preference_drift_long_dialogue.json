@@ -1,0 +1,81 @@
+{
+  "sample_id": "awareness_preference_drift_long_v1",
+  "seed": {
+    "preset_name": "awareness_preference_drift_long",
+    "seed_type": "preference_drift_long_dialogue",
+    "description": "40-turn long dialogue testing whether agent updates awareness when user explicitly switches preference mid-conversation. User establishes 'focused work, one thing at a time' early, then around turn 24-26 switches to 'multi-tasking, juggle 3 threads'. Agent should update profile to reflect the latest preference and behavior probes at turn 36 and 40 should show multi-tasking application."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {"turn_index": 1, "user_message": "I'm starting a new sprint planning session. Let's go through what's on my plate.", "agent_reply": "Sure. What's the first item?", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 2, "user_message": "First, I have to finish the Q4 product roadmap doc.", "agent_reply": "Got it. Roadmap doc first.", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 3, "user_message": "I also have a customer escalation and a hiring loop to manage but let's not touch those yet.", "agent_reply": "Understood — sticking to roadmap for now.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 4, "user_message": "Walk me through the roadmap structure.", "agent_reply": "Sections typically include vision, themes, milestones, dependencies, and risks.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 5, "user_message": "Important: while we work on this, let's stay laser-focused. Don't bring up other topics — escalation, hiring, anything — until the roadmap is done. I work best one thing at a time.", "agent_reply": "Understood. Single-track focus on the roadmap until it's done.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "narrative", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 6, "user_message": "OK, draft the vision section first.", "agent_reply": "(drafts vision section)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 7, "user_message": "Make it more outcome-focused — less feature listing.", "agent_reply": "(revises with outcomes language)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 8, "user_message": "Now themes. We have three: platform reliability, growth velocity, and developer experience.", "agent_reply": "(drafts three themes)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 9, "user_message": "Tighten the developer experience one.", "agent_reply": "(tightens)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 10, "user_message": "Milestones next. Q1 through Q4 with one major deliverable per quarter.", "agent_reply": "(drafts milestones)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 11, "user_message": "Add buffer for Q3 — that's our migration window.", "agent_reply": "(adds buffer note)", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 12, "user_message": "Dependencies: we depend on the platform team for Q1 and infra for Q3.", "agent_reply": "(captures dependencies)", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 13, "user_message": "Risks. List the top 5.", "agent_reply": "1. Hiring delay\n2. Platform migration complexity\n3. Customer churn\n4. Competitive pressure\n5. Tech debt accumulation", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 14, "user_message": "Drop tech debt — it's a constant, not a discrete risk.", "agent_reply": "Removed. List is now 4 items.", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 15, "user_message": "Add 'platform team capacity' as a separate risk from migration complexity.", "agent_reply": "(adds it)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 16, "user_message": "I really like how you stuck to one thing — keep working like this.", "agent_reply": "Will continue single-track focus.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "narrative", "signal_strength": "weak", "expected_action": "observe"}},
+    {"turn_index": 17, "user_message": "Polish the milestones section — make it scannable.", "agent_reply": "(polishes with bullets)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 18, "user_message": "Almost done. Run through the whole doc end to end.", "agent_reply": "(reads through full draft)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 19, "user_message": "Looks good. Save it as v1.", "agent_reply": "Saved as roadmap_v1.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 20, "user_message": "OK that's done. What's next on my plate?", "agent_reply": "Roadmap complete. You mentioned customer escalation and hiring loop earlier.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 21, "user_message": "Right. Let's do escalation next.", "agent_reply": "(switching to escalation context)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 22, "user_message": "Customer X is threatening to churn over reliability incidents in Q3.", "agent_reply": "Got it.", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 23, "user_message": "Draft a response email to their CEO.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 24, "user_message": "Wait — actually a Q4 review just landed and I need to also juggle the hiring loop, both right now in parallel with the escalation.", "agent_reply": "OK — three things in parallel. How would you like to manage them?", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 25, "user_message": "Forget the 'stay focused' thing — that was for the roadmap phase. From now on, when I'm working, I want you to actively remind me of all 3 parallel threads — escalation, hiring, Q4 review — and surface what needs attention across them.", "agent_reply": "Understood — switching to multi-track mode. I'll surface progress and blockers across all three threads.", "signal_annotation": {"signal_type": "adversarial", "module_scope": "awareness", "dimension": "narrative", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 26, "user_message": "From now on, default to juggling multiple threads unless I say otherwise. Don't single-track me anymore.", "agent_reply": "Got it — multi-tasking is the new default.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "narrative", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 27, "user_message": "OK what's the status across all three?", "agent_reply": "- Escalation: draft response in progress\n- Hiring: not started\n- Q4 review: not started", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 28, "user_message": "Hiring first — I have a panel today at 3pm.", "agent_reply": "Pivoting to hiring. Want a candidate brief?", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 29, "user_message": "Yes, brief on the senior PM candidate.", "agent_reply": "(drafts brief)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 30, "user_message": "While I review that, also progress the escalation email — both at once.", "agent_reply": "(continues both)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 31, "user_message": "Brief looks good. Now what's the Q4 review structure?", "agent_reply": "Typical: outcomes vs goals, key wins, misses, learnings, Q1 carryover.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 32, "user_message": "Draft outcomes-vs-goals — pull from the roadmap doc.", "agent_reply": "(drafts using roadmap_v1 as source)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 33, "user_message": "Escalation email — finalize it.", "agent_reply": "(finalizes email)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 34, "user_message": "Q4 review key wins next.", "agent_reply": "(drafts key wins)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 35, "user_message": "Hiring — any prep tips for the panel at 3pm?", "agent_reply": "(jumps back to hiring with tips)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 36, "user_message": "Give me a status across everything I'm working on right now.", "agent_reply": "PROBE — agent should surface ALL three threads (escalation, hiring, Q4 review) per the multi-track preference.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "narrative", "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 37, "user_message": "Now Q4 review misses section.", "agent_reply": "(drafts misses)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 38, "user_message": "Hiring panel done. Decision is hire.", "agent_reply": "Noted, candidate hired.", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 39, "user_message": "Q4 review learnings.", "agent_reply": "(drafts learnings)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 40, "user_message": "Wrap up — what's the overall status across everything we touched today?", "agent_reply": "PROBE — agent should cover all parallel threads, demonstrating multi-track behavior per latest preference.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "narrative", "signal_strength": null, "expected_action": "ignore"}}
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [2, 4],
+    "expected_profile_must_contain": [
+      {"section": "Narrative Management", "phrase_or_synonym": "multi-track"}
+    ],
+    "expected_profile_must_not_contain": [
+      "single-track",
+      "stay focused",
+      "one thing at a time"
+    ],
+    "behavior_probe_turns": [36, 40]
+  },
+  "qa_items": [
+    {
+      "question": "How do I currently prefer to handle parallel work threads?",
+      "tester_hint_answer": "Multi-tasking — juggle multiple threads in parallel. The earlier 'stay focused, one thing at a time' preference was scoped to the roadmap phase and has been replaced.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [25, 26]
+    },
+    {
+      "question": "If I ask for status, what should you surface?",
+      "tester_hint_answer": "Status across all parallel threads I'm currently juggling, not just one.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [25, 26]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

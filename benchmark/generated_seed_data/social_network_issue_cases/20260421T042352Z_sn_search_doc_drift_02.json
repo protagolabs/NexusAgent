@@ -1,0 +1,287 @@
+{
+  "sample_id": "sn_search_doc_drift_02_20260421T042352Z",
+  "dialogue_seed": "The user describes several people in their network, including Aisha Grant, who knows accessibility review and screen-reader QA. Later the user asks, 'Who was the accessibility person again?' without using an exact name.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"accessibility person\", \"screen-reader QA\", and \"Aisha Grant\". The questions should ask who the accessibility-related person was and what she could help with.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I'm trying to organize my contacts from the product community. Can I run a few people by you and have you help me keep straight who does what?",
+      "agent_reply": "Absolutely. Share the names and whatever details you remember, and I can help you organize them by role, expertise, company, and how you know them."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Okay, first is Aisha Grant. I met her through the BrightPath Health app project. She does accessibility review and screen-reader QA, and I think she was consulting for Northstar Labs at the time. Her email might be aisha.grant@northstarlabs.co.",
+      "agent_reply": "Got it. So far I have:\n- Aisha Grant — accessibility review and screen-reader QA\n- Connected to: BrightPath Health app project\n- Affiliation at the time: consulting for Northstar Labs\n- Possible email: aisha.grant@northstarlabs.co\n\nSend the next person when you're ready."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Next is Ben Ortega. He's a frontend engineer at Maple Cloud, and he used to work with Priya Nair. I know Ben from the CityLoop redesign, where he handled the design system implementation.",
+      "agent_reply": "Added:\n- Ben Ortega — frontend engineer\n- Organization: Maple Cloud\n- Worked on: CityLoop redesign\n- Responsibility: design system implementation\n- Relationship: Ben Ortega used to work with Priya Nair\n\nYou can keep going, and I’ll track the network."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Priya Nair is a product designer, currently at Lattice & Pine Studio. She introduced me to Ben. I think her work email is priya@latticepine.design.",
+      "agent_reply": "Noted:\n- Priya Nair — product designer\n- Organization: Lattice & Pine Studio\n- Contact: priya@latticepine.design\n- Relationship: introduced you to Ben Ortega\n\nAt this point, I can already see a small cluster around CityLoop and product/design collaboration."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "There's also Marcus Lee. He was the engineering manager on BrightPath Health, and I think he was the one coordinating outside specialists, including that accessibility consultant.",
+      "agent_reply": "Added Marcus as well:\n- Marcus Lee — engineering manager\n- Project: BrightPath Health\n- Likely coordinated external specialists\n- Relationship to Aisha Grant: possibly the person who coordinated her consulting involvement\n\nThat helps connect the BrightPath contacts more clearly."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Can you give me a clean summary before I forget?",
+      "agent_reply": "Sure — here’s a clean summary of your current network notes:\n\n1. Aisha Grant\n- Specialty: accessibility review and screen-reader QA\n- Context: met through the BrightPath Health app project\n- Affiliation at the time: consulting for Northstar Labs\n- Possible email: aisha.grant@northstarlabs.co\n\n2. Ben Ortega\n- Role: frontend engineer\n- Company: Maple Cloud\n- Context: CityLoop redesign\n- Focus: design system implementation\n- Relationship: used to work with Priya Nair\n\n3. Priya Nair\n- Role: product designer\n- Company: Lattice & Pine Studio\n- Email: priya@latticepine.design\n- Relationship: introduced you to Ben Ortega\n\n4. Marcus Lee\n- Role: engineering manager\n- Project: BrightPath Health\n- Relationship: likely coordinated outside specialists, including the accessibility consultant\n\nConnections:\n- Aisha Grant and Marcus Lee are connected through BrightPath Health.\n- Ben Ortega and Priya Nair have a prior work relationship.\n- Priya introduced you to Ben."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Great. I may need to reach back out to one of them for an audit on a new mobile flow.",
+      "agent_reply": "Based on your notes, Aisha Grant seems like the strongest fit for an audit, especially if the new mobile flow needs accessibility review or screen-reader QA. If the issue is more about interface consistency or implementation quality, Ben or Priya could also be relevant depending on whether you need engineering or design input."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Who was the accessibility person again?",
+      "agent_reply": "That was Aisha Grant — she’s the one associated with accessibility review and screen-reader QA. You met her through the BrightPath Health app project, and she may have been consulting for Northstar Labs."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Right, that's the one. Do I have any contact info for her, or just the company connection?",
+      "agent_reply": "You have one possible direct contact detail for her:\n- Aisha Grant — possible email: aisha.grant@northstarlabs.co\n\nYou also have the company affiliation note:\n- She was consulting for Northstar Labs at the time\n\nAnd an indirect connection:\n- Marcus Lee may have coordinated her work on BrightPath Health, so he could be a fallback route if the email is outdated."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Perfect. Can you turn that into a short outreach note I could send her?",
+      "agent_reply": "Sure — here’s a short draft:\n\nSubject: Accessibility review for a new mobile flow\n\nHi Aisha,\n\nI hope you’re doing well. We met through the BrightPath Health project. I’m working on a new mobile flow and wanted to see whether you’re available for accessibility review and screen-reader QA support.\n\nIf you’re open to it, I’d be happy to share a bit more context and timeline.\n\nBest,\n[Your Name]\n\nIf you want, I can also make it warmer, more formal, or tailored to a freelance inquiry."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Make it a little warmer and mention that Marcus may have suggested I reconnect.",
+      "agent_reply": "Of course — here’s a warmer version:\n\nSubject: Reconnecting about accessibility review\n\nHi Aisha,\n\nI hope you’ve been well. We met through the BrightPath Health project, and I’m reaching out because I’m working on a new mobile flow that could use accessibility review and screen-reader QA.\n\nMarcus Lee may have even mentioned that I was planning to reconnect. If you’re available, I’d love to see whether this might be a fit and share a bit more context on scope and timing.\n\nBest,\n[Your Name]\n\nIf you want, I can also make this sound more casual or more clearly freelance-oriented."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Good. Also, I remembered one more person: Elena Park. She was at Northstar Labs too, I think as a UX researcher, and I got her name from Priya. No email though.",
+      "agent_reply": "Added:\n- Elena Park — likely UX researcher\n- Organization: Northstar Labs\n- Relationship: you got her name from Priya Nair\n- Contact info: none yet\n\nThat creates a useful link between Priya and someone else connected to Northstar Labs, alongside Aisha’s consulting affiliation there."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Can you update the network summary with Elena included and keep the relationships clear?",
+      "agent_reply": "Absolutely — updated summary:\n\n1. Aisha Grant\n- Specialty: accessibility review and screen-reader QA\n- Context: met through the BrightPath Health app project\n- Affiliation at the time: consulting for Northstar Labs\n- Possible email: aisha.grant@northstarlabs.co\n\n2. Ben Ortega\n- Role: frontend engineer\n- Company: Maple Cloud\n- Context: CityLoop redesign\n- Focus: design system implementation\n- Relationship: used to work with Priya Nair\n\n3. Priya Nair\n- Role: product designer\n- Organization: Lattice & Pine Studio\n- Email: priya@latticepine.design\n- Relationship: introduced you to Ben Ortega\n- Also connected you indirectly to Elena Park\n\n4. Marcus Lee\n- Role: engineering manager\n- Project: BrightPath Health\n- Relationship: likely coordinated outside specialists, including Aisha Grant\n\n5. Elena Park\n- Role: likely UX researcher\n- Organization: Northstar Labs\n- Relationship: you heard about her through Priya Nair\n- Email: not recorded\n\nKey relationships:\n- Aisha Grant and Marcus Lee are connected through BrightPath Health.\n- Aisha Grant and Elena Park are both tied to Northstar Labs, though in different ways.\n- Ben Ortega and Priya Nair previously worked together.\n- Priya Nair introduced you to Ben and also surfaced Elena Park as a contact."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Which people in this list are tied to Northstar again?",
+      "agent_reply": "The Northstar Labs connections are:\n- Aisha Grant — she was consulting for Northstar Labs at the time\n- Elena Park — likely worked there as a UX researcher\n\nSo Aisha is tied through consulting, while Elena appears to have been more directly affiliated."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "If Aisha's email bounces, who should I try next for an intro?",
+      "agent_reply": "Best fallback options, in order:\n\n1. Marcus Lee\n- Strongest operational connection to Aisha\n- He likely coordinated outside specialists on BrightPath Health\n- Best choice if you want a direct reintroduction\n\n2. Priya Nair\n- Not directly tied to Aisha in your notes, but she seems well-connected across your network\n- Good option if you want help finding the right person through design/product circles\n\n3. Elena Park\n- Only if you confirm she was indeed at Northstar Labs and likely knew Aisha\n- More speculative, since your current note is just shared Northstar affiliation\n\nSo if the email fails, Marcus Lee is your best next contact."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Can you draft a short note to Marcus asking for the reintroduction?",
+      "agent_reply": "Sure — here’s a concise draft:\n\nHi Marcus,\n\nHope you’re doing well. I’m trying to reconnect with Aisha Grant about a possible accessibility review for a new mobile flow. I reached out using the contact I had, but in case it’s outdated, I wondered if you’d be open to reintroducing us.\n\nIf helpful, I can send a short blurb you can forward.\n\nBest,\n[Your Name]"
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Make that even shorter, like something I could send quickly.",
+      "agent_reply": "Absolutely:\n\nHi Marcus — hope you’re well. I’m trying to reconnect with Aisha Grant about accessibility review for a new mobile flow. If you’re in touch with her, would you mind reintroducing us? Thanks! \n\n— [Your Name]"
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Actually, remind me who introduced me to Ben?",
+      "agent_reply": "Priya Nair introduced you to Ben Ortega."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "And Ben was the engineer, right? Not the researcher?",
+      "agent_reply": "Correct — Ben Ortega was the frontend engineer at Maple Cloud. The likely researcher in your notes is Elena Park, who you think was a UX researcher at Northstar Labs."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Great, that's enough for now. Give me a final compact contact list I can paste into my notes app.",
+      "agent_reply": "Here’s a compact version you can paste:\n\n- Aisha Grant — accessibility review, screen-reader QA; met via BrightPath Health; consulting for Northstar Labs; possible email: aisha.grant@northstarlabs.co\n- Ben Ortega — frontend engineer, Maple Cloud; worked on CityLoop redesign; handled design system implementation\n- Priya Nair — product designer, Lattice & Pine Studio; email: priya@latticepine.design; introduced me to Ben\n- Marcus Lee — engineering manager on BrightPath Health; likely coordinated outside specialists including Aisha\n- Elena Park — likely UX researcher at Northstar Labs; name came from Priya; no email on file"
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually one more thing — can you group them by project or company instead of by person?",
+      "agent_reply": "Sure — grouped view:\n\nBrightPath Health\n- Aisha Grant — accessibility review, screen-reader QA; met through this project; was consulting for Northstar Labs\n- Marcus Lee — engineering manager; likely coordinated outside specialists including Aisha\n\nCityLoop redesign\n- Ben Ortega — frontend engineer; handled design system implementation\n\nNorthstar Labs\n- Aisha Grant — consultant affiliation at the time\n- Elena Park — likely UX researcher\n\nMaple Cloud\n- Ben Ortega — frontend engineer\n\nLattice & Pine Studio\n- Priya Nair — product designer; introduced you to Ben\n\nCross-person links\n- Priya Nair introduced you to Ben Ortega\n- Ben Ortega previously worked with Priya Nair\n- Priya also surfaced Elena Park\n- Marcus Lee is your strongest route back to Aisha if needed"
+    },
+    {
+      "turn_index": 22,
+      "user_message": "That's helpful. Which of these people seem best for a quick gut check on mobile accessibility, not a full audit?",
+      "agent_reply": "Best fit: Aisha Grant.\n\nWhy:\n- Her specialty is explicitly accessibility review and screen-reader QA\n- She sounds well suited for a lightweight expert pass, not just a formal audit\n\nPossible secondary options, depending on what you need:\n- Priya Nair — useful if you want design feedback on usability or flow clarity, but not a substitute for accessibility expertise\n- Ben Ortega — useful if your question is partly about implementation constraints in a frontend/mobile UI\n\nIf the need is specifically accessibility, Aisha is still the clearest match."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Can you give me a super short version of Aisha's details only? Like one line.",
+      "agent_reply": "Aisha Grant — accessibility review and screen-reader QA; met via BrightPath Health; consulted for Northstar Labs; possible email: aisha.grant@northstarlabs.co."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "And Elena again — what exactly do I know about her versus what I'm just guessing?",
+      "agent_reply": "Here’s the split:\n\nKnown from your notes\n- Name: Elena Park\n- You got her name from Priya Nair\n- She was connected to Northstar Labs\n\nLess certain / inferred\n- Role: likely UX researcher\n- Direct relationship to you: not established\n- Contact info: none recorded\n- Whether she knew Aisha personally: not confirmed\n\nSo the strongest facts are Priya as the source and Elena’s Northstar Labs connection."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Good distinction. If I wanted to ask Priya whether Elena still works there, what's a simple message?",
+      "agent_reply": "Here’s a simple draft:\n\nHi Priya — quick question: do you know if Elena Park is still at Northstar Labs? I’m updating my notes and may want to reach out. Thanks!"
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Make it a little less transactional.",
+      "agent_reply": "Sure:\n\nHi Priya — hope you’re doing well. Quick question: do you know whether Elena Park is still at Northstar Labs? I was revisiting some old contacts and her name came up. No rush, and thanks either way."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Nice. Before I go, who in this list is directly connected to Priya?",
+      "agent_reply": "Direct Priya connections in your notes:\n- Ben Ortega — Priya introduced you to him, and they previously worked together\n- Elena Park — Priya is the person who gave you Elena’s name\n- You — Priya is directly in your network as a contact\n\nNo direct Priya link is recorded for Aisha Grant or Marcus Lee."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "And Marcus is only tied to BrightPath, right?",
+      "agent_reply": "Based on your current notes, yes.\n\nMarcus Lee is only tied to:\n- BrightPath Health\n- His role there as engineering manager\n- Coordinating outside specialists, likely including Aisha Grant\n\nYou don’t currently have any company affiliation or project connection for him beyond BrightPath."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Okay. Give me a tiny 'who to contact for what' cheat sheet.",
+      "agent_reply": "Here’s a compact cheat sheet:\n\n- Aisha Grant — accessibility review / screen-reader QA\n- Ben Ortega — frontend implementation / design systems\n- Priya Nair — product design / warm introductions\n- Marcus Lee — reconnecting with BrightPath contacts, especially Aisha\n- Elena Park — Northstar Labs contact to verify, likely research-related"
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect, save that as the takeaway for this set.",
+      "agent_reply": "Done — takeaway for this set:\n\n- Aisha Grant = accessibility\n- Ben Ortega = frontend/design systems\n- Priya Nair = product design + connector\n- Marcus Lee = BrightPath reintros\n- Elena Park = Northstar contact to verify"
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Aisha Grant",
+        "Ben Ortega",
+        "Priya Nair",
+        "Marcus Lee",
+        "Elena Park",
+        "Northstar Labs",
+        "BrightPath Health",
+        "Maple Cloud",
+        "Lattice & Pine Studio",
+        "CityLoop redesign"
+      ],
+      "relations": [
+        "Aisha Grant was met through the BrightPath Health app project",
+        "Aisha Grant specialized in accessibility review and screen-reader QA",
+        "Aisha Grant was consulting for Northstar Labs",
+        "Ben Ortega is a frontend engineer at Maple Cloud",
+        "Ben Ortega worked on the CityLoop redesign and handled design system implementation",
+        "Ben Ortega used to work with Priya Nair",
+        "Priya Nair is a product designer at Lattice & Pine Studio",
+        "Priya Nair introduced the user to Ben Ortega",
+        "Marcus Lee was the engineering manager on BrightPath Health",
+        "Marcus Lee likely coordinated outside specialists including Aisha Grant",
+        "Elena Park was connected to Northstar Labs and was likely a UX researcher",
+        "The user got Elena Park's name from Priya Nair",
+        "Aisha Grant and Marcus Lee are connected through BrightPath Health",
+        "Aisha Grant and Elena Park are both tied to Northstar Labs in different ways"
+      ],
+      "contact_or_org_details": [
+        "Aisha Grant possible email: aisha.grant@northstarlabs.co",
+        "Priya Nair email: priya@latticepine.design",
+        "Aisha Grant affiliated with Northstar Labs as a consultant",
+        "Ben Ortega affiliated with Maple Cloud",
+        "Priya Nair affiliated with Lattice & Pine Studio",
+        "Elena Park affiliated with Northstar Labs",
+        "Marcus Lee tied to BrightPath Health"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who was the accessibility person again?",
+      "tester_hint_answer": "It was Aisha Grant, the contact tied to accessibility review on BrightPath.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        8
+      ]
+    },
+    {
+      "question": "What could the accessibility person help with on my side?",
+      "tester_hint_answer": "She could help with accessibility review and screen-reader QA, especially for a mobile flow audit or gut check.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        7,
+        22
+      ]
+    },
+    {
+      "question": "Was Aisha Grant the one connected to screen-reader QA?",
+      "tester_hint_answer": "Yes—Aisha Grant was specifically noted for screen-reader QA.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        6,
+        23
+      ]
+    },
+    {
+      "question": "How do I know Aisha Grant, and what company was she tied to?",
+      "tester_hint_answer": "You met her through BrightPath Health, and she was consulting for Northstar Labs.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        6,
+        8
+      ]
+    },
+    {
+      "question": "If I want to reach the accessibility person, do I have contact info for Aisha Grant or just the company connection?",
+      "tester_hint_answer": "You have a possible direct email for Aisha plus her Northstar Labs consulting connection.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        9,
+        23
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_search_doc_drift_02",
+    "issue": "search_interface_doc_drift",
+    "required_qa_phrases": [
+      "accessibility person",
+      "screen-reader QA",
+      "Aisha Grant"
+    ],
+    "stress_signal": "User asks for a contact by remembered expertise rather than exact name."
+  }
+}

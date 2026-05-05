@@ -1,0 +1,313 @@
+{
+  "sample_id": "project_followup_20260417T072527Z",
+  "seed": "A user follows up with an agent on an ongoing project, reviews prior context, updates information about relevant team members, and restates how they want the agent to report progress and collaborate going forward.",
+  "target_modules": [
+    "memory",
+    "social_network",
+    "awareness"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I want to restart our project follow-up thread from scratch so it's clean. This is about the Riverside tenant portal rollout. I'm the operations lead at Northlight Housing, and we're targeting a soft launch in September 2026. Please keep your updates brief up front with bullets, then add details underneath only if needed.",
+      "agent_reply": "Got it. I’ll treat this as a fresh thread for the Riverside tenant portal rollout.\n\nWhat I’m carrying forward from this message:\n- Project: Riverside tenant portal rollout\n- Your role: Operations Lead at Northlight Housing\n- Target: soft launch in September 2026\n- Update preference: brief bullet summary first, with details underneath only when useful\n\nTo rebuild context cleanly, send me:\n- current project status\n- key people and roles\n- major risks or blockers\n- what you want me to track going forward\n\nI’ll mirror your preferred format in future updates."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Good. Also, I prefer you flag risks early rather than waiting until they're fully confirmed. And if you give me action items, separate what belongs to me versus what belongs to the vendor. The vendor is LatticeWorks. Their project manager is Priya Nair.",
+      "agent_reply": "Understood.\n\nWorking preferences I’ll use:\n- I’ll flag emerging risks early, even if they’re not fully confirmed yet.\n- I’ll separate action items by owner, especially You vs Vendor.\n- Vendor: LatticeWorks\n- Vendor PM: Priya Nair\n\nSuggested structure for future follow-ups:\n- Status\n- Emerging risks\n- Actions — You\n- Actions — LatticeWorks\n- Notes/details if needed\n\nPlease send the latest project snapshot and I’ll organize it that way."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Latest snapshot: design sign-off is done, SSO is still in review with our IT security team, and the document upload feature is behind by about 10 days. Internally, Marcus Lee owns security review. Jenna Ortiz from resident services is handling pilot recruitment. We want a 50-household pilot before the soft launch.",
+      "agent_reply": "Here’s the current snapshot in your preferred format:\n\n- Status\n  - Design sign-off: complete\n  - SSO: in review with IT security\n  - Document upload: ~10 days behind\n  - Pilot goal: 50 households before September 2026 soft launch\n\n- Emerging risks\n  - SSO review could compress testing time if Marcus Lee’s security review runs long\n  - Document upload delay may affect pilot readiness if that feature is needed in the pilot scope\n\n- Actions — You\n  - Confirm whether document upload is required for the 50-household pilot\n  - Check expected review timing with Marcus Lee\n\n- Actions — LatticeWorks\n  - Provide recovery plan for the 10-day document upload delay\n  - Clarify dependencies between SSO completion and pilot environment readiness\n\n- Notes\n  - Marcus Lee: internal owner for security review\n  - Jenna Ortiz: Resident Services lead for pilot recruitment\n\nIf you want, I can turn this into a standing project brief we keep updating."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Yes, keep a standing brief. A few updates: document upload is required for the pilot, unfortunately. Priya said on Tuesday that engineering thinks they can recover 4 of the 10 days. Also, Jenna already has 18 households informally interested. Don't write me long narrative recaps unless I ask.",
+      "agent_reply": "Understood — I’ll keep this as a standing brief and avoid long narrative recaps unless you ask.\n\nStanding brief v1:\n- Status\n  - Design sign-off: complete\n  - SSO: in review with IT security\n  - Document upload: 10 days behind, with LatticeWorks estimating recovery of 4 days\n  - Pilot recruitment: 18 households informally interested out of 50 target\n\n- Emerging risks\n  - Document upload remains a pilot-critical risk because it is required for the pilot\n  - SSO timing still risks compressing test and onboarding windows\n\n- Actions — You\n  - Confirm timeline with Marcus Lee for security review\n  - Ask Jenna Ortiz for a path from 18 interested households to 50 confirmed pilot participants\n\n- Actions — LatticeWorks\n  - Convert Priya Nair’s recovery estimate into a dated recovery plan\n  - Confirm whether the remaining 6-day slip affects pilot build readiness\n\nIf you send new updates, I’ll keep revising this in the same compact structure."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Add one more person: Elena Park, our director of IT, wants to review the access-control settings before pilot launch. Also, if you think I should escalate something, say it plainly instead of hinting.",
+      "agent_reply": "Added.\n\nStanding brief v2:\n- Status\n  - Design sign-off: complete\n  - SSO: in review with IT security\n  - Document upload: 10 days behind; LatticeWorks believes 4 days can be recovered\n  - Pilot recruitment: 18 households informally interested / 50 target\n  - Access-control settings: pending review by Elena Park, Director of IT, before pilot launch\n\n- Emerging risks\n  - Document upload is a direct pilot risk\n  - SSO review timing may affect downstream testing\n  - Access-control review adds another pre-pilot dependency\n\n- Actions — You\n  - Get a target date from Marcus Lee for security review completion\n  - Schedule Elena Park’s access-control review window now\n  - Ask Jenna Ortiz for a recruitment conversion plan to reach 50 households\n\n- Actions — LatticeWorks\n  - Send dated recovery plan for document upload\n  - Confirm whether access-control configuration will be ready for Elena’s review\n\n- Plain escalation view\n  - Yes: if Priya cannot provide a dated recovery plan this week, you should escalate the document upload issue.\n  - Yes: if Marcus cannot give even a provisional SSO review date soon, escalate internally to Elena Park.\n\nI’ll keep being direct when escalation is warranted."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "That helps. For context, we had a rough rollout on a different product back in 2024 because security review finished too late, so I'm trying not to repeat that. Also, when you summarize meetings for me, end with a one-line 'decision needed' if there is one.",
+      "agent_reply": "Makes sense, and that 2024 experience is useful context.\n\nI’ll carry forward these preferences:\n- Flag risks early\n- Separate actions by owner\n- Keep summaries compact, not narrative-heavy\n- Be plain about escalation\n- End meeting summaries with a one-line \"Decision needed\" when applicable\n\nUpdated standing brief v3:\n- Status\n  - Design sign-off: complete\n  - SSO: in review with IT security\n  - Document upload: 10 days behind; potential 4-day recovery per Priya Nair\n  - Pilot recruitment: 18 interested / 50 target\n  - Access-control settings: pending Elena Park review before pilot launch\n\n- Emerging risks\n  - Highest risk: late security review repeating the 2024 pattern and compressing readiness\n  - Document upload remains a pilot-critical dependency\n  - Access-control approval is another possible gate before pilot launch\n\n- Actions — You\n  - Get a dated checkpoint from Marcus Lee on SSO/security review\n  - Reserve Elena Park review time before the pilot window gets crowded\n  - Ask Jenna Ortiz for a timeline to convert 18 interested households into 50 confirmed\n\n- Actions — LatticeWorks\n  - Provide dated document upload recovery plan\n  - Confirm readiness for access-control review\n\n- Decision needed\n  - Whether to treat security review timing as an active escalation now, rather than waiting for slip confirmation"
+    },
+    {
+      "turn_index": 7,
+      "user_message": "I have a check-in with Priya tomorrow afternoon. Can you draft a short agenda I can use? Keep it to five bullets max, and make sure the biggest risks come first.",
+      "agent_reply": "- Confirm dated recovery plan for document upload, including what 4 days can realistically be recovered and what remains at risk\n- Clarify dependencies between document upload, SSO completion, and pilot environment readiness\n- Review access-control configuration readiness ahead of Elena Park’s pre-pilot review\n- Get vendor view on pilot timing risk for the 50-household rollout target in September 2026\n- Confirm next-owner actions and deadlines from LatticeWorks after tomorrow’s meeting\n\nDecision needed: whether Priya’s plan is solid enough to avoid immediate escalation on the document upload delay"
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Nice. One correction: my check-in is actually with Priya and Marcus together, not just Priya. Also, Jenna is in Resident Services, but she reports to Daniel Cho, our VP of Community Operations, and he may want a pilot-readiness update next week.",
+      "agent_reply": "Thanks — I’ve updated the context.\n\nKey relationship updates:\n- Priya Nair: Project Manager at LatticeWorks\n- Marcus Lee: internal owner for security review\n- Jenna Ortiz: Resident Services\n- Jenna Ortiz reports to Daniel Cho\n- Daniel Cho: VP of Community Operations at Northlight Housing\n- Daniel may want a pilot-readiness update next week\n\nRevised meeting agenda for Priya + Marcus:\n- Align on security review timing and whether SSO approval will affect pilot test readiness\n- Confirm dated recovery plan for document upload and remaining risk after the proposed 4-day recovery\n- Review any dependency between security approval, document upload, and pilot environment readiness\n- Confirm readiness and timeline for Elena Park’s access-control review\n- Assign next steps with owners and dates across Northlight Housing vs LatticeWorks\n\nDecision needed: whether current security and feature timelines justify escalation before next week’s pilot-readiness update to Daniel Cho"
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Please draft that pilot-readiness update too, but make it something I could send Daniel in Slack. Short, direct, no jargon. Mention the good news as well as the risks.",
+      "agent_reply": "Here’s a Slack-ready draft:\n\nHi Daniel — quick Riverside pilot-readiness update:\n- Design sign-off is complete.\n- Jenna has 18 households already interested, with a goal of 50 for the pilot.\n- Main risk is timing: SSO is still under security review, and the document upload feature is currently about 10 days behind.\n- LatticeWorks thinks they can recover 4 of those days, but I’m waiting on a dated plan.\n- Elena will also need to review access-control settings before pilot launch.\n\nOverall: progress is real, but pilot timing still depends on security review and the document upload recovery plan.\n\nDecision needed: whether you want to be pulled in early if either timeline slips further.\n\nIf you want, I can also make this even shorter and more executive-sounding."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "That's close. Make it slightly firmer on the risks, and remember I don't like hedging language when an issue is real. Also, going forward, if I ask for a draft message, give me the message first and any commentary after it.",
+      "agent_reply": "Hi Daniel — quick Riverside pilot-readiness update:\n- Design sign-off is complete.\n- Jenna has 18 households interested so far, with a goal of 50 for the pilot.\n- We have two active schedule risks: SSO is still in security review, and the document upload feature is about 10 days behind.\n- LatticeWorks expects to recover 4 days on document upload, but I’m still waiting for a dated recovery plan.\n- Elena Park also needs to complete access-control review before pilot launch.\n\nOverall: the project is moving, but pilot timing is at risk until security review dates and the document upload recovery plan are locked.\n\nDecision needed: do you want to be looped in now on these risks, or only if either date slips again?\n\nNoted for future drafts:\n- Message first\n- Commentary after, only if helpful\n- Firmer language when a risk is real\n\nCommentary: this version is more direct on schedule risk without becoming alarmist."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Quick update after the Priya and Marcus check-in. Marcus said security can finish the SSO review by May 22 if LatticeWorks sends the revised logging notes by this Friday. Priya committed to that. On document upload, they now think the net delay is 5 days, not 6, and she said she'd send the dated recovery plan by end of day tomorrow.",
+      "agent_reply": "- Status\n  - SSO review can finish by May 22 if revised logging notes arrive by this Friday\n  - Priya committed to sending those notes on time\n  - Document upload net delay now appears to be 5 days\n  - Dated recovery plan expected from Priya by end of day tomorrow\n\n- Emerging risks\n  - SSO is still an active risk until the logging notes are actually delivered this Friday\n  - Document upload remains a pilot risk until the dated recovery plan is in hand\n\n- Actions — You\n  - Check Friday that Priya’s logging notes were sent to Marcus\n  - Follow up tomorrow if the recovery plan does not arrive by end of day\n\n- Actions — LatticeWorks\n  - Send revised logging notes by Friday\n  - Send dated recovery plan by tomorrow EOD\n\n- Decision needed\n  - Whether you want to alert Elena Park now that May 22 is the working SSO completion date"
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Yes, draft a short note to Elena. Email style, not Slack. I want to hold a review slot the week of May 27. Keep it direct.",
+      "agent_reply": "Subject: Hold time for Riverside access-control review\n\nHi Elena —\n\nWe now have a working target of May 22 for completion of the SSO security review, assuming LatticeWorks sends revised logging notes to Marcus by Friday.\n\nCan we hold time during the week of May 27 for your access-control review for the Riverside tenant portal pilot? I’d like to reserve the slot now so we do not lose time if security closes on schedule.\n\nThanks,\n[Your Name]\n\nCommentary: This keeps it direct and ties the request to the May 22 dependency without extra detail."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Good. Another update: Jenna told me this morning she now has 26 interested households, and Daniel asked for a live status review next Wednesday. He wants Priya there too.",
+      "agent_reply": "- Status\n  - Pilot interest is now 26 households, up from 18\n  - Daniel Cho requested a live status review next Wednesday\n  - Priya Nair should attend\n\n- Emerging risks\n  - Next Wednesday’s review creates a near-term deadline for firm dates, especially on SSO and document upload\n  - Recruitment is improving, but 26 interested is still well short of the 50-household pilot target\n\n- Actions — You\n  - Confirm meeting time with Daniel and include Priya\n  - Ask Jenna for expected conversion timing from 26 interested to confirmed pilot households\n\n- Actions — LatticeWorks\n  - Arrive with the dated document upload recovery plan\n  - Confirm Friday delivery of logging notes and impact on May 22 security completion\n\n- Decision needed\n  - Whether Daniel’s review should be framed as a status update only or as an escalation point if vendor dates are still soft"
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Make it an escalation point if dates are still soft. Also, I communicate better with a tight prep list than a full briefing, so for that meeting I want no more than six bullets total.",
+      "agent_reply": "- Noted: next Wednesday’s review should function as an escalation point if vendor dates are still soft\n- Noted: for your prep, use a tight list, max six bullets, not a full briefing\n\nPrep list for Daniel review:\n- Confirm whether Priya delivered the revised logging notes by Friday and whether May 22 still holds for SSO completion\n- Verify that the dated document upload recovery plan was received and whether the net 5-day delay is credible\n- State clearly that soft or missing dates at the meeting will trigger escalation\n- Report pilot recruitment at 26 interested households and expected path to 50 confirmed\n- Confirm Elena Park’s access-control review slot for the week of May 27\n- Leave with named owners and dates for every open dependency\n\nDecision needed: whether you want Daniel to join only for decision points or for the full review"
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Full review. And one more person to track: Samir Patel from our support team will own the tenant help workflow once the pilot starts. He doesn't need to be in next week's meeting, but I want him in the standing brief.",
+      "agent_reply": "- Added to standing brief: Samir Patel, Support Team, owner of tenant help workflow for the pilot phase\n- Daniel Cho should attend the full review next Wednesday\n\nStanding brief updates:\n- Status\n  - SSO target completion: May 22, contingent on Friday logging notes from LatticeWorks\n  - Document upload: net 5-day delay pending dated recovery plan\n  - Pilot recruitment: 26 interested / 50 target\n  - Access-control review: to be held with Elena Park during week of May 27\n  - Pilot support workflow: Samir Patel will own tenant help workflow once pilot begins\n\n- Emerging risks\n  - Any missed vendor commitment before next Wednesday turns Daniel’s review into an escalation point\n  - Support workflow ownership is set, but handoff timing will matter if pilot readiness tightens\n\n- Decision needed\n  - Whether to bring Samir in before pilot launch planning starts in detail"
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Yes, but later. For now, draft the meeting invite note I can send Daniel, Priya, and Marcus. Keep it short. And remember: draft first, comments after.",
+      "agent_reply": "Subject: Riverside pilot status review\n\nHi Daniel, Priya, and Marcus —\n\nI’m setting time next Wednesday for a live Riverside pilot status review. We’ll focus on three items: SSO review timing, the document upload recovery plan, and any decisions or escalations needed to protect pilot readiness.\n\nPlease come prepared with current dates, owners, and any open dependencies.\n\nThanks,\n[Your Name]\n\nCommentary: Kept short and direct, with the escalation framing built in."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "I just got Priya's recovery plan. The feature build wraps May 16, QA ends May 21, and deployment to pilot is May 23. She says that keeps us inside the pilot prep window if security really closes May 22.",
+      "agent_reply": "- Status\n  - Recovery plan received from Priya\n  - Document upload build wraps May 16\n  - QA ends May 21\n  - Pilot deployment scheduled for May 23\n  - Plan holds only if SSO/security closes May 22 as expected\n\n- Emerging risks\n  - This is now a tight dependency chain with almost no slack between security completion and pilot deployment\n  - A one-day slip in either security or QA could affect pilot prep timing\n\n- Actions — You\n  - Bring this dependency chain explicitly into next Wednesday’s review\n  - Ask Elena Park to hold review time that can accommodate a May 23 deployment outcome\n\n- Actions — LatticeWorks\n  - Confirm whether QA can start on schedule without any unresolved SSO-related dependency\n  - State what contingency exists if May 21 QA completion slips\n\n- Decision needed\n  - Whether to treat the May 22 to May 23 sequence as too tight and escalate now"
+    },
+    {
+      "turn_index": 18,
+      "user_message": "I don't want to escalate before Wednesday unless something slips first. But I do want a blunt read: are we in yellow or red?",
+      "agent_reply": "- Blunt read: yellow, close to red\n- Reason\n  - You now have dates for the major items, which keeps this out of red for the moment\n  - But the schedule has almost no buffer: May 22 security completion and May 23 pilot deployment is very tight\n  - If Friday logging notes are missed, or if QA moves, it turns red quickly\n\n- What would make it red\n  - Logging notes not delivered by Friday\n  - Marcus backing off May 22\n  - Any movement in the May 21 QA end date\n\n- Recommended stance\n  - Hold at yellow now\n  - Be ready to escalate immediately on the first slip\n\n- Decision needed\n  - Whether you want next Wednesday framed as a yellow-status review with pre-agreed escalation triggers"
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Yes. Also, I need a very short speaking note for myself for that meeting opener. Two sentences max.",
+      "agent_reply": "We have a workable plan, but the schedule is tight enough that any slip in security, QA, or deployment will trigger escalation. Today I want to confirm firm dates, owners, and contingency steps so we know whether the pilot remains on track.\n\nCommentary: Two sentences, direct, and consistent with your yellow-close-to-red framing."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Perfect. Last update for today: Marcus emailed that if the logging notes arrive Friday morning, he can probably finish by May 21 instead of May 22. Keep that as tentative, not committed.",
+      "agent_reply": "- Status\n  - Marcus says SSO/security may finish by May 21 if logging notes arrive Friday morning\n  - That earlier date is tentative, not committed\n  - Current committed working date remains May 22\n\n- Emerging risks\n  - Good sign, but do not plan against May 21 yet\n  - The key trigger is still on-time delivery of logging notes Friday morning\n\n- Actions — You\n  - Treat May 21 as upside only in next Wednesday’s discussion\n  - Continue planning against the committed May 22 date\n\n- Actions — LatticeWorks\n  - Deliver logging notes Friday morning as promised\n\n- Decision needed\n  - None today unless Friday delivery slips"
+    },
+    {
+      "turn_index": 21,
+      "user_message": "New update from this morning: Priya did send the logging notes on Friday morning, and Marcus now says May 21 looks likely, but he's still not calling it final until he closes the checklist. Elena accepted the hold for the week of May 27. Also, Daniel's review is set for Wednesday at 2 pm.",
+      "agent_reply": "- Status\n  - Priya sent the logging notes Friday morning\n  - Marcus now sees May 21 as likely for SSO/security completion, but not final until the checklist is closed\n  - Elena Park accepted a hold for the week of May 27\n  - Daniel Cho’s review is set for Wednesday at 2 pm\n\n- Emerging risks\n  - SSO timing is improving, but it is still not committed\n  - The schedule remains tight because document upload deployment is still planned for May 23\n\n- Actions — You\n  - In Wednesday’s meeting, present May 21 as likely but keep May 22 as the planning date\n  - Confirm Elena’s preferred review slot once security is officially closed\n\n- Actions — LatticeWorks\n  - Hold to the May 16 build, May 21 QA, and May 23 deployment dates\n  - Be ready Wednesday with contingency steps if security closes on May 22 rather than May 21\n\n- Decision needed\n  - Whether to ask Daniel on Wednesday to pre-approve escalation if any committed date moves"
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Yes, and I also want a prep list for myself for Wednesday. Max six bullets like before. Keep it sharp.",
+      "agent_reply": "- State up front: status is yellow, and any slip in security, QA, or deployment triggers escalation\n- Confirm whether Marcus is still tracking to likely May 21, while keeping May 22 as the planning date until closed\n- Verify LatticeWorks is still committed to May 16 build complete, May 21 QA complete, and May 23 pilot deployment\n- Ask for explicit contingency steps if security closes on May 22 or QA slips by even one day\n- Report pilot recruitment progress and whether Jenna Ortiz has a credible path from 26 interested households to 50\n- Leave the meeting with named owners, firm dates, and Daniel Cho’s agreement on escalation triggers\n\nDecision needed: whether Daniel should pre-authorize immediate escalation on any single date slip"
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Helpful. Jenna just messaged me that she's at 31 interested households now, and she expects to hit 40 by the end of next week if outreach keeps converting. She asked whether she should join Wednesday's review. My instinct is no unless Daniel asks.",
+      "agent_reply": "- Status\n  - Jenna Ortiz is now at 31 interested households\n  - She expects to reach 40 by the end of next week if current outreach conversion holds\n\n- Emerging risks\n  - Recruitment is moving, but there is still a gap from projected 40 to the 50-household pilot target\n  - Bringing too many people into Wednesday’s review could dilute the decision focus on schedule risk\n\n- Recommendation\n  - I agree with your instinct: Jenna should not join Wednesday unless Daniel asks or unless recruitment becomes a decision point\n\n- Actions — You\n  - Keep Jenna off the invite for now\n  - Be ready to give Daniel a short recruitment update: 31 interested now, 40 projected by end of next week\n\n- Actions — LatticeWorks\n  - None specific from this update\n\n- Decision needed\n  - Whether to ask Jenna for a simple conversion plan from 40 projected to 50 confirmed before the next check-in"
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Yes, draft me a short Slack to Jenna asking for that. Message first.",
+      "agent_reply": "Hi Jenna — good progress getting to 31 interested. Can you send me a simple plan for how you expect to move from 40 projected next week to 50 confirmed for the pilot, including any support you need from ops?\n\nCommentary: Short, direct, and it asks for both the path and any help needed."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Good. Another thing: Daniel's chief of staff, Lauren Kim, asked me to copy her on anything sent ahead of Wednesday. Track her too. She manages his meeting prep.",
+      "agent_reply": "- Added to standing brief: Lauren Kim, Chief of Staff to Daniel Cho, manages his meeting prep\n- Relationship noted: Lauren Kim supports Daniel Cho and should be copied on materials sent ahead of Wednesday’s 2 pm review\n\n- Emerging risks\n  - None new from this update, but missing Lauren on pre-reads could create avoidable friction before the review\n\n- Actions — You\n  - Copy Lauren Kim on any pre-read or draft sent to Daniel Cho before Wednesday\n\n- Actions — LatticeWorks\n  - None\n\n- Decision needed\n  - Whether you want a short pre-read note prepared for Daniel and Lauren today"
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Yes. Keep it email style, very short, and copy-ready for Daniel and Lauren. No more than five bullets in the body.",
+      "agent_reply": "Subject: Riverside review prep for Wednesday\n\nHi Daniel and Lauren —\n\nAhead of Wednesday’s Riverside review at 2 pm, here is the current status:\n- Overall status is yellow; any slip in security, QA, or deployment will trigger escalation.\n- Marcus now says May 21 for SSO completion looks likely, but May 22 remains the planning date until security is formally closed.\n- LatticeWorks’ current recovery plan shows document upload build complete May 16, QA complete May 21, and pilot deployment May 23.\n- Jenna Ortiz is at 31 interested households and expects to reach 40 by the end of next week, against a 50-household pilot goal.\n- Elena Park has held time the week of May 27 for access-control review.\n\nThanks,\n[Your Name]\n\nCommentary: This stays tight, direct, and suitable to copy Lauren on without extra explanation."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Looks right. One new wrinkle: Priya just told me their QA lead, Tom Alvarez, will join Wednesday because Daniel may ask technical questions on the May 21 QA date. Add him to the brief.",
+      "agent_reply": "- Added to standing brief: Tom Alvarez, QA Lead at LatticeWorks\n- Role noted: Tom Alvarez will join Wednesday’s 2 pm review to answer technical questions, especially around the May 21 QA completion date\n\n- Emerging risks\n  - Tom joining is useful, but it also suggests QA confidence may be a live issue worth probing directly\n\n- Actions — You\n  - Expect Daniel to ask Tom Alvarez whether May 21 is firm and what could move it\n  - Keep the meeting focused so Tom addresses QA risk, not general project status\n\n- Actions — LatticeWorks\n  - Tom Alvarez should come prepared with QA scope, exit criteria, and any blockers that could affect May 21\n\n- Decision needed\n  - Whether you want to explicitly ask Tom for the QA contingency plan if testing runs past May 21"
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Yes, definitely. And give me two blunt questions I can ask Tom if he starts sounding vague.",
+      "agent_reply": "- What specifically has to be true for QA to finish on May 21, and which of those items is still at risk?\n- If QA does not finish on May 21, what is the exact fallback plan and how does that change the May 23 deployment date?\n\nDecision needed: whether a vague answer from Tom should count as an escalation trigger in the room"
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Yes, if he's vague, I want to treat that as a warning sign. Also, for future status updates, include a one-line 'watch items' section if there are any near-term triggers in the next seven days.",
+      "agent_reply": "Understood.\n\nI’ll add this format going forward:\n- Status\n- Emerging risks\n- Watch items\n- Actions — You\n- Actions — LatticeWorks\n- Decision needed\n\nUpdated standing brief snapshot:\n- Status\n  - Daniel Cho review: Wednesday at 2 pm\n  - Priya Nair delivered logging notes Friday morning\n  - Marcus Lee says May 21 for SSO completion looks likely, but May 22 remains the planning date until closure\n  - Document upload plan remains May 16 build complete, May 21 QA complete, May 23 pilot deployment\n  - Elena Park has a hold the week of May 27 for access-control review\n  - Jenna Ortiz is at 31 interested households, projecting 40 by end of next week\n  - Tom Alvarez, QA Lead at LatticeWorks, will join Wednesday’s review\n  - Lauren Kim, Daniel Cho’s chief of staff, should be copied on pre-reads\n\n- Emerging risks\n  - The project is still yellow, close to red if any committed date moves\n  - QA confidence is now a live topic to test directly with Tom\n\n- Watch items\n  - Security closure confirmation, QA date firmness, and any sign that May 23 deployment is slipping\n\n- Actions — You\n  - Copy Lauren on Wednesday pre-read\n  - Ask Tom bluntly for conditions and fallback if QA slips\n  - Keep May 22 as the planning date until Marcus closes the checklist\n\n- Actions — LatticeWorks\n  - Hold the current build, QA, and deployment dates\n  - Come prepared with QA contingency details\n\n- Decision needed\n  - Whether vagueness on QA should be treated as an in-meeting escalation signal"
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Great. Last thing for tonight: give me a very short pre-meeting checklist for tomorrow morning before I send the pre-read. Four bullets max.",
+      "agent_reply": "- Confirm Marcus has not changed the May 21 likely / May 22 planning-date position\n- Recheck with Priya that May 16 build, May 21 QA, and May 23 deployment still stand\n- Make sure Lauren Kim is copied on the pre-read to Daniel Cho\n- Include the escalation rule plainly: any slip or vague commitment tomorrow triggers escalation\n\nDecision needed: none if all four are confirmed"
+    }
+  ],
+  "module_coverage": {
+    "memory": {
+      "facts": [
+        "The project is the Riverside tenant portal rollout.",
+        "The user is the Operations Lead at Northlight Housing.",
+        "The rollout targets a soft launch in September 2026 with a 50-household pilot beforehand.",
+        "Document upload is required for the pilot.",
+        "A prior 2024 rollout went poorly because security review finished too late, which the user wants to avoid repeating.",
+        "Samir Patel will own the tenant help workflow once the pilot starts."
+      ],
+      "time_anchors": [
+        "Soft launch target: September 2026.",
+        "Past reference: rough rollout in 2024.",
+        "SSO/security working dates discussed around May 21 and May 22.",
+        "Elena Park held review time for the week of May 27.",
+        "Daniel Cho’s review is set for Wednesday at 2 pm."
+      ],
+      "followup_hooks": [
+        "Maintain a standing brief for the project and keep revising it as updates arrive.",
+        "Track whether the pilot reaches 50 households from Jenna’s current pipeline.",
+        "Monitor whether the project stays yellow or turns red based on near-term slips.",
+        "Bring Samir Patel in later for pilot launch planning, but not yet."
+      ]
+    },
+    "social_network": {
+      "entities": [
+        "Northlight Housing",
+        "LatticeWorks",
+        "Priya Nair",
+        "Marcus Lee",
+        "Jenna Ortiz",
+        "Elena Park",
+        "Daniel Cho",
+        "Samir Patel",
+        "Lauren Kim",
+        "Tom Alvarez"
+      ],
+      "relations": [
+        "Priya Nair is the project manager at LatticeWorks.",
+        "Marcus Lee owns the internal security review.",
+        "Jenna Ortiz is in Resident Services and reports to Daniel Cho.",
+        "Daniel Cho is VP of Community Operations at Northlight Housing.",
+        "Elena Park is the user’s Director of IT.",
+        "Lauren Kim is Daniel Cho’s chief of staff and manages his meeting prep.",
+        "Tom Alvarez is the QA lead at LatticeWorks.",
+        "Samir Patel is from the support team and will own the tenant help workflow once the pilot starts."
+      ],
+      "contact_or_org_details": [
+        "Northlight Housing is the user’s organization.",
+        "LatticeWorks is the vendor organization.",
+        "Daniel’s review is scheduled for Wednesday at 2 pm.",
+        "Lauren Kim should be copied on anything sent ahead of Wednesday’s review."
+      ]
+    },
+    "awareness": {
+      "explicit_preferences": [
+        "Updates should be brief up front with bullets, with details only if needed.",
+        "Risks should be flagged early rather than waiting for full confirmation.",
+        "Action items should be separated by owner, especially user versus vendor.",
+        "The user does not want long narrative recaps unless requested.",
+        "If escalation is warranted, it should be stated plainly rather than hinted.",
+        "Meeting summaries should end with a one-line 'Decision needed' when applicable.",
+        "For draft messages, the message should come first and commentary after it.",
+        "The user prefers firmer language when a risk is real and dislikes hedging.",
+        "For meeting prep, the user prefers a tight prep list rather than a full briefing.",
+        "Future status updates should include a one-line 'Watch items' section for near-term triggers."
+      ],
+      "agent_adaptations": [
+        "The agent repeatedly used compact bullet-based status formats instead of long prose.",
+        "The agent consistently separated actions into 'You' and 'LatticeWorks' sections.",
+        "The agent added early risk framing and explicit escalation guidance in later briefs.",
+        "The agent appended 'Decision needed' lines to summaries and drafts when relevant.",
+        "When asked for drafts later, the agent provided the draft message first and commentary afterward.",
+        "The agent honored bullet-count limits for agendas, prep lists, and pre-read notes.",
+        "The agent incorporated the requested 'Watch items' section into the later standing brief."
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "What project is this thread about, what is the user’s role, and when is the target soft launch?",
+      "tester_hint_answer": "Riverside tenant portal rollout; user is Operations Lead at Northlight Housing; soft launch target is September 2026.",
+      "target_modules": [
+        "memory"
+      ],
+      "evidence_turns": [
+        1
+      ]
+    },
+    {
+      "question": "Who is the vendor PM, who owns internal security review, and what organization is the vendor?",
+      "tester_hint_answer": "Priya Nair is the vendor PM at LatticeWorks, and Marcus Lee owns the internal security review.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        3,
+        8
+      ]
+    },
+    {
+      "question": "How does Jenna Ortiz fit into the org structure, and who else should be copied on materials for Daniel before Wednesday?",
+      "tester_hint_answer": "Jenna is in Resident Services and reports to Daniel Cho; Lauren Kim, Daniel’s chief of staff, should be copied.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        8,
+        25
+      ]
+    },
+    {
+      "question": "What communication style does the user want for updates and draft messages, and did the agent adapt to it later?",
+      "tester_hint_answer": "Brief bullets first, no long narrative unless asked, and draft message first with commentary after; the agent follows this in later drafts and briefs.",
+      "target_modules": [
+        "awareness"
+      ],
+      "evidence_turns": [
+        1,
+        4,
+        10,
+        12,
+        16
+      ]
+    },
+    {
+      "question": "What past experience from 2024 is shaping the user’s caution now, and what standing follow-up should still be tracked later?",
+      "tester_hint_answer": "A 2024 rollout suffered because security review finished too late; later follow-up should keep tracking the standing brief and whether the pilot reaches 50 households.",
+      "target_modules": [
+        "memory",
+        "awareness"
+      ],
+      "evidence_turns": [
+        6,
+        15,
+        23
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For memory-oriented evaluation, later replay or post-processing should preserve stable facts, time anchors, and long-term follow-up hooks.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored.",
+    "For awareness-oriented evaluation, later stages may need explicit preference update handling because this v1 generator does not call update_awareness."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ]
+}

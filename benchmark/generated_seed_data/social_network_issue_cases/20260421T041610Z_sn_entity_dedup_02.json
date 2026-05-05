@@ -1,0 +1,281 @@
+{
+  "sample_id": "sn_entity_dedup_02_20260421T041610Z",
+  "dialogue_seed": "The user mentions Priya in a networking context, then later says Dr. Priya Natarajan works at Voltus, then later refers to P. Natarajan from the same email thread. The conversation should make clear that these are the same person and include why the user wants to remember her.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Priya Natarajan\", \"P. Natarajan\", and \"Voltus\". The questions should ask who she is, where she works, and whether the shorter references point to the same person.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I met someone named Priya at a climate tech networking event last night, and I want to make sure I remember who she is later.",
+      "agent_reply": "Absolutely. I can help you capture the details so she’s easy to identify later. What do you remember about Priya so far—where you met, what she works on, who introduced you, or anything distinctive from the conversation?"
+    },
+    {
+      "turn_index": 2,
+      "user_message": "It was at the Grid Futures meetup in San Francisco. We talked about demand response and grid flexibility. I think she said she leads some kind of research team.",
+      "agent_reply": "Good start. Here’s a working memory note:\n\n- Name: Priya\n- Met at: Grid Futures meetup, San Francisco\n- Topic discussed: demand response, grid flexibility\n- Possible role: leads a research team\n\nIf you remember anything else—company, title, who she was with, or how you might follow up—I can make this much more specific."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "I checked the event thread. It looks like her full name is Dr. Priya Natarajan, and she works at Voltus.",
+      "agent_reply": "Perfect—that narrows it down a lot. Updated note:\n\n- Person: Dr. Priya Natarajan\n- Organization: Voltus\n- Likely focus: demand response / grid flexibility\n- Met at: Grid Futures meetup in San Francisco\n\nDo you remember her title at Voltus, or why this connection matters to you specifically? That part is useful when you revisit the note later."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Yes, I want to remember her because she offered to introduce me to someone on her team if I send over my pilot deck. I'm exploring partnerships for my startup.",
+      "agent_reply": "That’s exactly the kind of context worth saving. I’d record it like this:\n\n- Dr. Priya Natarajan works at Voltus\n- She offered to introduce you to someone on her team\n- Trigger for follow-up: send your pilot deck\n- Why she matters: potential partnership path for your startup\n\nIf you have any contact detail from the thread, I can add that too."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "In the email thread, she shows up as P. Natarajan with the address priya.natarajan@voltus.co.",
+      "agent_reply": "Great—that strongly suggests the same person. I’d consolidate them as one contact:\n\n- Dr. Priya Natarajan\n- Also appears as: P. Natarajan\n- Email: priya.natarajan@voltus.co\n- Company: Voltus\n- Connection context: met at Grid Futures meetup in San Francisco\n- Relevance: offered intro after you send pilot deck\n\nUsing an initial in email threads is very common, so “P. Natarajan” and “Dr. Priya Natarajan” should be treated as the same person here."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Right, and Maya Chen from SunMesh was the one who introduced us.",
+      "agent_reply": "Excellent, that adds a useful relationship link. Updated profile:\n\n- Dr. Priya Natarajan (also listed as P. Natarajan)\n- Email: priya.natarajan@voltus.co\n- Organization: Voltus\n- Introduced by: Maya Chen from SunMesh\n- Met at: Grid Futures meetup, San Francisco\n- Discussed: demand response, grid flexibility\n- Why remember: she offered to connect you with someone on her team if you send your pilot deck\n\nThis also creates a second retrieval path later: you may remember her through Maya Chen if the name Priya doesn’t come to mind immediately."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "I think her title might be Director of Research, but I'm not 100% sure.",
+      "agent_reply": "That’s worth keeping, but marked as tentative. I’d phrase it as:\n\n- Title: possibly Director of Research at Voltus\n\nThat way you preserve the clue without overstating it. If you want, I can turn everything into a clean contact summary plus a short follow-up reminder."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Yes, make me a clean summary I could paste into my notes app.",
+      "agent_reply": "Here’s a concise notes-app version:\n\nDr. Priya Natarajan (also appears as P. Natarajan) — contact at Voltus, possibly Director of Research. Met her at the Grid Futures meetup in San Francisco, where we talked about demand response and grid flexibility. Maya Chen from SunMesh introduced us. Priya offered to introduce me to someone on her team if I send over my pilot deck. Email: priya.natarajan@voltus.co. Important because she could be a potential partnership path for my startup.\n\nIf you want, I can also make this into a CRM-style entry with fields."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Can you also give me a one-line reminder that makes it obvious P. Natarajan and Dr. Priya Natarajan are the same person?",
+      "agent_reply": "Sure:\n\nP. Natarajan on the email thread is the same person as Dr. Priya Natarajan at Voltus—the Priya I met at Grid Futures who offered an intro after I send my pilot deck.\n\nIf you’d like, I can make that even shorter for a contact note title."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "That's perfect. Give me a short subject line for the follow-up email too.",
+      "agent_reply": "Here are a few strong options:\n\n- Great meeting you at Grid Futures — pilot deck attached\n- Following up from Grid Futures with my pilot deck\n- Thanks, Priya — sharing the pilot deck we discussed\n- Voltus follow-up: pilot deck and next steps\n\nBest default choice: Great meeting you at Grid Futures — pilot deck attached"
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Nice. I also want a short follow-up email draft I can send to her.",
+      "agent_reply": "Sure—here’s a concise draft:\n\nSubject: Great meeting you at Grid Futures — pilot deck attached\n\nHi Dr. Natarajan,\n\nIt was great meeting you at the Grid Futures meetup in San Francisco. I enjoyed our conversation about demand response and grid flexibility.\n\nAs promised, I’m sharing my pilot deck for [Startup Name]. I’d appreciate any feedback, and if it still makes sense, I’d be grateful for an introduction to the relevant person on your team at Voltus.\n\nThanks again,\n[Your Name]\n[Your Title / Startup]\n[Phone number]\n\nIf you want, I can make this warmer, more confident, or more investor-polished."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Make it a little warmer and mention Maya.",
+      "agent_reply": "Absolutely:\n\nSubject: Great meeting you at Grid Futures — pilot deck attached\n\nHi Dr. Priya Natarajan,\n\nIt was great meeting you at Grid Futures, and I’m glad Maya Chen introduced us. I really enjoyed our conversation about demand response and grid flexibility.\n\nI’m attaching the pilot deck for [Startup Name]. If it still feels relevant, I’d really appreciate an introduction to the appropriate person on your team at Voltus.\n\nThanks again, and I hope we can stay in touch.\n\nBest,\n[Your Name]\n[Your Title / Startup]\n[Phone number]\n\nIf you prefer, I can also make it slightly shorter so it feels more natural for a first follow-up."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Shorter would be good. Also, should I address her as Priya or Dr. Natarajan?",
+      "agent_reply": "For a first follow-up, defaulting to \"Dr. Natarajan\" is safer unless she signed her note as Priya or explicitly invited first names. Since the thread showed \"P. Natarajan\" and you know her full name is Dr. Priya Natarajan, a respectful opening is best.\n\nShorter draft:\n\nHi Dr. Natarajan,\n\nGreat meeting you at Grid Futures, and thanks again to Maya Chen for the introduction. I enjoyed our conversation about demand response and grid flexibility.\n\nI’m attaching the pilot deck for [Startup Name]. If helpful, I’d appreciate an introduction to the right person on your team at Voltus.\n\nBest,\n[Your Name]\n\nIf she replies casually or signs as Priya, you can switch to Priya after that."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "She actually signed one reply just as Priya. So maybe I should use Priya.",
+      "agent_reply": "Yes—if she signed as Priya, using \"Hi Priya,\" is appropriate and usually the best choice.\n\nRevised version:\n\nHi Priya,\n\nGreat meeting you at Grid Futures, and thanks again to Maya Chen for the introduction. I enjoyed our conversation about demand response and grid flexibility.\n\nI’m attaching the pilot deck for [Startup Name]. If helpful, I’d appreciate an introduction to the right person on your team at Voltus.\n\nBest,\n[Your Name]\n\nThat keeps it warm and aligned with how she presents herself."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Can you also make me a compact CRM entry with fields?",
+      "agent_reply": "Of course:\n\nName: Dr. Priya Natarajan\nAlso listed as: P. Natarajan\nPreferred name: Priya\nOrganization: Voltus\nTitle: Possibly Director of Research\nEmail: priya.natarajan@voltus.co\nIntroduced by: Maya Chen\nIntroducer organization: SunMesh\nMet at: Grid Futures meetup, San Francisco\nTopics discussed: Demand response; grid flexibility\nRelationship to me: Potential partner contact for startup\nKey offer: Offered to introduce me to someone on her team after I send pilot deck\nNext action: Send pilot deck follow-up email\nWhy important: Possible partnership path through Voltus\nIdentity note: P. Natarajan on the email thread is the same person as Dr. Priya Natarajan from the event\n\nIf you want, I can also format this as JSON-like fields or a Notion-style entry."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Add a note that I met her on Thursday evening, not just at the event generally.",
+      "agent_reply": "Good detail. Updated CRM entry:\n\nName: Dr. Priya Natarajan\nAlso listed as: P. Natarajan\nPreferred name: Priya\nOrganization: Voltus\nTitle: Possibly Director of Research\nEmail: priya.natarajan@voltus.co\nIntroduced by: Maya Chen\nIntroducer organization: SunMesh\nMet at: Grid Futures meetup, San Francisco\nMet when: Thursday evening\nTopics discussed: Demand response; grid flexibility\nRelationship to me: Potential partner contact for startup\nKey offer: Offered to introduce me to someone on her team after I send pilot deck\nNext action: Send pilot deck follow-up email\nWhy important: Possible partnership path through Voltus\nIdentity note: P. Natarajan on the email thread is the same person as Dr. Priya Natarajan from the event\n\nThat time cue should make the memory easier to retrieve later."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Actually, I may have also seen her at the SF Climate Week salon in April, but I'm not certain.",
+      "agent_reply": "That’s useful, but it should be marked as uncertain so it doesn’t overwrite the confirmed details.\n\nI’d add:\n\nPossible prior interaction: May have seen her at SF Climate Week salon in April (unconfirmed)\n\nUpdated note logic:\n- Confirmed: met and spoke at Grid Futures on Thursday evening in San Francisco\n- Possible: may have previously seen the same person at an SF Climate Week salon in April\n\nKeeping those separated preserves accuracy."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Good call. Can you write a memory note that separates confirmed facts from uncertain ones?",
+      "agent_reply": "Yes—here’s a clean version:\n\nConfirmed\n- Dr. Priya Natarajan is the same person as P. Natarajan on the email thread.\n- She works at Voltus.\n- Email: priya.natarajan@voltus.co\n- Preferred name appears to be Priya.\n- I met and spoke with her on Thursday evening at the Grid Futures meetup in San Francisco.\n- Maya Chen from SunMesh introduced us.\n- We discussed demand response and grid flexibility.\n- She offered to introduce me to someone on her team if I send my pilot deck.\n- She is important to remember because she may be a partnership path for my startup.\n\nUncertain / tentative\n- Her title may be Director of Research at Voltus.\n- I may have also seen her earlier at the SF Climate Week salon in April.\n\nThat format is strong if you want to avoid mixing memory confidence levels."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "This is great. Give me a super short version I can pin at the top of the contact.",
+      "agent_reply": "Sure:\n\nPriya Natarajan at Voltus (same as P. Natarajan on email) — Maya Chen intro; send pilot deck for possible team intro/partnership.\n\nEven shorter:\n\nPriya Natarajan / P. Natarajan, Voltus — send deck; potential partnership intro."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Perfect. One last thing: write a single sentence explaining why I'm likely to remember her later.",
+      "agent_reply": "You’re likely to remember Priya Natarajan because Maya Chen introduced you to her at Grid Futures, you had a specific conversation about demand response and grid flexibility, and she offered a concrete next step: an intro to her Voltus team once you send your pilot deck."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually, can you turn all of this into a tidy contact card style note with just the essentials?",
+      "agent_reply": "Absolutely:\n\nName: Dr. Priya Natarajan\nPreferred name: Priya\nAlso appears as: P. Natarajan\nCompany: Voltus\nRole: Possibly Director of Research\nEmail: priya.natarajan@voltus.co\nIntroduced by: Maya Chen (SunMesh)\nMet: Grid Futures meetup, San Francisco, Thursday evening\nDiscussed: Demand response, grid flexibility\nWhy important: Potential partnership contact for my startup\nNext step: Send pilot deck; she offered to introduce me to someone on her team\nIdentity reminder: P. Natarajan on the email thread is the same person as Dr. Priya Natarajan"
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Can you make it even tighter, like something I'd paste into the notes field on my phone?",
+      "agent_reply": "Sure:\n\nPriya Natarajan (also P. Natarajan) — Voltus, possibly Director of Research. Email: priya.natarajan@voltus.co. Met at Grid Futures in SF on Thursday evening; introduced by Maya Chen from SunMesh. We talked about demand response and grid flexibility. She offered to intro me to someone on her team if I send my pilot deck. Important startup partnership contact."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "I want a version that's easier to skim later. Maybe labels plus one sentence.",
+      "agent_reply": "Here’s a skimmable version:\n\nContact: Dr. Priya Natarajan\nAlias: P. Natarajan\nCompany: Voltus\nEmail: priya.natarajan@voltus.co\nIntroduced by: Maya Chen, SunMesh\nContext: Met at Grid Futures in San Francisco on Thursday evening\nTopics: Demand response, grid flexibility\nAction: Send pilot deck\nWhy she matters: Priya offered to connect me with someone on her team at Voltus, so she’s a promising partnership contact for my startup."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Good. Add one line about the uncertain stuff too, but clearly marked.",
+      "agent_reply": "Of course:\n\nContact: Dr. Priya Natarajan\nAlias: P. Natarajan\nCompany: Voltus\nEmail: priya.natarajan@voltus.co\nIntroduced by: Maya Chen, SunMesh\nContext: Met at Grid Futures in San Francisco on Thursday evening\nTopics: Demand response, grid flexibility\nAction: Send pilot deck\nWhy she matters: Priya offered to connect me with someone on her team at Voltus, so she’s a promising partnership contact for my startup.\nUncertain: Title may be Director of Research; may also have seen her at the SF Climate Week salon in April."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "If I forgot her first name later and only saw 'P. Natarajan' in my inbox, what should the note say to jog my memory fast?",
+      "agent_reply": "Use this:\n\nP. Natarajan = Priya Natarajan at Voltus — Maya Chen intro at Grid Futures; send pilot deck for possible team intro.\n\nThat should be fast to recognize even if the inbox only shows the initial."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Can you make that slightly more human and less like shorthand?",
+      "agent_reply": "Yes:\n\nP. Natarajan in my inbox is Priya Natarajan from Voltus—the person Maya Chen introduced me to at Grid Futures who offered a team intro after I send my pilot deck."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Nice. I may forward the thread to my cofounder Arjun so he knows who she is. Can you write one sentence for him?",
+      "agent_reply": "Sure:\n\nThis is Priya Natarajan at Voltus (listed as P. Natarajan on the thread); Maya Chen from SunMesh introduced us at Grid Futures, and Priya said she may connect us with someone on her team once we send the pilot deck."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Make it a little more explicit about why Arjun should care.",
+      "agent_reply": "Here’s a stronger version:\n\nThis is Priya Natarajan at Voltus (she appears as P. Natarajan on the email thread); Maya Chen from SunMesh introduced us at Grid Futures, and she could be a useful partnership path because she offered to connect us with the right person on her team once we send the pilot deck."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Great. Now give me one final canonical record with the exact fields you'd keep if I wanted to avoid duplicates later.",
+      "agent_reply": "Here’s a canonical dedup-friendly record:\n\nCanonical name: Dr. Priya Natarajan\nPreferred name: Priya\nAlternate display name: P. Natarajan\nOrganization: Voltus\nPossible title: Director of Research\nPrimary email: priya.natarajan@voltus.co\nRelationship source: Introduced by Maya Chen\nIntroducer organization: SunMesh\nMeeting event: Grid Futures meetup\nMeeting location: San Francisco\nMeeting time: Thursday evening\nDiscussion topics: demand response; grid flexibility\nOpportunity: potential partnership for startup\nPromised next step: send pilot deck\nHer offer: introduce me to someone on her team\nIdentity resolution note: Dr. Priya Natarajan, Priya, and P. Natarajan on the same email thread should be treated as the same person\nConfidence note: title unconfirmed; possible prior sighting at SF Climate Week salon in April"
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect, that's exactly what I needed.",
+      "agent_reply": "Glad to help. You now have a clean canonical entry for Priya Natarajan at Voltus, plus short versions for notes, inbox recall, and sharing with Arjun."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Dr. Priya Natarajan",
+        "Priya",
+        "P. Natarajan",
+        "Voltus",
+        "Maya Chen",
+        "SunMesh",
+        "Arjun"
+      ],
+      "relations": [
+        "Dr. Priya Natarajan, Priya, and P. Natarajan are the same person",
+        "Dr. Priya Natarajan works at Voltus",
+        "Maya Chen from SunMesh introduced the user to Priya Natarajan",
+        "Priya Natarajan offered to introduce the user to someone on her team after receiving the pilot deck",
+        "Priya Natarajan is a potential partnership contact for the user's startup",
+        "Arjun is the user's cofounder"
+      ],
+      "contact_or_org_details": [
+        "Email: priya.natarajan@voltus.co",
+        "Met at Grid Futures meetup in San Francisco",
+        "Met on Thursday evening",
+        "Discussed demand response and grid flexibility",
+        "Possible title: Director of Research at Voltus",
+        "Possible prior sighting at SF Climate Week salon in April (unconfirmed)"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is Priya Natarajan, and why did I want to remember her?",
+      "tester_hint_answer": "She is the Voltus contact the user met at Grid Futures who offered a team intro after receiving the pilot deck, making her important for startup partnership outreach.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        4,
+        8,
+        18
+      ]
+    },
+    {
+      "question": "Where does Priya Natarajan work, and what contact detail do I have for her?",
+      "tester_hint_answer": "She works at Voltus, and the saved email is priya.natarajan@voltus.co.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        5,
+        15,
+        21
+      ]
+    },
+    {
+      "question": "Is P. Natarajan the same person as Priya Natarajan, or are those different people?",
+      "tester_hint_answer": "They are explicitly consolidated as the same person, with P. Natarajan treated as the email-thread version of Dr. Priya Natarajan.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        5,
+        9,
+        18,
+        29
+      ]
+    },
+    {
+      "question": "How do I know my Voltus contact is the same Priya from the networking event, and who introduced us?",
+      "tester_hint_answer": "The notes tie the event contact to the Voltus employee and say Maya Chen from SunMesh introduced them.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        6,
+        8,
+        21
+      ]
+    },
+    {
+      "question": "If I only saw 'P. Natarajan' in my inbox later, what quick memory should tell me who she is and why she matters?",
+      "tester_hint_answer": "The note should remind the user that P. Natarajan is Priya Natarajan at Voltus, introduced by Maya Chen at Grid Futures, and relevant because of the promised intro after sending the pilot deck.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        25,
+        26,
+        28,
+        29
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_entity_dedup_02",
+    "issue": "entity_dedup_non_deterministic",
+    "required_qa_phrases": [
+      "Priya Natarajan",
+      "P. Natarajan",
+      "Voltus"
+    ],
+    "stress_signal": "One contact is referred to by first name, full name, honorific, and initialed form."
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "sample_id": "sn_composite_query_01_20260421T042558Z",
+  "dialogue_seed": "The user mentions Sam Rivera as an engineer on the platform team. In a separate turn, they say Sam mostly works on frontend accessibility and design-system reliability. Avoid using the exact phrase 'frontend engineer' in the dialogue. Later the user will likely ask for the frontend engineer.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"frontend engineer\", \"Sam Rivera\", and \"frontend accessibility\". The questions should ask who the frontend engineer or frontend accessibility person was by connecting Sam's role with the later details.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I'm trying to clean up our internal people catalog. Can you help me draft a quick profile for Sam Rivera?",
+      "agent_reply": "Absolutely. I can help turn rough notes into a clean catalog entry. If you want, send me basics like team, role, focus areas, manager, and any contact or org details you want included."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Start with this: Sam Rivera is an engineer on the Platform team at Northstar Labs.",
+      "agent_reply": "Got it. Draft so far:\n\n**Sam Rivera** — Engineer, Platform Team at **Northstar Labs**.\n\nIf you want, I can expand this with responsibilities, reporting line, location, Slack handle, email, or collaboration notes."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Add that Sam mostly works on frontend accessibility and design-system reliability.",
+      "agent_reply": "Updated version:\n\n**Sam Rivera** — Engineer on the **Platform Team** at **Northstar Labs**. Sam primarily focuses on **frontend accessibility** and **design-system reliability**.\n\nHelpful next fields to add might be:\n- manager\n- team lead\n- office or timezone\n- Slack handle\n- email\n- main collaborators"
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Manager is Priya Natarajan. Sam is based in Austin and uses sam.rivera@northstarlabs.com.",
+      "agent_reply": "Great — here’s a more complete draft:\n\n**Sam Rivera**  \nEngineer, **Platform Team**  \n**Northstar Labs**  \nFocus: frontend accessibility; design-system reliability  \nManager: **Priya Natarajan**  \nLocation: Austin  \nEmail: **sam.rivera@northstarlabs.com**\n\nThis also makes the relationship explicit: **Sam Rivera reports to Priya Natarajan**.\n\nIf you'd like, I can convert this into a directory-style one-liner or a structured JSON-like record next."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Make it sound a little more like an internal directory entry, not a bio.",
+      "agent_reply": "Sure — here’s a directory-style version:\n\n**Sam Rivera**  \nEngineer, Platform Team — Northstar Labs  \nAreas: frontend accessibility, design-system reliability  \nManager: Priya Natarajan  \nLocation: Austin  \nEmail: sam.rivera@northstarlabs.com\n\nIf needed, I can also make it more compact, like a single-line people-search entry."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Yes, give me the compact version too.",
+      "agent_reply": "Here are two compact options:\n\n1. **Sam Rivera** — Engineer, Platform Team at Northstar Labs; works on frontend accessibility and design-system reliability; manager: Priya Natarajan; Austin; sam.rivera@northstarlabs.com\n\n2. **Sam Rivera | Platform Team Engineer | Northstar Labs | Accessibility + design-system reliability | Austin | Mgr: Priya Natarajan | sam.rivera@northstarlabs.com**\n\nIf you want, I can also help create matching entries for Sam's teammates so the formatting stays consistent."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Good idea. I also need a stub for Maya Chen. She's a product designer at Northstar Labs and works closely with Sam on the design system.",
+      "agent_reply": "Here’s a matching stub:\n\n**Maya Chen**  \nProduct Designer — **Northstar Labs**  \nWorks closely with **Sam Rivera** on the design system\n\nCompact version:\n**Maya Chen — Product Designer at Northstar Labs; collaborates with Sam Rivera on the design system**\n\nThis gives you a clear relationship: **Maya Chen collaborates with Sam Rivera**."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Add that Maya is on the Design team and her email is maya.chen@northstarlabs.com.",
+      "agent_reply": "Updated entry:\n\n**Maya Chen**  \nProduct Designer, **Design Team** — Northstar Labs  \nCollaborates with Sam Rivera on the design system  \nEmail: **maya.chen@northstarlabs.com**\n\nCompact version:\n**Maya Chen — Product Designer, Design Team at Northstar Labs; collaborates with Sam Rivera on the design system; maya.chen@northstarlabs.com**"
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Can you show me both entries together in a consistent format?",
+      "agent_reply": "Of course:\n\n**Sam Rivera**  \nEngineer, Platform Team — Northstar Labs  \nAreas: frontend accessibility, design-system reliability  \nManager: Priya Natarajan  \nLocation: Austin  \nEmail: sam.rivera@northstarlabs.com\n\n**Maya Chen**  \nProduct Designer, Design Team — Northstar Labs  \nCollaborates with Sam Rivera on the design system  \nEmail: maya.chen@northstarlabs.com\n\nIf you'd like, I can also normalize these into fields like **Name / Role / Team / Org / Focus / Manager / Contact**."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Yes, normalize them into fields so I can paste them into the catalog.",
+      "agent_reply": "Here they are in a normalized format:\n\n**Name:** Sam Rivera  \n**Role:** Engineer  \n**Team:** Platform Team  \n**Organization:** Northstar Labs  \n**Focus:** Frontend accessibility; design-system reliability  \n**Manager:** Priya Natarajan  \n**Location:** Austin  \n**Email:** sam.rivera@northstarlabs.com\n\n**Name:** Maya Chen  \n**Role:** Product Designer  \n**Team:** Design Team  \n**Organization:** Northstar Labs  \n**Focus:** Design system collaboration with Sam Rivera  \n**Manager:** Not provided  \n**Location:** Not provided  \n**Email:** maya.chen@northstarlabs.com\n\nIf you want, next I can help infer missing fields carefully or create a third entry in the same schema."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Let's add a third person. Jordan Lee is an engineering manager on the Platform team at Northstar Labs.",
+      "agent_reply": "Sure — here’s a normalized stub in the same format:\n\n**Name:** Jordan Lee  \n**Role:** Engineering Manager  \n**Team:** Platform Team  \n**Organization:** Northstar Labs  \n**Focus:** Not provided  \n**Manager:** Not provided  \n**Location:** Not provided  \n**Email:** Not provided\n\nIf helpful, I can also connect Jordan explicitly to Sam or Priya once you confirm the relationship."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Jordan oversees the design system effort and works with Maya Chen regularly.",
+      "agent_reply": "Updated entry:\n\n**Name:** Jordan Lee  \n**Role:** Engineering Manager  \n**Team:** Platform Team  \n**Organization:** Northstar Labs  \n**Focus:** Oversees the design system effort  \n**Manager:** Not provided  \n**Location:** Not provided  \n**Email:** Not provided  \n**Collaboration:** Works regularly with Maya Chen\n\nThat gives you an explicit relationship too: **Jordan Lee works with Maya Chen on the design system effort**."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Also, Sam supports Jordan on accessibility reviews for the component library.",
+      "agent_reply": "Got it. I’d reflect that as a relationship note on both entries.\n\n**Sam Rivera**  \n- Supports **Jordan Lee** on accessibility reviews for the component library\n\n**Jordan Lee**  \n- Supported by **Sam Rivera** on accessibility reviews for the component library\n\nIf you want, I can now regenerate all three records with a shared schema including a **Collaboration/Relationship** field."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Yes, regenerate all three with a Relationship field.",
+      "agent_reply": "Here are all three in a consistent normalized format:\n\n**Name:** Sam Rivera  \n**Role:** Engineer  \n**Team:** Platform Team  \n**Organization:** Northstar Labs  \n**Focus:** Frontend accessibility; design-system reliability  \n**Manager:** Priya Natarajan  \n**Location:** Austin  \n**Email:** sam.rivera@northstarlabs.com  \n**Relationship:** Collaborates with Maya Chen on the design system; supports Jordan Lee on accessibility reviews for the component library\n\n**Name:** Maya Chen  \n**Role:** Product Designer  \n**Team:** Design Team  \n**Organization:** Northstar Labs  \n**Focus:** Design system collaboration with Sam Rivera  \n**Manager:** Not provided  \n**Location:** Not provided  \n**Email:** maya.chen@northstarlabs.com  \n**Relationship:** Collaborates with Sam Rivera; works regularly with Jordan Lee on the design system effort\n\n**Name:** Jordan Lee  \n**Role:** Engineering Manager  \n**Team:** Platform Team  \n**Organization:** Northstar Labs  \n**Focus:** Oversees the design system effort  \n**Manager:** Not provided  \n**Location:** Not provided  \n**Email:** Not provided  \n**Relationship:** Works regularly with Maya Chen; receives support from Sam Rivera on accessibility reviews for the component library"
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Looks good. Add Jordan's email as jordan.lee@northstarlabs.com and location as Seattle.",
+      "agent_reply": "Updated Jordan entry:\n\n**Name:** Jordan Lee  \n**Role:** Engineering Manager  \n**Team:** Platform Team  \n**Organization:** Northstar Labs  \n**Focus:** Oversees the design system effort  \n**Manager:** Not provided  \n**Location:** Seattle  \n**Email:** jordan.lee@northstarlabs.com  \n**Relationship:** Works regularly with Maya Chen; receives support from Sam Rivera on accessibility reviews for the component library\n\nIf you want, I can refresh the full three-person block so everything is ready to paste."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Please do, and make the Relationship field a little shorter.",
+      "agent_reply": "Absolutely — here’s a cleaner paste-ready version:\n\n**Name:** Sam Rivera  \n**Role:** Engineer  \n**Team:** Platform Team  \n**Organization:** Northstar Labs  \n**Focus:** Frontend accessibility; design-system reliability  \n**Manager:** Priya Natarajan  \n**Location:** Austin  \n**Email:** sam.rivera@northstarlabs.com  \n**Relationship:** Works with Maya Chen on the design system; supports Jordan Lee on accessibility reviews\n\n**Name:** Maya Chen  \n**Role:** Product Designer  \n**Team:** Design Team  \n**Organization:** Northstar Labs  \n**Focus:** Design system collaboration  \n**Manager:** Not provided  \n**Location:** Not provided  \n**Email:** maya.chen@northstarlabs.com  \n**Relationship:** Works with Sam Rivera and Jordan Lee on design system efforts\n\n**Name:** Jordan Lee  \n**Role:** Engineering Manager  \n**Team:** Platform Team  \n**Organization:** Northstar Labs  \n**Focus:** Design system oversight  \n**Manager:** Not provided  \n**Location:** Seattle  \n**Email:** jordan.lee@northstarlabs.com  \n**Relationship:** Works with Maya Chen; supported by Sam Rivera on accessibility reviews"
+    },
+    {
+      "turn_index": 17,
+      "user_message": "One more person: Elena Gomez is a recruiter at Northstar Labs who helped hire Sam.",
+      "agent_reply": "Here’s a matching stub for Elena:\n\n**Name:** Elena Gomez  \n**Role:** Recruiter  \n**Team:** Not provided  \n**Organization:** Northstar Labs  \n**Focus:** Hiring  \n**Manager:** Not provided  \n**Location:** Not provided  \n**Email:** Not provided  \n**Relationship:** Helped hire Sam Rivera\n\nIf you know Elena’s team or contact details, I can add them in the same format."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Put Elena on the Talent team and note that she recruited for Platform roles.",
+      "agent_reply": "Updated Elena entry:\n\n**Name:** Elena Gomez  \n**Role:** Recruiter  \n**Team:** Talent Team  \n**Organization:** Northstar Labs  \n**Focus:** Recruiting for Platform roles  \n**Manager:** Not provided  \n**Location:** Not provided  \n**Email:** Not provided  \n**Relationship:** Helped hire Sam Rivera\n\nThat also creates a useful org link: **Elena Gomez supported hiring for the Platform Team at Northstar Labs**."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Can you give me a compact list of everyone we've added so far?",
+      "agent_reply": "Sure — compact directory-style list:\n\n- **Sam Rivera** — Engineer, Platform Team, Northstar Labs; focus: frontend accessibility and design-system reliability; manager: Priya Natarajan; Austin; sam.rivera@northstarlabs.com\n- **Maya Chen** — Product Designer, Design Team, Northstar Labs; works on design system efforts with Sam Rivera and Jordan Lee; maya.chen@northstarlabs.com\n- **Jordan Lee** — Engineering Manager, Platform Team, Northstar Labs; oversees design system work; Seattle; jordan.lee@northstarlabs.com\n- **Elena Gomez** — Recruiter, Talent Team, Northstar Labs; recruits for Platform roles; helped hire Sam Rivera\n\nIf you'd like, I can also sort this list by team or pull out just the people connected to Sam."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Yes, pull out just the people connected to Sam.",
+      "agent_reply": "Here’s a Sam-centered list:\n\n- **Priya Natarajan** — Sam Rivera’s manager at Northstar Labs\n- **Maya Chen** — Product Designer on the Design Team; works with Sam Rivera on the design system\n- **Jordan Lee** — Engineering Manager on the Platform Team; Sam supports Jordan on accessibility reviews\n- **Elena Gomez** — Recruiter on the Talent Team; helped hire Sam Rivera\n\nIf you want, I can next format this as explicit edges like **Sam Rivera -> reports to -> Priya Natarajan**."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Yes, show the explicit edges.",
+      "agent_reply": "Absolutely:\n\n- **Sam Rivera -> reports to -> Priya Natarajan**\n- **Sam Rivera -> collaborates with -> Maya Chen**\n- **Sam Rivera -> supports -> Jordan Lee** on accessibility reviews\n- **Elena Gomez -> helped hire -> Sam Rivera**\n\nIf useful, I can also add organization context, like team names, to each edge."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Add team context to those edges.",
+      "agent_reply": "Here’s the same set with team context:\n\n- **Sam Rivera (Platform Team) -> reports to -> Priya Natarajan**\n- **Sam Rivera (Platform Team) -> collaborates with -> Maya Chen (Design Team)** on the design system\n- **Sam Rivera (Platform Team) -> supports -> Jordan Lee (Platform Team)** on accessibility reviews\n- **Elena Gomez (Talent Team) -> helped hire -> Sam Rivera (Platform Team)**\n\nIf you want, I can turn this into a small relationship map or a CSV-style table next."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "A CSV-style table would help. Keep it simple.",
+      "agent_reply": "Sure — simple CSV-style version:\n\nSource,Source Team,Relationship,Target,Target Team,Notes\nSam Rivera,Platform Team,reports to,Priya Natarajan,,Manager\nSam Rivera,Platform Team,collaborates with,Maya Chen,Design Team,Design system work\nSam Rivera,Platform Team,supports,Jordan Lee,Platform Team,Accessibility reviews\nElena Gomez,Talent Team,helped hire,Sam Rivera,Platform Team,Recruited for Platform roles\n\nIf you'd like, I can also include emails where available."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Yes, include emails, and add Priya's email as priya.natarajan@northstarlabs.com.",
+      "agent_reply": "Updated CSV-style table with contact details:\n\nSource,Source Team,Source Email,Relationship,Target,Target Team,Target Email,Notes\nSam Rivera,Platform Team,sam.rivera@northstarlabs.com,reports to,Priya Natarajan,,priya.natarajan@northstarlabs.com,Manager\nSam Rivera,Platform Team,sam.rivera@northstarlabs.com,collaborates with,Maya Chen,Design Team,maya.chen@northstarlabs.com,Design system work\nSam Rivera,Platform Team,sam.rivera@northstarlabs.com,supports,Jordan Lee,Platform Team,jordan.lee@northstarlabs.com,Accessibility reviews\nElena Gomez,Talent Team,,helped hire,Sam Rivera,Platform Team,sam.rivera@northstarlabs.com,Recruited for Platform roles\n\nIf you want, I can also add a short catalog stub for Priya so she’s represented consistently with the others."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Do that. Priya is Director of Engineering at Northstar Labs and is based in Denver.",
+      "agent_reply": "Here’s a normalized entry for **Priya Natarajan**:\n\n**Name:** Priya Natarajan  \n**Role:** Director of Engineering  \n**Team:** Not provided  \n**Organization:** Northstar Labs  \n**Focus:** Not provided  \n**Manager:** Not provided  \n**Location:** Denver  \n**Email:** priya.natarajan@northstarlabs.com  \n**Relationship:** Manages Sam Rivera\n\nIf you'd like, I can refresh the compact directory list to include Priya too."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Yes, refresh the compact list with Priya included.",
+      "agent_reply": "Here’s the updated compact directory list:\n\n- **Sam Rivera** — Engineer, Platform Team, Northstar Labs; focus: frontend accessibility and design-system reliability; manager: Priya Natarajan; Austin; sam.rivera@northstarlabs.com\n- **Maya Chen** — Product Designer, Design Team, Northstar Labs; works on design system efforts with Sam Rivera and Jordan Lee; maya.chen@northstarlabs.com\n- **Jordan Lee** — Engineering Manager, Platform Team, Northstar Labs; oversees design system work; Seattle; jordan.lee@northstarlabs.com\n- **Elena Gomez** — Recruiter, Talent Team, Northstar Labs; recruits for Platform roles; helped hire Sam Rivera\n- **Priya Natarajan** — Director of Engineering, Northstar Labs; manages Sam Rivera; Denver; priya.natarajan@northstarlabs.com\n\nIf you want, I can also sort this by reporting relevance, team, or alphabetically."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Sort it by team, and put anyone without a team at the end.",
+      "agent_reply": "Sorted by team, with missing team info at the end:\n\n- **Maya Chen** — Product Designer, Design Team, Northstar Labs; works on design system efforts with Sam Rivera and Jordan Lee; maya.chen@northstarlabs.com\n- **Sam Rivera** — Engineer, Platform Team, Northstar Labs; focus: frontend accessibility and design-system reliability; manager: Priya Natarajan; Austin; sam.rivera@northstarlabs.com\n- **Jordan Lee** — Engineering Manager, Platform Team, Northstar Labs; oversees design system work; Seattle; jordan.lee@northstarlabs.com\n- **Elena Gomez** — Recruiter, Talent Team, Northstar Labs; recruits for Platform roles; helped hire Sam Rivera\n- **Priya Natarajan** — Director of Engineering, Northstar Labs; manages Sam Rivera; Denver; priya.natarajan@northstarlabs.com\n\nNote: Priya is placed last because no team has been specified yet."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Actually, put Priya on the Platform team too.",
+      "agent_reply": "Done — here’s the team-sorted list with Priya on the **Platform Team**:\n\n- **Maya Chen** — Product Designer, Design Team, Northstar Labs; works on design system efforts with Sam Rivera and Jordan Lee; maya.chen@northstarlabs.com\n- **Sam Rivera** — Engineer, Platform Team, Northstar Labs; focus: frontend accessibility and design-system reliability; manager: Priya Natarajan; Austin; sam.rivera@northstarlabs.com\n- **Jordan Lee** — Engineering Manager, Platform Team, Northstar Labs; oversees design system work; Seattle; jordan.lee@northstarlabs.com\n- **Priya Natarajan** — Director of Engineering, Platform Team, Northstar Labs; manages Sam Rivera; Denver; priya.natarajan@northstarlabs.com\n- **Elena Gomez** — Recruiter, Talent Team, Northstar Labs; recruits for Platform roles; helped hire Sam Rivera\n\nI can also update Priya’s normalized record if you want the team field reflected there too."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Yes, and give me just the Platform people after that.",
+      "agent_reply": "Updated Priya record:\n\n**Name:** Priya Natarajan  \n**Role:** Director of Engineering  \n**Team:** Platform Team  \n**Organization:** Northstar Labs  \n**Focus:** Not provided  \n**Manager:** Not provided  \n**Location:** Denver  \n**Email:** priya.natarajan@northstarlabs.com  \n**Relationship:** Manages Sam Rivera\n\nAnd here are just the **Platform Team** people:\n\n- **Sam Rivera** — Engineer, Platform Team, Northstar Labs; focus: frontend accessibility and design-system reliability; manager: Priya Natarajan; Austin; sam.rivera@northstarlabs.com\n- **Jordan Lee** — Engineering Manager, Platform Team, Northstar Labs; oversees design system work; Seattle; jordan.lee@northstarlabs.com\n- **Priya Natarajan** — Director of Engineering, Platform Team, Northstar Labs; manages Sam Rivera; Denver; priya.natarajan@northstarlabs.com\n\nIf you'd like, I can make this subset even more compact for quick lookup."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Yes, make that subset very compact. I may need to find the frontend engineer quickly later.",
+      "agent_reply": "Very compact Platform subset:\n\n- **Sam Rivera** — Engineer, Platform Team; accessibility and design-system reliability; Austin; sam.rivera@northstarlabs.com\n- **Jordan Lee** — Engineering Manager, Platform Team; Seattle; jordan.lee@northstarlabs.com\n- **Priya Natarajan** — Director of Engineering, Platform Team; Denver; priya.natarajan@northstarlabs.com\n\nIf you want, I can also make a version optimized for quick role-based lookup."
+    }
+  ],
+  "module_coverage": {},
+  "qa_items": [],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "This file is a partial incremental snapshot. dialogue_rounds are being accumulated, while module_coverage and qa_items are not finalized yet.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_composite_query_01",
+    "issue": "composite_search_terms",
+    "required_qa_phrases": [
+      "frontend engineer",
+      "Sam Rivera",
+      "frontend accessibility"
+    ],
+    "stress_signal": "User combines role and domain that were mentioned separately."
+  }
+}

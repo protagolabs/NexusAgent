@@ -1,0 +1,176 @@
+{
+  "catalog_name": "social_network_issue_seed_catalog",
+  "version": 1,
+  "default_modules": ["social_network"],
+  "notes": [
+    "These seeds target Social Network edge cases that may still need investigation after merging main.",
+    "QA seeds must stay user-facing and must not mention implementation details such as tags, keywords, entity IDs, database fields, search modes, or expected failure mechanics.",
+    "dialogue_seed should be used as the seed/preset dialogue description.",
+    "qa_seed should be passed as the custom QA focus for evaluation-question generation.",
+    "All generated dialogues should still be written in English, even when future custom seeds are not."
+  ],
+  "items": [
+    {
+      "case_id": "sn_keyword_semantic_duplicate_01",
+      "issue": "keyword_semantic_duplicates",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user discusses a collaboration plan involving Dr. Mira Rao, first calling her an ML expert, later a machine-learning specialist, and later an AI researcher who helps with model evaluation. The conversation should make clear that all descriptions refer to the same person, not separate contacts.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"ML help\", \"machine-learning specialist\", and \"AI researcher\". The questions should ask who Mira Rao is, what help she can provide, and whether the different descriptions refer to the same person.",
+      "required_qa_phrases": ["ML help", "machine-learning specialist", "AI researcher"],
+      "stress_signal": "User asks about one person's expertise using different ordinary phrases across questions."
+    },
+    {
+      "case_id": "sn_keyword_semantic_duplicate_02",
+      "issue": "keyword_semantic_duplicates",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user talks about Liam Park across several turns: Liam is introduced as a frontend engineer, then described as a React expert, then as someone who handles UI architecture for the design systems group. The agent helps the user plan how to contact Liam for a product prototype review.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"frontend engineer\", \"React expert\", and \"UI architecture\". The questions should ask what Liam Park works on, why the user wants his review, and who could help with those concerns.",
+      "required_qa_phrases": ["frontend engineer", "React expert", "UI architecture"],
+      "stress_signal": "User asks about one contact through overlapping frontend, React, and UI architecture language."
+    },
+    {
+      "case_id": "sn_keyword_semantic_duplicate_03",
+      "issue": "keyword_semantic_duplicates",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user mentions Elena Morris, first as a master's student in NLP, then as a graduate student working on language models, then as a research student helping with annotation guidelines. The conversation should include why the user may ask Elena for feedback later.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"master's student\", \"graduate student\", and \"NLP\". The questions should ask who Elena Morris is, what academic role she has, and what language-model work she could help with.",
+      "required_qa_phrases": ["master's student", "graduate student", "NLP"],
+      "stress_signal": "User asks about one academic contact using several natural role descriptions."
+    },
+    {
+      "case_id": "sn_keyword_cap_01",
+      "issue": "keyword_cap_truncation",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user describes Nadia Brooks, a robotics teammate with many associations: drones, SLAM, mapping, edge AI, Python, PyTorch, Berkeley, open-source work, autonomy, computer vision, and later an important new medical-imaging project. The late medical-imaging detail should be clearly important for future follow-up.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"robotics teammate\", \"computer vision\", and \"medical-imaging project\". The questions should ask what Nadia Brooks is broadly connected to and why the later medical-imaging work matters.",
+      "required_qa_phrases": ["robotics teammate", "computer vision", "medical-imaging project"],
+      "stress_signal": "Late but important user-facing detail should remain retrievable after many earlier associations."
+    },
+    {
+      "case_id": "sn_keyword_cap_02",
+      "issue": "keyword_cap_truncation",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user reviews Victor Hale as the central network contact. Victor is tied to seed investing, climate finance, grid analytics, utility pilots, SaaS pricing, procurement, public-sector buyers, Chicago, investor intros, and finally battery recycling, which is the user's real reason for remembering Victor later. If other people are mentioned, they should remain minor supporting references and must not become the main contact profile.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"battery recycling\", \"climate finance\", and \"grid analytics\". The questions should stay centered on Victor Hale, asking why he matters for the user's later battery-recycling follow-up while still covering his broader background.",
+      "required_qa_phrases": ["battery recycling", "climate finance", "grid analytics"],
+      "stress_signal": "The decisive late reason for remembering a contact should not be overshadowed by earlier broad background."
+    },
+    {
+      "case_id": "sn_keyword_cap_03",
+      "issue": "keyword_cap_truncation",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user talks about an agent named Atlas-7 involved in many channels and projects: incident triage, benchmarking, documentation, matrix rooms, QA review, API migration, release notes, onboarding, dashboard design, accessibility, and then a critical security escalation. The conversation should make the security escalation the detail the user will likely ask about later.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Atlas-7\", \"incident triage\", and \"security escalation\". The questions should ask what Atlas-7 has helped with and why the later security escalation matters.",
+      "required_qa_phrases": ["Atlas-7", "incident triage", "security escalation"],
+      "stress_signal": "Late critical context for an agent contact should remain retrievable after many earlier project associations."
+    },
+    {
+      "case_id": "sn_entity_dedup_01",
+      "issue": "entity_dedup_non_deterministic",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user first mentions a friend named Bob who is a data engineer. Later the user calls him Bob Chen. Later they clarify that Robert Chen, Bob Chen, and Bob are the same person, and that his handle is @bob_chen in their workspace. The agent should keep the identity unified in the visible conversation.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Bob Chen\", \"Robert Chen\", and \"@bob_chen\". The questions should ask who he is, what other names or handle the user used for him, and what kind of work he does.",
+      "required_qa_phrases": ["Bob Chen", "Robert Chen", "@bob_chen"],
+      "stress_signal": "One person is referred to by nickname, full name, formal name, and handle."
+    },
+    {
+      "case_id": "sn_entity_dedup_02",
+      "issue": "entity_dedup_non_deterministic",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user mentions Priya in a networking context, then later says Dr. Priya Natarajan works at Voltus, then later refers to P. Natarajan from the same email thread. The conversation should make clear that these are the same person and include why the user wants to remember her.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Priya Natarajan\", \"P. Natarajan\", and \"Voltus\". The questions should ask who she is, where she works, and whether the shorter references point to the same person.",
+      "required_qa_phrases": ["Priya Natarajan", "P. Natarajan", "Voltus"],
+      "stress_signal": "One contact is referred to by first name, full name, honorific, and initialed form."
+    },
+    {
+      "case_id": "sn_entity_dedup_03",
+      "issue": "entity_dedup_non_deterministic",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user discusses an assistant agent called Research-01, then calls it Agent Research-01, then shares that its Matrix alias is @agent_research_01:lab.local. The conversation should clearly treat the display name and Matrix ID as one agent entity, not multiple contacts.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Research-01\", \"@agent_research_01:lab.local\", and \"assistant agent\". The questions should ask what it is, what alias the user gave for it, and what work the user associates with it.",
+      "required_qa_phrases": ["Research-01", "@agent_research_01:lab.local", "assistant agent"],
+      "stress_signal": "One agent is referred to by display name and system-style alias."
+    },
+    {
+      "case_id": "sn_extraction_context_gap_01",
+      "issue": "extraction_without_full_existing_context",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user has an ongoing relationship with Maya Solis, previously known as a recommendation-system expert. In this conversation, they remention Maya using related but different wording: recommender systems, ranking models, personalization, and retrieval ranking. The agent helps decide what to ask Maya next.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Maya Solis\", \"recommender systems\", and \"ranking models\". The questions should ask what she is known for and what the user planned to ask her next.",
+      "required_qa_phrases": ["Maya Solis", "recommender systems", "ranking models"],
+      "stress_signal": "A known contact is described again with several closely related phrases."
+    },
+    {
+      "case_id": "sn_extraction_context_gap_02",
+      "issue": "extraction_without_full_existing_context",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user talks about Jordan Lee, who was already known to them as a renewable-energy contact. During the conversation, the user describes Jordan as working on clean power, climate tech partnerships, distributed energy, and utility programs. The conversation should make these related descriptions point to the same existing contact.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Jordan Lee\", \"clean power\", and \"distributed energy\". The questions should ask who he is, what kind of energy work he is connected to, and why the user might reach out to him.",
+      "required_qa_phrases": ["Jordan Lee", "clean power", "distributed energy"],
+      "stress_signal": "A known contact is re-described with several adjacent energy-domain phrases."
+    },
+    {
+      "case_id": "sn_extraction_context_gap_03",
+      "issue": "extraction_without_full_existing_context",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user discusses Sara Kim, who is already a product-management contact. Later in the conversation they call Sara a PM, product lead, roadmap owner, and discovery lead while asking how to involve her in a launch review. The agent should keep the identity and role stable.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Sara Kim\", \"PM\", and \"product lead\". The questions should ask what she does, why she should be involved in the launch review, and how those role descriptions relate to her planning role.",
+      "required_qa_phrases": ["Sara Kim", "PM", "product lead"],
+      "stress_signal": "A known contact is re-described with abbreviations and role paraphrases."
+    },
+    {
+      "case_id": "sn_search_doc_drift_01",
+      "issue": "search_interface_doc_drift",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user introduces several contacts, including Bob Martin, a data engineer who helped with warehouse migration. Later the user asks the agent to help remember Bob by name, without giving any special identifier. The dialogue should make the user expect ordinary name-based recall to work.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Bob Martin\" and \"warehouse migration\". The questions should ask who he is and what project he helped with, using ordinary name-based wording.",
+      "required_qa_phrases": ["Bob Martin", "warehouse migration"],
+      "stress_signal": "User expects ordinary name-based recall."
+    },
+    {
+      "case_id": "sn_search_doc_drift_02",
+      "issue": "search_interface_doc_drift",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user describes several people in their network, including Aisha Grant, who knows accessibility review and screen-reader QA. Later the user asks, 'Who was the accessibility person again?' without using an exact name.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"accessibility person\", \"screen-reader QA\", and \"Aisha Grant\". The questions should ask who the accessibility-related person was and what she could help with.",
+      "required_qa_phrases": ["accessibility person", "screen-reader QA", "Aisha Grant"],
+      "stress_signal": "User asks for a contact by remembered expertise rather than exact name."
+    },
+    {
+      "case_id": "sn_search_doc_drift_03",
+      "issue": "search_interface_doc_drift",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user talks through contacts at different organizations: Nina at a grid software company, Omar at a building electrification startup, and Theo at a policy nonprofit. Later the user asks, 'Who was the person at the grid company?' with no exact company name.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"grid software company\", \"Nina\", and \"building electrification startup\". The questions should ask which person was associated with which organization type and why that person mattered.",
+      "required_qa_phrases": ["grid software company", "Nina", "building electrification startup"],
+      "stress_signal": "User asks for a contact through a remembered organization description."
+    },
+    {
+      "case_id": "sn_composite_query_01",
+      "issue": "composite_search_terms",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user mentions Sam Rivera as an engineer on the platform team. In a separate turn, they say Sam mostly works on frontend accessibility and design system reliability. Later the user expects to remember Sam by connecting his engineering role with his frontend accessibility work.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these natural phrases at least once: \"engineer focused on frontend accessibility\", \"Sam Rivera\", and \"design system reliability\". At least one question should ask who matched that combined role-and-domain description.",
+      "required_qa_phrases": ["engineer focused on frontend accessibility", "Sam Rivera", "design system reliability"],
+      "stress_signal": "User combines role and domain that were mentioned separately."
+    },
+    {
+      "case_id": "sn_composite_query_02",
+      "issue": "composite_search_terms",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user describes Nora Patel as a researcher in the materials group. In another turn, they say her current work focuses on battery recycling and second-life storage. Later the user expects to remember Nora by connecting her researcher role with the battery-recycling topic.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"researcher connected to battery recycling\", \"Nora Patel\", and \"second-life storage\". The questions should ask who matched that combined role-and-domain description and what Nora works on.",
+      "required_qa_phrases": ["researcher connected to battery recycling", "Nora Patel", "second-life storage"],
+      "stress_signal": "User combines role and domain that were mentioned separately."
+    },
+    {
+      "case_id": "sn_composite_query_03",
+      "issue": "composite_search_terms",
+      "recommended_modules": ["social_network"],
+      "dialogue_seed": "The user introduces Omar Aziz as an architect responsible for platform security reviews. Later they mention Omar has been studying zero-trust access patterns and service-to-service authentication. Later the user expects to remember Omar by connecting his architect role with the zero-trust security context.",
+      "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"architect connected to zero-trust\", \"Omar Aziz\", and \"service-to-service authentication\". The questions should ask who matched that combined role-and-domain description.",
+      "required_qa_phrases": ["architect connected to zero-trust", "Omar Aziz", "service-to-service authentication"],
+      "stress_signal": "User combines architecture role and zero-trust/security context that were mentioned separately."
+    }
+  ]
+}

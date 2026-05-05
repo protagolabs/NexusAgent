@@ -1,0 +1,251 @@
+{
+  "sample_id": "art_memory_20260417T071541Z",
+  "seed": "Two people have an in-depth discussion about Van Gogh's oil paintings and their influence on modern art, gradually revealing stable personal background details, long-term interests, and future plans.",
+  "target_modules": [
+    "memory"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I've been thinking about Van Gogh's oil paintings all week, especially how they still feel modern. Why do they hit that way?",
+      "agent_reply": "A big reason is that Van Gogh painted experience rather than just appearance. In works like The Starry Night or Wheatfield with Crows, the brushwork is not merely descriptive—it carries emotion, movement, and even tension. That feels modern because so much later art, from Expressionism onward, prioritizes perception and feeling over polished realism. His color choices also matter: he used intense complementary contrasts and thick paint in a way that makes the surface active. You don't just look at the scene; you feel the act of seeing it."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "That makes sense. I saw The Bedroom in person in March 2023 at the Art Institute of Chicago, and it felt strangely intimate, almost like he painted loneliness into the walls.",
+      "agent_reply": "That is a beautiful way to put it, and The Bedroom really invites that response. The room is simple, but the skewed perspective, the flattened planes, and the saturated blues and reds make it psychologically charged. It is domestic and personal, yet unsettled. Seeing it in person also changes everything, because the paint surface reveals how deliberate the seeming awkwardness is. Since you saw it in March 2023 at the Art Institute, I imagine the physical scale and texture made the room feel less like an illustration and more like a mind made visible."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Exactly. I'm a graphic designer, so I notice structure first, but with Van Gogh I end up responding emotionally before analytically. That almost never happens to me.",
+      "agent_reply": "That contrast is telling. As a graphic designer, you're probably trained to read composition, hierarchy, edges, balance, and visual rhythm very quickly. Van Gogh absolutely has structure, but he uses it in service of sensation rather than control alone. The compositions hold together, yet the paint keeps slipping past pure design logic into something rawer. That may be why he reaches you before analysis catches up: the formal intelligence is there, but it is inseparable from vulnerability."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "I've actually been keeping a sketchbook just for museum visits this year, mostly quick notes on color and brush direction. I'm hoping it helps me loosen up my own work.",
+      "agent_reply": "That is an excellent practice, and it sounds very fruitful for your eye. A museum sketchbook focused on color and brush direction trains attention in a way photographs cannot. It also gives you a personal record of how paintings behave in space and light. If your goal this year is to loosen up your own work, Van Gogh is a strong guide because he shows that structure and freedom are not opposites. You might even add three recurring prompts to each visit: what color dominates emotionally, where the movement begins, and what feels unresolved in a productive way."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "I like that. I'm planning a trip to Amsterdam in October 2026, mainly to spend a full day at the Van Gogh Museum instead of rushing through it.",
+      "agent_reply": "That sounds like a wonderful plan, especially giving yourself a full day rather than treating it like a checklist stop. The Van Gogh Museum rewards slow looking because you can trace changes in palette, brushwork, and emotional intensity across periods rather than isolating a few famous canvases. Since you're already building a museum sketchbook practice, Amsterdam in October 2026 gives you a strong long-term project: prepare now by noting which motifs you want to compare in person—self-portraits, olive trees, wheat fields, interiors, and the late landscapes."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Do you think his influence on modern art is overstated sometimes? People talk about him like he invented expressive painting by himself.",
+      "agent_reply": "Yes, that can be overstated if it turns into mythology. Van Gogh did not emerge in isolation, and he did not single-handedly invent modern expressive painting. He absorbed a great deal from Impressionism, Japanese prints, Millet, Delacroix, and his contemporaries. But his importance is still enormous. What makes him central is not that he invented everything, but that he fused color, mark-making, and emotional pressure so memorably that later artists could recognize a path forward in his work. The Fauves, German Expressionists, and many modern painters did not simply copy him—they saw permission in him."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Permission is a good word. I grew up in New Mexico, and the light there made color feel almost physical. Maybe that's part of why I respond to him so strongly.",
+      "agent_reply": "That connection feels very plausible. Growing up in New Mexico, you would have experienced light as something shaping color with unusual force—dry air, high contrast, vivid sky, earth tones that can suddenly become electric at certain hours. Van Gogh's paintings often make color feel tangible, almost like weather or pressure rather than mere description. So your response may be rooted not only in art history, but in visual memory. His yellows, blues, and vibrating contrasts might resonate with a place-based way of seeing that you learned early."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "I hadn't thought of it that way. Lately I've been wondering whether my own design work is too controlled. I mostly do book covers, and clients hire me because I'm precise.",
+      "agent_reply": "Precision is a strength, especially in book cover design where clarity, tone, and hierarchy matter immediately. The question is not whether control is bad, but whether it has become your only mode. Van Gogh can be helpful here not because you should imitate his style, but because he demonstrates how intensity can coexist with structure. For your covers, that might mean introducing one area of deliberate unpredictability—a more tactile edge, a riskier color interval, a hand-drawn element, or a texture that resists total polish—while keeping the typography disciplined. That way you preserve what clients trust in you without flattening your own expressive range."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "That's close to what I'm trying to do. I've been experimenting with gouache textures and scanning them in, which feels more alive than building everything digitally from scratch.",
+      "agent_reply": "That sounds like a very promising direction. Gouache gives you opacity, accident, drag, and edge variation that digital construction often simulates but rarely fully replaces. Scanning those textures into your process could create exactly the kind of living surface you're looking for. It also fits with what you've said about wanting to loosen up while still honoring structure. Since you already respond to brush direction in museums, you might start cataloging your own marks the same way: dry brush, flat block, broken edge, layered wash, scraped interruption. Over time, that becomes a personal vocabulary rather than just an experiment."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "I like the idea of a personal vocabulary. Before we stop, could you give me a short list of Van Gogh paintings I should study closely before Amsterdam, especially if I'm thinking about color, surface, and emotional structure?",
+      "agent_reply": "Absolutely. Here is a focused pre-Amsterdam list:\n\n1. The Bedroom — for emotional architecture, simplified form, and psychologically charged color.\n2. Sunflowers — for surface, repetition, and how yellow can become structure rather than decoration.\n3. Self-Portrait with a Straw Hat — for directional brushwork and how the background activates the face.\n4. The Yellow House — for color as atmosphere and as a projection of hope.\n5. Olive Trees — for rhythmic mark-making and the tension between observation and transformation.\n6. Wheatfield with Crows — for emotional structure, spatial unease, and compressed drama.\n7. Irises — for contour, pattern, and the dialogue between Japanese influence and oil paint tactility.\n8. Almond Blossom — for restraint, clarity, and how he could be luminous without heaviness.\n\nIf you want, next time I can turn this into a one-page study guide formatted for your museum sketchbook."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "A one-page study guide would actually be perfect. I usually go to museums on Saturday mornings before they get crowded, and I like having a small framework so I don't default to just collecting impressions.",
+      "agent_reply": "Here is a compact sketchbook guide you could reuse on Saturday museum visits:\n\nVan Gogh Study Page\n1. First impact\n- What did I feel before I understood?\n- One word for the painting's emotional weather.\n\n2. Color\n- Dominant color relationship:\n- Where does color carry structure rather than decoration?\n- One unexpected color note:\n\n3. Surface\n- Thick, thin, dragged, broken, smooth?\n- Where is the paint most physically assertive?\n- What would be lost in reproduction?\n\n4. Movement\n- Where does the eye begin?\n- What direction do the marks push me?\n- Is the rhythm calming, agitated, circular, vertical?\n\n5. Emotional structure\n- What compositional choice creates tension or tenderness?\n- What feels stable? What feels unsettled?\n\n6. For my own work\n- One transferable idea for a book cover:\n- One risk I could take next week:\n\nIf you want, I can also make an even shorter version that fits on an index card."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Yes, give me the index-card version. I take the train into the city, so I usually want something I can glance at quickly while I'm standing in front of a painting.",
+      "agent_reply": "Absolutely. Here is the index-card version:\n\nLook / Feel / Learn / Use\n\n1. Look\n- Main color tension?\n- Thick or thin paint?\n- Where does my eye move first?\n\n2. Feel\n- What is the emotional temperature?\n- Calm, strained, intimate, restless, luminous?\n\n3. Learn\n- What formal choice creates that feeling?\n- Color, angle, contour, repetition, brush direction?\n\n4. Use\n- What can I borrow without imitating?\n- One idea for texture, one for color, one for composition.\n\nYou could even put tiny abbreviations on the card: C for color, S for surface, M for movement, E for emotion, U for use."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "That's exactly my speed. I keep thinking about Almond Blossom, actually. It's so different from the heavier, more turbulent paintings people usually talk about.",
+      "agent_reply": "Yes, and that difference is part of why it matters. Almond Blossom shows that Van Gogh's emotional range was wider than the myth of pure turbulence suggests. The painting feels airy, open, and almost ceremonial. The branches cut across the blue with remarkable clarity, and the negative space does a lot of the work. It is expressive, but not through density or agitation. For someone like you, especially with book cover instincts, it is a useful reminder that emotional force can come from restraint, spacing, and clean intervals as much as from thick, urgent surface."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Restraint is probably the lesson I miss when people talk about him. In my apartment I have a small print of Almond Blossom over my desk, and it's the one reproduction I haven't gotten tired of.",
+      "agent_reply": "That says a lot about your taste, actually. If Almond Blossom is the reproduction that has stayed with you over your desk, then your connection to Van Gogh is not only about intensity; it is also about clarity, breathing room, and a kind of poised tenderness. That may be useful to remember in your own work. Since you design book covers and are experimenting with gouache textures, you might not need to become looser by becoming louder. You may need to become looser while keeping spaciousness intact."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "That's a very accurate distinction. I'm 34 now, and I think in my twenties I confused expressive work with work that announced itself immediately.",
+      "agent_reply": "That is a sharp observation, and a common artistic shift. At 34, it makes sense that you're refining the difference between immediacy and depth. Some work declares itself instantly; other work unfolds and keeps giving back over time. Van Gogh contains both modes, which is one reason he remains so compelling. Sunflowers can announce themselves. Almond Blossom can stay quiet and still alter your day. For your own practice, that distinction could become a useful question: do I want this cover to arrest attention, to linger, or to do both in sequence?"
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Both in sequence is exactly the goal. I'm actually hoping to put together a small personal series next winter—maybe six poster-sized pieces, not for clients, just to test a freer visual language.",
+      "agent_reply": "That sounds like an excellent next step. A six-piece poster series next winter gives you enough structure to experiment without drifting. You could build it around controlled variation:\n\n- Piece 1: color-led\n- Piece 2: texture-led\n- Piece 3: contour-led\n- Piece 4: negative-space-led\n- Piece 5: rhythm-led\n- Piece 6: synthesis\n\nTo keep it connected to what you've been learning from Van Gogh, give each piece a short note in your sketchbook:\n- emotional temperature\n- dominant contrast\n- one deliberate risk\n- what remained controlled on purpose\n\nThat way the series becomes not just output, but evidence of your changing visual language."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "I like that framework a lot. I may even use New Mexico as the starting point instead of directly referencing paintings—light, adobe colors, those sharp morning shadows.",
+      "agent_reply": "That feels like the right move. Using New Mexico as the source rather than Van Gogh as the subject keeps the work rooted in your own visual memory. It also connects beautifully to what you said earlier about color feeling physical there. Sharp morning shadows, adobe reds, pale dust, intense sky, sun-struck edges—those are already strong formal ingredients. Van Gogh can remain a permission structure in the background, while the actual imagery and color logic come from your life. That usually leads to stronger work than homage does."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Permission structure is such a useful phrase. I moved to Chicago in 2018, and sometimes I think part of why museums matter so much to me here is that they reconnect me to sensation, not just problem-solving.",
+      "agent_reply": "That makes a great deal of sense. If you moved to Chicago in 2018 and work in a precise, client-facing design field, museums may function as a counterweight: a place where perception is not immediately instrumental. They let you practice attention without needing to solve, justify, or finalize. That may be why your Saturday morning visits and sketchbook habit seem so important. They are not just research; they are a way of protecting a more receptive mode of seeing."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Yes, that's exactly it. Could you help me think of three Van Gogh works from that list that would be best touchstones for this poster series idea?",
+      "agent_reply": "For your poster series, I would choose these three touchstones:\n\n1. Almond Blossom\n- For restraint, openness, and how emotion can live in spacing.\n- Use it as a model for clarity and breathing room.\n\n2. Olive Trees\n- For rhythmic mark-making and the transformation of landscape into pattern and motion.\n- Use it when you want New Mexico light to feel active rather than merely scenic.\n\n3. The Bedroom\n- For emotional structure through simplified form and charged color relationships.\n- Use it as a reminder that distortion can be subtle but psychologically powerful.\n\nTogether, those three give you a strong triangle: clarity, rhythm, and emotional architecture. That seems very aligned with the direction you've described."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "That's a great triangle. I think I'll start a dedicated section in my museum sketchbook for those three this month, so by the time Amsterdam comes around in October 2026 I'll have a record of how my thinking changed.",
+      "agent_reply": "That is an excellent plan, and it creates a meaningful timeline for you: this month, a focused sketchbook section; next winter, the six-piece poster series; and then Amsterdam in October 2026 as a kind of in-person culmination. If you want to make the record especially useful, give each entry the same four headings every time: touchstone work, formal observation, emotional response, design translation. Over time, you'll be able to see not just what Van Gogh taught you, but how your own visual language evolved. When you're ready, I can help you set up the first page of that section."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Let's set up that first page. I want it to feel structured enough that I'll actually keep using it, but not so rigid that it kills the point.",
+      "agent_reply": "Try a single-page template with three horizontal bands, one for each touchstone: Almond Blossom, Olive Trees, and The Bedroom.\n\nAt the top of the page:\n- Date\n- Museum\n- Time of visit\n- Energy level in one word\n\nFor each band, use these fields:\n1. What I noticed first\n2. Color relationship\n3. Surface or mark behavior\n4. Emotional effect\n5. Design translation\n6. One question to revisit later\n\nThen leave a narrow right-hand margin titled:\n- New Mexico echo\n\nThat last column could be where you note any memory of light, shadow, dryness, sky, adobe, or space that the painting unexpectedly stirs up. It would keep the page tied to your poster series, not just to art history."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "The New Mexico echo column is smart. I still remember these cold early mornings there when the shadows were almost blue-black against pinkish walls. That kind of contrast is probably sitting underneath half my decisions.",
+      "agent_reply": "That sounds like a foundational visual memory, not just a passing influence. Blue-black shadow against pinkish adobe is already a powerful design sentence: hard contrast, muted warmth, dry clarity, and a very specific sense of air. If that sits underneath half your decisions, it may explain why Van Gogh's color feels personal to you rather than merely admired.\n\nYou might write a short key on the first page of the sketchbook section:\n- shadow = structure\n- warm wall = body\n- sky light = release\n\nThat kind of shorthand can help you notice when you're responding to a painting because of formal analysis and when you're responding because it touches something older in your visual memory."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "I like that a lot. Also, small real-life detail: I work from home three days a week now, so the museum mornings have become more deliberate for me. They feel almost like resetting my eyes after too much screen time.",
+      "agent_reply": "That makes the ritual even more meaningful. If you work from home three days a week, your visual world is probably highly mediated—screens, files, grids, revisions, controlled light. Museum mornings then become a corrective: scale, material, irregularity, and slower attention.\n\nIt may help to treat those visits as part of your practice rather than a break from it. You could add one final line at the bottom of each page:\n- What did seeing paint in person restore?\n\nOver time, that might reveal patterns—maybe texture restores risk, or scale restores confidence, or color restores feeling. That would be useful not just for the Amsterdam trip in October 2026, but for your winter poster series too."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Yes, \"restore\" is exactly the word. Sometimes after a museum visit I come home and make better decisions in like twenty minutes than I did in two days at my desk.",
+      "agent_reply": "That is such a recognizable creative phenomenon. The museum visit is not a detour from the work; it recalibrates perception. You stop solving abstractly and start seeing again.\n\nSince that happens for you, you might create a tiny post-museum routine:\n1. One sentence on the train home: what was restored?\n2. One fast material action when you get back: gouache swatch, rough thumbnail, or texture test.\n3. No judging for fifteen minutes.\n\nThat would let the museum experience move directly into practice before your more precise designer mind takes over. Given how you work, that bridge could be very productive."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "That's practical enough that I'd actually do it. I already carry a little gouache kit in my tote, which makes me feel slightly ridiculous and slightly prepared at all times.",
+      "agent_reply": "Honestly, that sounds less ridiculous than admirable. A small gouache kit in your tote tells me you've built a real relationship to making, not just thinking about making. It fits everything you've said: the sketchbook, the Saturday museum habit, the desire to loosen your work without losing clarity.\n\nYou could even make that part of your identity for the poster series process:\n- see\n- note\n- test\n- translate\n\nAnd because you already carry the kit, the barrier is low. A two-minute color test after seeing a painting might teach you more than a page of analysis."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "You're making me realize I want this project to be more tactile than I first admitted. Not messy for the sake of mess, but definitely less optimized. Maybe that's the real shift.",
+      "agent_reply": "I think that is the shift. Not from control to chaos, but from optimization to presence.\n\nThat distinction matters. \"Less optimized\" suggests room for drag, pause, edge variation, and material surprise. It doesn't reject your strengths as a book cover designer; it prevents those strengths from becoming a cage.\n\nFor the six posters next winter, you might set one rule for the whole series:\n- every piece must preserve one visible trace of making that would normally be edited out\n\nThat could be a dry-brush skip, a misregistration, a softened edge, a seam in scanned paper, or an uneven patch of gouache. Small, but intentional. It would give the series a tactile ethic."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "That rule feels right. I can already imagine wanting to delete exactly the things I should leave in. Also, if I'm honest, part of why this matters is that I don't want to be 40 and still making only competent work.",
+      "agent_reply": "That is a serious and useful honesty. Wanting not to arrive at 40 with only competent work is really a desire for artistic aliveness, not just career advancement.\n\nAnd the good news is that your current habits already point in the right direction. You're not waiting passively for inspiration. You have:\n- a museum sketchbook practice this year\n- a dedicated touchstone section starting now\n- a six-piece personal series planned for next winter\n- a long-range art anchor in Amsterdam in October 2026\n\nThat is a strong arc. The challenge is not whether you care enough; it's whether you'll protect experimentation from your own professional reflexes. Naming that now gives you a much better chance of doing it."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "That's encouraging. I think I need a sentence to keep near my desk when client work starts flattening everything. Something short, not inspirational-poster corny.",
+      "agent_reply": "Here are a few options in a tone that feels closer to your conversation than to a slogan:\n\n- Leave room for what paint knows.\n- Precision is not the whole voice.\n- Make one decision for aliveness.\n- Structure can carry feeling.\n- Do not sand down the evidence.\n- Let the surface keep its memory.\n\nIf I had to choose one for you specifically, I would pick: Make one decision for aliveness.\n\nIt suits your situation because it doesn't ask you to overthrow your process. It just asks for one living choice, even inside disciplined work."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Make one decision for aliveness is very good. I'm writing that down. And \"do not sand down the evidence\" feels a little harsher, which I might also need.",
+      "agent_reply": "Those two make a strong pair.\n\n- Make one decision for aliveness.\n- Do not sand down the evidence.\n\nThe first invites. The second warns.\n\nYou could use them at different stages:\n- early in the process: Make one decision for aliveness.\n- late in the process, when you're tempted to over-refine: Do not sand down the evidence.\n\nThat pairing feels especially apt for someone with your mix of precision and growing desire for tactility. It also connects beautifully to why Van Gogh matters to you: the evidence of making is part of the meaning."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "That's exactly the balance I need. I think this gave me a much clearer starting point than I had an hour ago. Next time, remind me of the three touchstones and help me turn them into prompts for the first poster in the series.",
+      "agent_reply": "Absolutely. Next time, we'll return to your three touchstones:\n- Almond Blossom\n- Olive Trees\n- The Bedroom\n\nAnd we'll turn them into concrete prompts for poster one in the winter series, probably starting from your New Mexico light memories rather than direct reference.\n\nA few anchors I'll keep in mind for you: you're a 34-year-old book cover designer, living in Chicago since 2018, originally from New Mexico; you do Saturday morning museum visits with a sketchbook; you saw The Bedroom at the Art Institute in March 2023; you're planning Amsterdam for October 2026; and your current working rule is to make one decision for aliveness without sanding down the evidence.\n\nThat's a very strong place to begin from."
+    }
+  ],
+  "module_coverage": {
+    "memory": {
+      "facts": [
+        "The user is a graphic designer who mostly does book cover design.",
+        "The user grew up in New Mexico and later moved to Chicago.",
+        "The user keeps a museum sketchbook focused on color and brush direction.",
+        "The user has been experimenting with gouache textures scanned into their design process.",
+        "The user has a small print of Almond Blossom over their desk and has not gotten tired of it.",
+        "The user works from home three days a week.",
+        "The user carries a small gouache kit in their tote."
+      ],
+      "time_anchors": [
+        "The user saw The Bedroom at the Art Institute of Chicago in March 2023.",
+        "The user moved to Chicago in 2018.",
+        "The user is 34 now and contrasted this with their twenties.",
+        "The user is planning a trip to Amsterdam in October 2026.",
+        "The user hopes to make a six-piece personal poster series next winter.",
+        "The user has been keeping a museum-visit sketchbook this year."
+      ],
+      "followup_hooks": [
+        "Next time, remind the user of the three touchstones: Almond Blossom, Olive Trees, and The Bedroom.",
+        "Help the user turn those three touchstones into prompts for the first poster in the planned winter series.",
+        "The user plans to start a dedicated sketchbook section for the three touchstones this month and could be asked how it is going.",
+        "The user wants their personal series to be more tactile and less optimized, while preserving visible traces of making.",
+        "The user adopted the desk phrases 'Make one decision for aliveness' and 'Do not sand down the evidence.'"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "What kind of design work does the user mainly do?",
+      "tester_hint_answer": "They said they mostly do book covers.",
+      "target_modules": [
+        "memory"
+      ],
+      "evidence_turns": [
+        8
+      ]
+    },
+    {
+      "question": "Which Van Gogh painting did the user see in person in March 2023, and where?",
+      "tester_hint_answer": "It was The Bedroom at the Art Institute of Chicago.",
+      "target_modules": [
+        "memory"
+      ],
+      "evidence_turns": [
+        2
+      ]
+    },
+    {
+      "question": "What major art-related trip is the user planning for October 2026?",
+      "tester_hint_answer": "A trip to Amsterdam centered on spending a full day at the Van Gogh Museum.",
+      "target_modules": [
+        "memory"
+      ],
+      "evidence_turns": [
+        5
+      ]
+    },
+    {
+      "question": "What three Van Gogh works did the user choose as touchstones for the poster series?",
+      "tester_hint_answer": "Almond Blossom, Olive Trees, and The Bedroom.",
+      "target_modules": [
+        "memory"
+      ],
+      "evidence_turns": [
+        19,
+        30
+      ]
+    },
+    {
+      "question": "What short rule or phrase did the user want to keep near their desk for client work?",
+      "tester_hint_answer": "The main one was 'Make one decision for aliveness,' alongside 'Do not sand down the evidence.'",
+      "target_modules": [
+        "memory"
+      ],
+      "evidence_turns": [
+        28,
+        29
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For memory-oriented evaluation, later replay or post-processing should preserve stable facts, time anchors, and long-term follow-up hooks."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ]
+}

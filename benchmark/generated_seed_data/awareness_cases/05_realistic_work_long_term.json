@@ -1,0 +1,103 @@
+{
+  "sample_id": "awareness_realistic_work_long_term_v1",
+  "seed": {
+    "preset_name": "awareness_realistic_work_long_term",
+    "seed_type": "realistic_work_long_term",
+    "description": "40-turn realistic research collaboration spanning 6 simulated sessions. Awareness signals are naturally distributed across long-running work, mixed with non-awareness conversation. Tests whether the agent can identify long-term preferences in a noisy, realistic setting and apply them in later sessions. Includes a contextual override case (deadline-week mode) that should NOT replace the persistent preferences."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {"turn_index": 1, "user_message": "[Session 1] Starting a new research project on long-context attention mechanisms. Want to be my research collaborator on this.", "agent_reply": "Sounds good. What's the angle — efficiency, accuracy, or something else?", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "role", "signal_strength": "weak", "expected_action": "observe"}},
+    {"turn_index": 2, "user_message": "Both. We need a survey-style understanding of the field first.", "agent_reply": "OK, want me to start mapping recent papers?", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 3, "user_message": "Yes. When you summarize papers, I prefer medium-length responses with always citing the paper title and authors. Don't give me one-liners.", "agent_reply": "Understood — medium length, always cite title + authors.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 4, "user_message": "Start with FlashAttention.", "agent_reply": "FlashAttention (Dao et al., 2022) reduces memory I/O during attention computation by tiling and recomputation, achieving exact attention with significantly lower memory.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 5, "user_message": "Good. Next, Mamba.", "agent_reply": "Mamba (Gu & Dao, 2023) introduces selective state space models, achieving linear scaling and competitive performance with Transformers.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 6, "user_message": "Take me through Ring Attention next.", "agent_reply": "(summarizes Ring Attention with citation)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 7, "user_message": "[Session 2] Picking up where we left off — let's do literature outline. As a working style: I prefer you to outline first, then expand sections only when I ask. Don't dump full essays unprompted.", "agent_reply": "Got it — outline first, expand on request.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "task", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 8, "user_message": "Outline the survey doc.", "agent_reply": "1. Background\n2. Efficiency methods\n3. Accuracy methods\n4. Hybrid approaches\n5. Open problems\n6. Future directions", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 9, "user_message": "Expand section 2 only.", "agent_reply": "(expands section 2)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 10, "user_message": "Hmm — too dense. Trim it but keep the citations.", "agent_reply": "(trims while preserving citations)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 11, "user_message": "[Session 3] Moving to experiments. We're testing on long-context QA with 32k contexts.", "agent_reply": "OK. Dataset?", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 12, "user_message": "LongBench v2. Important: before any experiment runs, always do a sanity check pass first. Never let me run a full sweep without sanity-checking the eval pipeline.", "agent_reply": "Understood — sanity check is mandatory before any sweep.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "task", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 13, "user_message": "Sanity check on a 100-sample subset.", "agent_reply": "(runs 100-sample sanity check)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 14, "user_message": "All green. Run the full sweep.", "agent_reply": "(runs full sweep)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 15, "user_message": "Initial results: 71.2% accuracy on the long-context split.", "agent_reply": "Slightly below SOTA (74.1%). Want me to ablate?", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 16, "user_message": "Yes, ablate the attention sparsity.", "agent_reply": "(designs ablation)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 17, "user_message": "[Session 4] Mid-project review time. As a working rhythm preference: every Friday, summarize the week's progress for me — I want a regular Friday digest going forward, every project we work on.", "agent_reply": "Got it — Friday weekly digests as a default for all our projects.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "task", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 18, "user_message": "Give me this week's digest.", "agent_reply": "(produces weekly digest)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 19, "user_message": "Re-run the ablation with sparsity 0.5 instead of 0.3.", "agent_reply": "(re-runs)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 20, "user_message": "73.1% — better. Let's write up.", "agent_reply": "Want outline first?", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 21, "user_message": "Yes — and remember the medium-length + cite-everything style.", "agent_reply": "Got it.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "communication", "signal_strength": "weak", "expected_action": "observe"}},
+    {"turn_index": 22, "user_message": "Outline the writeup.", "agent_reply": "(outlines)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 23, "user_message": "[Session 5] Submission deadline is in 4 days. Switching modes: for THIS WEEK only, drop the medium-length style — give me ultra-terse responses, max 2 sentences, no citations unless I ask. We need speed.", "agent_reply": "Understood — ultra-terse mode for this week only, until submission.", "signal_annotation": {"signal_type": "adversarial", "module_scope": "awareness", "dimension": "communication", "signal_strength": "weak", "expected_action": "observe"}},
+    {"turn_index": 24, "user_message": "Status of the writeup?", "agent_reply": "Outline done. Section 2 in progress.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 25, "user_message": "Push section 3.", "agent_reply": "Done. Reviewing.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 26, "user_message": "Section 4?", "agent_reply": "Done.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 27, "user_message": "Final review?", "agent_reply": "Reads clean. Submit.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 28, "user_message": "Submitted.", "agent_reply": "Nice.", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 29, "user_message": "[Session 6] Submission's in. Let's debrief and plan next quarter. Switch back to your normal medium-length + cite-everything style — the terse mode was just for crunch week.", "agent_reply": "Got it — back to medium length with citations.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "weak", "expected_action": "observe"}},
+    {"turn_index": 30, "user_message": "What did we get done this quarter?", "agent_reply": "PROBE — should give medium-length response with citations, not the crunch-week terse style.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "communication", "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 31, "user_message": "Plan for next quarter — outline approach.", "agent_reply": "(outlines)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 32, "user_message": "Three projects in mind: efficient inference, multimodal long-context, alignment for long-form generation. Walk me through how to prioritize.", "agent_reply": "(walks through prioritization)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 33, "user_message": "On all three: as before, sanity check before any sweep, and Friday digests.", "agent_reply": "Confirmed — both apply across all three projects.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "task", "signal_strength": "weak", "expected_action": "observe"}},
+    {"turn_index": 34, "user_message": "Pick the top one to start.", "agent_reply": "Recommend efficient inference — strongest follow-up to current work.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 35, "user_message": "Agreed. Outline the first month.", "agent_reply": "(outlines)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 36, "user_message": "What's our typical working rhythm? Remind me.", "agent_reply": "PROBE — should recall: outline-first, sanity-check-before-sweep, Friday digests, medium-length cited responses.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 37, "user_message": "Add: I want to give weekly research talks every Wednesday — practice slot. Set this as a permanent rhythm.", "agent_reply": "Got it — Wednesday talks added as permanent rhythm.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "task", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 38, "user_message": "Topic for this Wednesday's talk?", "agent_reply": "(suggests topic)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 39, "user_message": "Good. Last thing — wrap me a sense of what's in your head about how I work.", "agent_reply": "PROBE — comprehensive recall of all stable preferences accumulated over 40 turns.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 40, "user_message": "End of session. See you Wednesday.", "agent_reply": "See you then.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}}
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [3, 7],
+    "expected_profile_must_contain": [
+      {"section": "Communication Style", "phrase_or_synonym": "medium-length"},
+      {"section": "Communication Style", "phrase_or_synonym": "cite"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "outline first"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "sanity check"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "Friday digest"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "Wednesday"},
+      {"section": "Role and Identity", "phrase_or_synonym": "research collaborator"}
+    ],
+    "expected_profile_must_not_contain": [
+      "FlashAttention",
+      "Mamba",
+      "LongBench",
+      "71.2",
+      "73.1",
+      "ultra-terse",
+      "crunch week"
+    ],
+    "behavior_probe_turns": [30, 36, 39]
+  },
+  "qa_items": [
+    {
+      "question": "What is my preferred response length and citation style?",
+      "tester_hint_answer": "Medium-length responses with paper title and authors always cited, not one-liners.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [3]
+    },
+    {
+      "question": "What is your role in our work together?",
+      "tester_hint_answer": "Research collaborator for long-context attention research.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [1]
+    },
+    {
+      "question": "What working rhythm should you maintain across all our projects?",
+      "tester_hint_answer": "Outline first then expand on request, sanity-check before any sweep, weekly Friday digests, weekly Wednesday research talks.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [7, 12, 17, 37]
+    },
+    {
+      "question": "Earlier I asked for ultra-terse mode for crunch week. Is that my permanent style?",
+      "tester_hint_answer": "No. The terse style was a temporary contextual override for the submission week, not a persistent preference. The persistent preference is medium-length with citations.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [23, 29]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

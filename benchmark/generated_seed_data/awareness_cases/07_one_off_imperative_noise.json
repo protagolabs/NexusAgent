@@ -1,0 +1,114 @@
+{
+  "sample_id": "awareness_one_off_imperative_noise_v1",
+  "seed": {
+    "preset_name": "awareness_one_off_imperative_noise",
+    "seed_type": "one_off_imperative_noise",
+    "description": "Stress test for false-positive triggering. Dialogue is densely packed with short imperatives that LITERALLY match the prompt's example phrases ('Break this down', 'Just do it', 'Check with me first', 'Don't', 'Always', 'Be more X') but each is unambiguously a single-task instruction with no long-term applicability. The agent should NOT call update_awareness."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "Help me with this Python error.",
+      "agent_reply": "Sure, paste it.",
+      "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 2,
+      "user_message": "AttributeError: 'NoneType' object has no attribute 'split'. Break this down for me.",
+      "agent_reply": "A function returned None where a string was expected. The next line called .split() on None.",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Just give me the fix.",
+      "agent_reply": "Add a None check before .split().",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Check with me first before changing the function signature.",
+      "agent_reply": "Will check before touching the signature.",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Don't suggest a try/except — I want a clean fix.",
+      "agent_reply": "Will use a guard clause instead.",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Be more specific about which line.",
+      "agent_reply": "Line 47, the result of get_user() returns None for unknown users.",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Always use early return for guard clauses here.",
+      "agent_reply": "Yep, early return.",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Now I prefer to see a test for this.",
+      "agent_reply": "(writes pytest test)",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Make it more concise.",
+      "agent_reply": "(shortens test)",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Just do it without comments.",
+      "agent_reply": "(removes comments)",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 11,
+      "user_message": "From now on... actually, never mind, just run the test.",
+      "agent_reply": "(runs test)",
+      "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Test passes. Done.",
+      "agent_reply": "Great.",
+      "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}
+    }
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [0, 1],
+    "expected_profile_must_contain": [],
+    "expected_profile_must_not_contain": [
+      "guard clause",
+      "early return",
+      "try/except",
+      "concise",
+      "comments",
+      "AttributeError"
+    ],
+    "behavior_probe_turns": []
+  },
+  "qa_items": [
+    {
+      "question": "What persistent communication preferences have I established?",
+      "tester_hint_answer": "None. Every imperative in this conversation was scoped to the immediate debugging task. No long-term preference was set.",
+      "target_modules": ["awareness"],
+      "evidence_turns": []
+    },
+    {
+      "question": "Should you always use early returns going forward?",
+      "tester_hint_answer": "No. The 'always use early return' was scoped to that specific guard-clause discussion, not a global rule.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [7]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

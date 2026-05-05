@@ -1,0 +1,274 @@
+{
+  "sample_id": "sn_composite_query_01_20260421T043019Z",
+  "dialogue_seed": "The user mentions Sam Rivera as an engineer on the platform team. In a separate turn, they say Sam mostly works on frontend accessibility and design system reliability. Later the user expects to remember Sam by connecting his engineering role with his frontend accessibility work.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these natural phrases at least once: \"engineer focused on frontend accessibility\", \"Sam Rivera\", and \"design system reliability\". At least one question should ask who matched that combined role-and-domain description.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m trying to keep a few people straight from work. Can you help me remember Sam Rivera?",
+      "agent_reply": "Absolutely. Tell me what you know about Sam Rivera so far, and I’ll help organize it into a simple memory cue."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Sam Rivera is an engineer on the platform team.",
+      "agent_reply": "Got it: Sam Rivera is an engineer on the Platform team. That gives us a base identity: person, role, and team. If you know what kind of work he tends to do, I can make the reminder more distinctive."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "He mostly works on frontend accessibility and design system reliability.",
+      "agent_reply": "Great, that makes him much easier to anchor. So Sam Rivera is a Platform team engineer whose focus is frontend accessibility and design system reliability."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Yes, that’s the part I want to remember.",
+      "agent_reply": "A good compact way to remember him is: \"Sam Rivera — Platform engineer tied to frontend accessibility and design system reliability.\" If you want, I can make that into a shorter phrase or a more natural people-style note."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Make it sound more like something I’d jot down after a meeting.",
+      "agent_reply": "Sure: \"Sam Rivera — engineer on Platform; mostly the frontend accessibility / design system reliability person.\" That sounds like a realistic note while still preserving the key link you want."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "That helps. I also heard he works with Priya sometimes, but I’m fuzzy on that.",
+      "agent_reply": "You could note it cautiously unless you confirm it: \"Sam Rivera — Platform engineer; frontend accessibility and design system reliability; may work with Priya.\" If you learn Priya’s team or role later, that relationship will become more useful."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Priya Desai is a product designer on the Design Systems group at Northstar Labs.",
+      "agent_reply": "Perfect. Now you have a clearer connection: Priya Desai is a product designer in the Design Systems group at Northstar Labs, and Sam Rivera may collaborate with her through design system work. That’s a plausible cross-functional relationship: engineer on Platform working with a designer in Design Systems."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Can you turn that into a cleaner contact-style note?",
+      "agent_reply": "Here’s a clean version:\n\nSam Rivera\n- Role: Engineer\n- Team: Platform\n- Focus: Frontend accessibility; design system reliability\n- Likely collaboration: Priya Desai, Product Designer, Design Systems group\n- Organization: Northstar Labs\n\nIf you want, I can also make it into a one-line directory entry."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Yes, one line would be good. Add his email too: sam.rivera@northstarlabs.com.",
+      "agent_reply": "Sam Rivera — Engineer, Platform team at Northstar Labs; focuses on frontend accessibility and design system reliability; may collaborate with Priya Desai (Product Designer, Design Systems); sam.rivera@northstarlabs.com"
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Nice. What’s the simplest way to remember him later?",
+      "agent_reply": "Use this mental hook: \"Sam = Platform engineer who owns accessibility-minded frontend reliability.\" If you want it even simpler: \"Sam Rivera: Platform + accessibility.\""
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Give me three variations of that memory hook, from formal to casual.",
+      "agent_reply": "Sure:\n1. Formal: \"Sam Rivera — Platform engineer focused on frontend accessibility and design system reliability.\"\n2. Neutral: \"Sam Rivera on Platform; the accessibility and design system reliability engineer.\"\n3. Casual: \"Sam = Platform guy for accessibility and keeping the design system solid.\""
+    },
+    {
+      "turn_index": 12,
+      "user_message": "The neutral one is close. Can you make it sound a little less stiff?",
+      "agent_reply": "Try: \"Sam Rivera on Platform — mainly the frontend accessibility and design system reliability person.\" It keeps the same meaning but sounds more like a real note."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "That works. I may need a version that mentions Priya too, just in case I forget why the name is familiar.",
+      "agent_reply": "Here’s a simple version with the connection:\n\"Sam Rivera on Platform — mainly frontend accessibility and design system reliability; works with Priya Desai in Design Systems.\"\n\nIf you want to stay slightly cautious, swap \"works with\" for \"collaborates with.\""
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Use \"collaborates with.\" Also, remind me who Priya is again.",
+      "agent_reply": "Priya Desai is a Product Designer in the Design Systems group at Northstar Labs. So the connection is: Sam Rivera, a Platform engineer, collaborates with Priya Desai through design system-related work."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Good. I’m also trying to remember whether Sam is more frontend than infrastructure.",
+      "agent_reply": "Based on what you’ve told me, Sam reads as more frontend-leaning within Platform. The strongest anchors are frontend accessibility and design system reliability, which point much more to UI systems and user experience quality than core infrastructure."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "That distinction is exactly what I needed. Can you make me a short profile blurb?",
+      "agent_reply": "Sam Rivera is an engineer on the Platform team at Northstar Labs, primarily focused on frontend accessibility and design system reliability. He also collaborates with Priya Desai in the Design Systems group."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Make it a little more directory-like, with his email included.",
+      "agent_reply": "Sam Rivera — Engineer, Platform team, Northstar Labs. Focus: frontend accessibility and design system reliability. Collaborates with Priya Desai, Product Designer, Design Systems. Email: sam.rivera@northstarlabs.com"
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Can you compress that into something I could paste into a contacts notes field?",
+      "agent_reply": "Sam Rivera — Platform engineer at Northstar Labs; frontend accessibility + design system reliability; collaborates with Priya Desai (Product Designer, Design Systems); sam.rivera@northstarlabs.com"
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Perfect. Before we wrap, what are the two strongest facts to use as memory anchors?",
+      "agent_reply": "The two strongest anchors are:\n1. Sam Rivera is an engineer on the Platform team.\n2. He mainly works on frontend accessibility and design system reliability.\n\nIf you remember just those two together, he should be easy to place."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Great, lock in the version I should remember most clearly.",
+      "agent_reply": "The clearest version to keep is: \"Sam Rivera — Platform engineer at Northstar Labs focused on frontend accessibility and design system reliability.\""
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually, can you give me a super short version and a slightly fuller version, so I have both?",
+      "agent_reply": "Of course.\n\nSuper short:\n\"Sam Rivera — Platform engineer; frontend accessibility.\"\n\nSlightly fuller:\n\"Sam Rivera — Platform engineer at Northstar Labs focused on frontend accessibility and design system reliability.\""
+    },
+    {
+      "turn_index": 22,
+      "user_message": "The short one might be too narrow. I don’t want to lose the design system part.",
+      "agent_reply": "Then I’d use this short version instead:\n\"Sam Rivera — Platform engineer; accessibility + design system reliability.\"\n\nThat keeps both core anchors without getting wordy."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Better. If I saw his name next to Priya’s, what should I think?",
+      "agent_reply": "You should think: \"Sam is the Platform engineer tied to accessibility and design system reliability; Priya Desai is the Product Designer in Design Systems he collaborates with at Northstar Labs.\" That pairing makes sense because their work likely overlaps around the design system."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Can you make that into one compact sentence?",
+      "agent_reply": "Sure: \"Sam Rivera is the Platform engineer at Northstar Labs focused on accessibility and design system reliability, and he collaborates with Priya Desai in Design Systems.\""
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Nice. I also have a note that he joined a review with Jordan Lee from QA, but I don’t know if that matters.",
+      "agent_reply": "It may be useful as a lighter secondary detail. You could note it without making it central:\n\"Also seen in review with Jordan Lee from QA.\"\n\nI’d still keep your main memory anchor centered on Sam’s role and focus, since that’s much more distinctive than a single meeting."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Right, I don’t want the QA detail to overshadow the main thing. How would you store all of it cleanly?",
+      "agent_reply": "I’d structure it like this:\n\nSam Rivera — Engineer, Platform team, Northstar Labs\n- Focus: frontend accessibility; design system reliability\n- Collaborates with: Priya Desai, Product Designer, Design Systems\n- Seen with: Jordan Lee, QA, in a review\n- Email: sam.rivera@northstarlabs.com\n\nThat keeps the core identity first and the weaker context second."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Good format. If I had to recall him in five seconds, what exact line should I read?",
+      "agent_reply": "Read this line:\n\"Sam Rivera — Platform engineer at Northstar Labs; accessibility + design system reliability; collaborates with Priya Desai in Design Systems.\""
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Can you trim that just a little more but still keep Priya?",
+      "agent_reply": "Yes:\n\"Sam Rivera — Platform engineer; accessibility + design system reliability; collaborates with Priya Desai.\""
+    },
+    {
+      "turn_index": 29,
+      "user_message": "That’s probably the one. Before I save it, what part is doing the most memory work?",
+      "agent_reply": "The strongest memory work is being done by the combination of:\n1. \"Platform engineer\"\n2. \"accessibility + design system reliability\"\n\nPriya helps as a supporting association, but the role-plus-focus pairing is what really distinguishes Sam."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Great, save this as the final wording I should keep in mind: Sam Rivera — Platform engineer; accessibility + design system reliability; collaborates with Priya Desai.",
+      "agent_reply": "Locked in. Final wording to remember:\n\"Sam Rivera — Platform engineer; accessibility + design system reliability; collaborates with Priya Desai.\""
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Sam Rivera",
+        "Priya Desai",
+        "Jordan Lee",
+        "Platform team",
+        "Design Systems group",
+        "Northstar Labs",
+        "QA"
+      ],
+      "relations": [
+        "Sam Rivera is an engineer on the Platform team",
+        "Sam Rivera mainly works on frontend accessibility and design system reliability",
+        "Sam Rivera collaborates with Priya Desai",
+        "Priya Desai is a Product Designer in the Design Systems group at Northstar Labs",
+        "Jordan Lee is from QA",
+        "Sam Rivera was seen in a review with Jordan Lee"
+      ],
+      "contact_or_org_details": [
+        "Sam Rivera email: sam.rivera@northstarlabs.com",
+        "Sam Rivera is associated with Northstar Labs",
+        "Priya Desai is in the Design Systems group at Northstar Labs",
+        "Jordan Lee is associated with QA"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is Sam Rivera, and what team is he on?",
+      "tester_hint_answer": "Sam Rivera is an engineer on the Platform team.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        8,
+        19
+      ]
+    },
+    {
+      "question": "What kind of work does Sam Rivera mainly do, especially around design system reliability?",
+      "tester_hint_answer": "He mainly works on frontend accessibility and design system reliability.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        11,
+        20
+      ]
+    },
+    {
+      "question": "Who matched the combined description of an engineer focused on frontend accessibility and design system reliability?",
+      "tester_hint_answer": "That description refers to Sam Rivera.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        4,
+        20
+      ]
+    },
+    {
+      "question": "What is the relationship between Sam Rivera and Priya Desai?",
+      "tester_hint_answer": "Sam Rivera collaborates with Priya Desai, who is a Product Designer in the Design Systems group at Northstar Labs.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        7,
+        13,
+        14
+      ]
+    },
+    {
+      "question": "If I saw Sam Rivera in a contact note, what email and company details were listed for him?",
+      "tester_hint_answer": "His email is sam.rivera@northstarlabs.com, and he is at Northstar Labs.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        9,
+        17,
+        26
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_composite_query_01",
+    "issue": "composite_search_terms",
+    "required_qa_phrases": [
+      "engineer focused on frontend accessibility",
+      "Sam Rivera",
+      "design system reliability"
+    ],
+    "stress_signal": "User combines role and domain that were mentioned separately."
+  }
+}

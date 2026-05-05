@@ -1,0 +1,188 @@
+{
+  "sample_id": "sn_keyword_semantic_duplicate_03_20260421T035523Z",
+  "dialogue_seed": "The user mentions Elena Morris, first as a master's student in NLP, then as a graduate student working on language models, then as a research student helping with annotation guidelines. The conversation should include why the user may ask Elena for feedback later.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"master's student\", \"graduate student\", and \"NLP\". The questions should ask who Elena Morris is, what academic role she has, and what language-model work she could help with.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m trying to jot down a few notes about Elena Morris so I can remember who to follow up with later.",
+      "agent_reply": "Sure — I can help you turn that into clean notes. What do you want to capture about Elena Morris: her role, what she works on, how you know her, or why you may contact her later?"
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Start with this: Elena Morris is a master’s student in NLP.",
+      "agent_reply": "Got it. Current note: Elena Morris is a master’s student in NLP. If you want, I can keep building this into a short profile."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Add that she’s also a graduate student working on language models.",
+      "agent_reply": "Updated. So far: Elena Morris is a master’s student in NLP and a graduate student working on language models. That wording is slightly overlapping, but it still sounds natural if these came from different contexts."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Yeah, that overlap is fine. Also note that she’s been helping with annotation guidelines on our project.",
+      "agent_reply": "Added: Elena Morris has been helping with annotation guidelines on your project. That gives a useful connection between her academic work and your collaboration."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "She’s in Professor Daniel Kim’s lab at Northbridge University, I think.",
+      "agent_reply": "Noted, with a little uncertainty: Elena Morris is in Professor Daniel Kim’s lab at Northbridge University. That also gives you an affiliation and a relationship: Elena works in Daniel Kim’s lab at Northbridge University."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Right. Daniel Kim is the faculty lead on the project, and Elena has been one of the research students supporting the data side.",
+      "agent_reply": "Great, that sharpens it. Updated summary: Professor Daniel Kim is the faculty lead on the project, and Elena Morris is one of the research students supporting the data side, including annotation guidelines. This makes her role much clearer."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "I may ask Elena for feedback later because she caught a few inconsistencies in our labeling scheme.",
+      "agent_reply": "That’s a strong reason to record. I’d phrase it as: You may ask Elena Morris for feedback later because she previously identified inconsistencies in the labeling scheme. That suggests she has practical judgment on annotation quality."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Can you make it sound like a normal contact note, not a formal bio?",
+      "agent_reply": "Of course. Here’s a more natural contact note:\n\nElena Morris — master’s / graduate student in NLP, working on language models. She’s in Professor Daniel Kim’s lab at Northbridge University and has been helping on our project as a research student, especially with annotation guidelines and data issues. Might be worth asking her for feedback later since she already spotted some inconsistencies in the labeling scheme.\n\nIf you want, I can also make it shorter or more CRM-style."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Make it a bit more specific and include her email: elena.morris@northbridge.edu.",
+      "agent_reply": "Here’s a more specific version:\n\nElena Morris — graduate student in NLP at Northbridge University, in Professor Daniel Kim’s lab, working on language models. She’s been helping our project as a research student on the data side, especially drafting and reviewing annotation guidelines. Good person to ask for feedback later because she noticed several inconsistencies in the labeling scheme early on. Email: elena.morris@northbridge.edu.\n\nIf you’d like, I can also turn this into a bullet list with fields like affiliation, role, and follow-up reason."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Yes, give me the bullet version.",
+      "agent_reply": "- Name: Elena Morris\n- Role: Graduate student / master’s student in NLP\n- Research focus: Language models\n- Affiliation: Northbridge University\n- Lab: Professor Daniel Kim’s lab\n- Related people: Professor Daniel Kim is the faculty lead on the project\n- Project involvement: Research student supporting the data side\n- Specific contributions: Helped with annotation guidelines; reviewed labeling decisions\n- Follow-up reason: Good person to ask for feedback later because she identified inconsistencies in the labeling scheme\n- Contact: elena.morris@northbridge.edu"
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Add that I met her through our weekly data quality meeting, usually on Thursdays.",
+      "agent_reply": "- Name: Elena Morris\n- Role: Graduate student / master’s student in NLP\n- Research focus: Language models\n- Affiliation: Northbridge University\n- Lab: Professor Daniel Kim’s lab\n- Related people: Professor Daniel Kim is the faculty lead on the project\n- Project involvement: Research student supporting the data side\n- Specific contributions: Helped with annotation guidelines; reviewed labeling decisions\n- How we’re connected: I met her through our weekly data quality meeting, usually on Thursdays\n- Follow-up reason: Good person to ask for feedback later because she identified inconsistencies in the labeling scheme\n- Contact: elena.morris@northbridge.edu"
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Also, she coordinated once with Priya Shah from our team about edge cases in the annotation docs.",
+      "agent_reply": "Added. That gives you another useful relationship note.\n\n- Name: Elena Morris\n- Role: Graduate student / master’s student in NLP\n- Research focus: Language models\n- Affiliation: Northbridge University\n- Lab: Professor Daniel Kim’s lab\n- Related people:\n  - Professor Daniel Kim — faculty lead on the project\n  - Priya Shah — coordinated with Elena about edge cases in the annotation docs\n- Project involvement: Research student supporting the data side\n- Specific contributions: Helped with annotation guidelines; reviewed labeling decisions; discussed annotation edge cases with Priya Shah\n- How we’re connected: I met her through our weekly data quality meeting, usually on Thursdays\n- Follow-up reason: Good person to ask for feedback later because she identified inconsistencies in the labeling scheme\n- Contact: elena.morris@northbridge.edu"
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Make the Priya part less strong — more like they talked a couple of times, not that Elena owned that work.",
+      "agent_reply": "Sure — I’d soften it like this:\n\n- Related people:\n  - Professor Daniel Kim — faculty lead on the project\n  - Priya Shah — spoke with Elena a couple of times about edge cases in the annotation docs\n- Specific contributions: Helped with annotation guidelines; reviewed labeling decisions\n\nIf you want the full note rewritten with that lighter wording, I can do that too."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Yes, rewrite the full bullet list with that wording.",
+      "agent_reply": "- Name: Elena Morris\n- Role: Graduate student / master’s student in NLP\n- Research focus: Language models\n- Affiliation: Northbridge University\n- Lab: Professor Daniel Kim’s lab\n- Related people:\n  - Professor Daniel Kim — faculty lead on the project\n  - Priya Shah — spoke with Elena a couple of times about edge cases in the annotation docs\n- Project involvement: Research student supporting the data side\n- Specific contributions: Helped with annotation guidelines; reviewed labeling decisions\n- How we’re connected: I met her through our weekly data quality meeting, usually on Thursdays\n- Follow-up reason: Good person to ask for feedback later because she identified inconsistencies in the labeling scheme\n- Contact: elena.morris@northbridge.edu"
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Can you add a short caution that I’m not completely sure whether her official program title is master’s student or just graduate student?",
+      "agent_reply": "Absolutely. Here’s a clean way to reflect that uncertainty:\n\n- Name: Elena Morris\n- Role: Graduate student in NLP\n- Program note: I’m not completely sure whether her official title is master’s student or just graduate student\n- Research focus: Language models\n- Affiliation: Northbridge University\n- Lab: Professor Daniel Kim’s lab\n- Related people:\n  - Professor Daniel Kim — faculty lead on the project\n  - Priya Shah — spoke with Elena a couple of times about edge cases in the annotation docs\n- Project involvement: Research student supporting the data side\n- Specific contributions: Helped with annotation guidelines; reviewed labeling decisions\n- How we’re connected: I met her through our weekly data quality meeting, usually on Thursdays\n- Follow-up reason: Good person to ask for feedback later because she identified inconsistencies in the labeling scheme\n- Contact: elena.morris@northbridge.edu"
+    },
+    {
+      "turn_index": 16,
+      "user_message": "That’s good. Maybe change the follow-up reason so it sounds like I’d ask her to sanity-check future guideline revisions.",
+      "agent_reply": "Good tweak. Updated line:\n\n- Follow-up reason: Good person to ask to sanity-check future guideline revisions because she previously identified inconsistencies in the labeling scheme\n\nIf you want, I can now give you the final polished version all together."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Please do, and keep it compact enough to paste into my notes app.",
+      "agent_reply": "- Elena Morris\n- Role: Graduate student in NLP\n- Program note: Official title may be master’s student or graduate student\n- Research focus: Language models\n- Affiliation: Northbridge University, Professor Daniel Kim’s lab\n- Project connection: Research student supporting the data side; helped with annotation guidelines and reviewed labeling decisions\n- Network: Daniel Kim is the faculty lead; Priya Shah spoke with Elena a couple of times about annotation edge cases\n- How I know her: Weekly data quality meeting, usually Thursdays\n- Follow-up: Good person to ask to sanity-check future guideline revisions since she caught inconsistencies in the labeling scheme\n- Contact: elena.morris@northbridge.edu"
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Can you make that even shorter, like a 3-line contact card?",
+      "agent_reply": "Elena Morris — graduate student in NLP at Northbridge University, in Professor Daniel Kim’s lab; works on language models.\nSupports our project on the data side, especially annotation guidelines and labeling review; I know her through the Thursday data quality meeting.\nUseful person to ask to sanity-check future guideline revisions since she caught inconsistencies early. Email: elena.morris@northbridge.edu."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Nice. Add just a tiny note that the Priya connection exists, but don’t make the card much longer.",
+      "agent_reply": "Elena Morris — graduate student in NLP at Northbridge University, in Professor Daniel Kim’s lab; works on language models.\nSupports our project on the data side, especially annotation guidelines and labeling review; I know her through the Thursday data quality meeting, and she’s also spoken a couple of times with Priya Shah about annotation edge cases.\nUseful person to ask to sanity-check future guideline revisions since she caught inconsistencies early. Email: elena.morris@northbridge.edu."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Perfect. One last thing: give me a subject line I could use if I email her for feedback later.",
+      "agent_reply": "A good subject line would be:\n\nFeedback on annotation guideline revisions\n\nIf you want, I can also suggest 2–3 alternatives with different levels of formality."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Yes, give me a few subject line alternatives — maybe one neutral, one warmer, and one very direct.",
+      "agent_reply": "Sure:\n\n- Neutral: Request for feedback on annotation guideline revisions\n- Warmer: Would love your quick feedback on our updated annotation guidelines\n- Very direct: Sanity-check needed: revised annotation guidelines\n\nIf you want, I can also draft the opening sentence of the email."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Please do. Keep it short and professional.",
+      "agent_reply": "Here’s a short opening:\n\nHi Elena — I’m reaching out because you caught several inconsistencies in our labeling scheme earlier, and I’d really value your feedback on the latest guideline revisions.\n\nIf you want, I can add a second sentence that mentions timing or asks for a quick review."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Add a sentence asking if she has 15 minutes this week, maybe after the Thursday meeting.",
+      "agent_reply": "Absolutely:\n\nHi Elena — I’m reaching out because you caught several inconsistencies in our labeling scheme earlier, and I’d really value your feedback on the latest guideline revisions. If you have 15 minutes this week, maybe after the Thursday data quality meeting, I’d appreciate a quick sanity-check.\n\nThat stays professional but still feels natural."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Good. Also, I think Priya Shah is a product analyst, not just \"from our team.\" Can you update that in the longer note version?",
+      "agent_reply": "Yes — here’s the updated longer note with that detail:\n\n- Name: Elena Morris\n- Role: Graduate student in NLP\n- Program note: Official title may be master’s student or graduate student\n- Research focus: Language models\n- Affiliation: Northbridge University, Professor Daniel Kim’s lab\n- Project connection: Research student supporting the data side; helped with annotation guidelines and reviewed labeling decisions\n- Network: Daniel Kim is the faculty lead; Priya Shah, product analyst on our team, spoke with Elena a couple of times about annotation edge cases\n- How I know her: Weekly data quality meeting, usually Thursdays\n- Follow-up: Good person to ask to sanity-check future guideline revisions since she caught inconsistencies in the labeling scheme\n- Contact: elena.morris@northbridge.edu"
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Actually, make Priya’s title a little uncertain too. I’m fairly sure she’s a product analyst, but not positive.",
+      "agent_reply": "Got it. I’d soften that line like this:\n\n- Network: Daniel Kim is the faculty lead; Priya Shah, I believe a product analyst on our team, spoke with Elena a couple of times about annotation edge cases\n\nOr, slightly cleaner:\n\n- Network: Daniel Kim is the faculty lead; Priya Shah (likely a product analyst on our team) spoke with Elena a couple of times about annotation edge cases\n\nI can fold that into the full note if you want."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Yes, fold it in, and also add that Elena was especially helpful on ambiguity cases.",
+      "agent_reply": "Here’s the revised full note:\n\n- Name: Elena Morris\n- Role: Graduate student in NLP\n- Program note: Official title may be master’s student or graduate student\n- Research focus: Language models\n- Affiliation: Northbridge University, Professor Daniel Kim’s lab\n- Project connection: Research student supporting the data side; helped with annotation guidelines, reviewed labeling decisions, and was especially helpful on ambiguity cases\n- Network: Daniel Kim is the faculty lead; Priya Shah (likely a product analyst on our team) spoke with Elena a couple of times about annotation edge cases\n- How I know her: Weekly data quality meeting, usually Thursdays\n- Follow-up: Good person to ask to sanity-check future guideline revisions since she caught inconsistencies in the labeling scheme\n- Contact: elena.morris@northbridge.edu"
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Can you make the follow-up line slightly less certain? More like she’d be a good person to ask if needed.",
+      "agent_reply": "Sure. A softer version would be:\n\n- Follow-up: Could be a good person to ask to sanity-check future guideline revisions if needed, since she caught inconsistencies in the labeling scheme\n\nOr even more tentative:\n\n- Follow-up: Might be worth asking to sanity-check future guideline revisions if needed, since she caught inconsistencies in the labeling scheme\n\nThe second one sounds more like a personal note."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Use the second one and give me the final compact note again.",
+      "agent_reply": "- Elena Morris\n- Role: Graduate student in NLP\n- Program note: Official title may be master’s student or graduate student\n- Research focus: Language models\n- Affiliation: Northbridge University, Professor Daniel Kim’s lab\n- Project connection: Research student supporting the data side; helped with annotation guidelines, reviewed labeling decisions, and was especially helpful on ambiguity cases\n- Network: Daniel Kim is the faculty lead; Priya Shah (likely a product analyst on our team) spoke with Elena a couple of times about annotation edge cases\n- How I know her: Weekly data quality meeting, usually Thursdays\n- Follow-up: Might be worth asking to sanity-check future guideline revisions if needed, since she caught inconsistencies in the labeling scheme\n- Contact: elena.morris@northbridge.edu"
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Nice. Before we stop, give me a one-sentence version I could drop into a spreadsheet contact column.",
+      "agent_reply": "Elena Morris — graduate student in NLP at Northbridge University in Professor Daniel Kim’s lab; helped with annotation guidelines and ambiguity cases on our project, and might be worth asking for a future sanity-check on guideline revisions; email: elena.morris@northbridge.edu."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "That works. Thanks — this is exactly the kind of note I needed.",
+      "agent_reply": "Glad it helped. You now have a short card, a fuller note, a spreadsheet version, and a ready-to-use email opener if you decide to contact Elena later."
+    }
+  ],
+  "module_coverage": {},
+  "qa_items": [],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "This file is a partial incremental snapshot. dialogue_rounds are being accumulated, while module_coverage and qa_items are not finalized yet.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_keyword_semantic_duplicate_03",
+    "issue": "keyword_semantic_duplicates",
+    "required_qa_phrases": [
+      "master's student",
+      "graduate student",
+      "NLP"
+    ],
+    "stress_signal": "User asks about one academic contact using several natural role descriptions."
+  }
+}

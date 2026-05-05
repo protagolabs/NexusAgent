@@ -1,0 +1,124 @@
+{
+  "sample_id": "awareness_pure_one_off_v1",
+  "seed": {
+    "preset_name": "awareness_pure_one_off",
+    "seed_type": "pure_one_off",
+    "description": "Baseline precision test: dialogue is full of one-off task instructions using imperative phrases ('Just', 'Don't', 'Break this down', 'Check with me first') that LOOK like preference signals but are actually single-use. Tests whether the agent over-triggers update_awareness on superficially-matching short phrases."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "Translate this sentence to French: 'The meeting is at 3pm.'",
+      "agent_reply": "La réunion est à 15h.",
+      "signal_annotation": {
+        "signal_type": "one_off",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Now make it more formal.",
+      "agent_reply": "La réunion aura lieu à 15 heures.",
+      "signal_annotation": {
+        "signal_type": "one_off",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Don't add anything extra. Just the translation.",
+      "agent_reply": "La réunion aura lieu à 15 heures.",
+      "signal_annotation": {
+        "signal_type": "one_off",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Just give me the German version too.",
+      "agent_reply": "Das Treffen findet um 15 Uhr statt.",
+      "signal_annotation": {
+        "signal_type": "one_off",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Break this down character by character — I need to learn the spelling.",
+      "agent_reply": "D-a-s T-r-e-f-f-e-n f-i-n-d-e-t u-m 1-5 U-h-r s-t-a-t-t.",
+      "signal_annotation": {
+        "signal_type": "one_off",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Check with me first if you're going to add stylistic comments — I just want clean output here.",
+      "agent_reply": "Will do. Plain output, no commentary.",
+      "signal_annotation": {
+        "signal_type": "one_off",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Now translate the French one to Spanish.",
+      "agent_reply": "La reunión es a las 15:00.",
+      "signal_annotation": {
+        "signal_type": "one_off",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    }
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [0, 0],
+    "expected_profile_must_contain": [],
+    "expected_profile_must_not_contain": [
+      "translation",
+      "formal",
+      "character by character",
+      "spelling"
+    ],
+    "behavior_probe_turns": []
+  },
+  "qa_items": [
+    {
+      "question": "What persistent communication preferences have I expressed in this conversation?",
+      "tester_hint_answer": "None. The conversation only contained one-off translation requests, not long-term preferences.",
+      "target_modules": ["awareness"],
+      "evidence_turns": []
+    },
+    {
+      "question": "Is there a long-term role or behavioral principle I have set?",
+      "tester_hint_answer": "No. No role or principle was defined.",
+      "target_modules": ["awareness"],
+      "evidence_turns": []
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

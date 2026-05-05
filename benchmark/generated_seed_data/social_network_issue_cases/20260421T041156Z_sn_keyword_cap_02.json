@@ -1,0 +1,286 @@
+{
+  "sample_id": "sn_keyword_cap_02_20260421T041156Z",
+  "dialogue_seed": "The user reviews Victor Hale as the central network contact. Victor is tied to seed investing, climate finance, grid analytics, utility pilots, SaaS pricing, procurement, public-sector buyers, Chicago, investor intros, and finally battery recycling, which is the user's real reason for remembering Victor later. If other people are mentioned, they should remain minor supporting references and must not become the main contact profile.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"battery recycling\", \"climate finance\", and \"grid analytics\". The questions should stay centered on Victor Hale, asking why he matters for the user's later battery-recycling follow-up while still covering his broader background.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m trying to reconstruct why I saved Victor Hale in my contacts. I only remember he mattered, but not the exact context.",
+      "agent_reply": "Let’s rebuild it from clues. Based on your notes, Victor Hale seems to be a network contact tied to seed investing, climate finance, grid analytics, utility pilots, SaaS pricing, procurement, public-sector buyers, and Chicago. The strongest signal is that battery recycling was your real reason for wanting to remember him later. If you want, I can help turn that into a clean contact profile plus a short \"why he matters\" summary."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Yes, make it practical. I want something I could paste into a CRM.",
+      "agent_reply": "Here’s a practical draft:\n\n**Victor Hale** — Chicago-based operator/investor-adjacent contact working around climate tech and early-stage companies. Relevant themes: seed investing, climate finance, grid analytics, utility pilots, SaaS pricing, procurement, and selling into public-sector buyers. Useful for investor introductions and commercial strategy in regulated or utility-facing markets. **Primary reason to remember:** may be relevant to battery recycling opportunities or introductions later.\n\n**Suggested CRM note:** Knows the climate/infra side of early-stage commercialization, especially where utilities, procurement complexity, and pricing strategy matter.\n\nIf you want, I can also split this into fields like role, geography, sectors, and likely value-add."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Split it into fields, but keep some ambiguity because I’m not fully sure what his title was.",
+      "agent_reply": "Sure — here’s a CRM-friendly version with uncertainty preserved:\n\n- **Name:** Victor Hale\n- **Location:** Chicago, IL\n- **Likely Role:** Investor / operator / advisor in early-stage climate tech\n- **Focus Areas:** Seed investing, climate finance, grid analytics, utility pilots, SaaS pricing, procurement, public-sector sales\n- **Commercial Strengths:** Navigating regulated customers, utility relationships, pricing strategy, buyer complexity\n- **Network Value:** Investor intros; possible connections to utilities, climate tech founders, and public-sector buyers\n- **Why Saved:** Wanted to remember him specifically for a later battery recycling angle\n- **Confidence Level:** Medium — themes are clearer than exact title\n\nYou could also add a tag set like: `climate-tech`, `utilities`, `procurement`, `investor-network`, `battery-recycling`, `Chicago`."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "That sounds right. I vaguely think he was connected to a grid analytics company, maybe through a pilot with a utility.",
+      "agent_reply": "That fits the rest of the profile well. I’d capture it cautiously like this:\n\n- **Possible Company Link:** Associated with a grid analytics company, possibly in an operating, advisory, or investing capacity\n- **Possible Market Activity:** Involved in or close to a utility pilot\n- **Likely Relevance:** Understands how utility pilots convert—or fail to convert—into paid deployments\n\nA good note for ambiguity would be: \"May have been connected to a grid analytics startup working with utilities, possibly around pilot programs and commercialization.\" That keeps the memory intact without overstating it."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Add investor intros too. I remember thinking he was useful because he could connect people, not just because of his own company work.",
+      "agent_reply": "Absolutely. That suggests Victor wasn’t just domain-relevant, but also a connector.\n\nUpdated profile note:\n\n**Victor Hale** — Chicago-based climate-tech contact, likely investor/operator/advisor. Associated with seed-stage companies and climate finance, with possible ties to a grid analytics startup and utility pilot work. Strong overlap with SaaS pricing, procurement, and selling into public-sector or regulated buyers. Valuable not only for operating insight but also for **investor introductions** and broader ecosystem connectivity. **Main reason saved for later:** potential relevance to battery recycling opportunities and introductions.\n\nThat framing makes him useful in two ways: subject-matter context and network access."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Can you make a shorter version, like 2-3 sentences max?",
+      "agent_reply": "Victor Hale is a Chicago-based climate-tech contact with likely experience across seed investing, climate finance, grid analytics, utility pilots, and go-to-market issues like SaaS pricing and procurement. He seemed useful both for investor intros and for navigating public-sector or utility-facing buyers. Main reason to remember him: possible relevance to battery recycling later."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Good. Now give me a version that sounds like a personal memory, not a formal summary.",
+      "agent_reply": "Here’s a more natural version:\n\nVictor Hale was someone I wanted to keep in mind because he sat close to the climate-tech / seed investing world, especially around grid analytics, utility pilots, and the messy pricing/procurement side of selling into regulated buyers. I also remember him as potentially useful for investor intros. The real reason I didn’t want to lose track of him was battery recycling."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "I think there may have been another person in the mix, maybe Maya from ComEd or someone adjacent to a utility, but Victor was the main one.",
+      "agent_reply": "That’s worth preserving as a supporting reference without diluting Victor’s profile.\n\nYou could note it this way:\n\n\"Victor Hale was the main contact. There may also have been a secondary connection—possibly Maya, maybe at ComEd or utility-adjacent—which reinforces the utility / pilot / procurement context around him. But Victor is the person I actually wanted to remember.\"\n\nThat creates an explicit relationship signal too: Victor may have been connected to someone at **ComEd**, which would support the Chicago + utility pilot memory."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Nice. Put that into a compact contact card with tags and one line for relationship/context.",
+      "agent_reply": "Here’s a compact contact card:\n\n**Victor Hale**  \nChicago, IL  \nLikely investor / operator / advisor in climate tech  \n\n**Relationship / Context:** Main contact to remember; possibly connected to Maya at ComEd or another utility-adjacent contact, which fits the grid analytics and utility pilot context.  \n\n**Why relevant:** Investor intros, climate finance perspective, utility/public-sector commercialization, and later battery recycling relevance.  \n\n**Tags:** `Victor Hale`, `Chicago`, `climate tech`, `seed investing`, `climate finance`, `grid analytics`, `utility pilots`, `SaaS pricing`, `procurement`, `public-sector buyers`, `investor intros`, `battery recycling`, `ComEd`\n\nIf you want, I can also convert this into a CSV-style row."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Yes, one CSV-style row would help.",
+      "agent_reply": "Here’s a simple CSV-style row:\n\n\"Victor Hale\",\"Chicago, IL\",\"Likely investor/operator/advisor\",\"Climate tech; seed investing; climate finance; grid analytics; utility pilots; SaaS pricing; procurement; public-sector buyers\",\"Useful for investor intros and commercialization in regulated markets\",\"Possibly connected to Maya at ComEd or utility-adjacent network\",\"Saved mainly because of later battery recycling relevance\",\"Medium confidence\"\n\nIf you want, I can next give you a normalized schema version with columns like `name`, `location`, `role_guess`, `affiliations`, `topics`, and `memory_reason`."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Do the normalized schema version. Keep it lean, but include affiliations or org hints if we have them.",
+      "agent_reply": "name,location,role_guess,affiliations_or_org_hints,topics,network_value,relationship_context,memory_reason,confidence\n\"Victor Hale\",\"Chicago, IL\",\"Investor / operator / advisor (uncertain)\",\"Possibly tied to a grid analytics startup; possibly connected to Maya at ComEd or a utility-adjacent contact\",\"Climate tech; seed investing; climate finance; utility pilots; SaaS pricing; procurement; public-sector buyers\",\"Investor intros; commercialization advice in regulated markets\",\"Primary contact; utility/pilot context may have come through ComEd-adjacent relationship\",\"Wanted to remember him mainly for future battery recycling relevance\",\"Medium\""
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Can you make the affiliation field slightly more explicit without pretending we know too much?",
+      "agent_reply": "Yes — I’d phrase it as a probable relationship, not a fact.\n\nRevised row:\n\nname,location,role_guess,affiliations_or_org_hints,topics,network_value,relationship_context,memory_reason,confidence\n\"Victor Hale\",\"Chicago, IL\",\"Investor / operator / advisor (uncertain)\",\"Likely in orbit of a grid analytics company and may have had a connection into ComEd via Maya or another utility-side contact\",\"Climate tech; seed investing; climate finance; utility pilots; SaaS pricing; procurement; public-sector buyers\",\"Investor intros; commercialization advice in regulated markets\",\"Victor was the main contact; ComEd/utility reference is supporting context only\",\"Wanted to remember him mainly for future battery recycling relevance\",\"Medium\""
+    },
+    {
+      "turn_index": 13,
+      "user_message": "That helps. I also have a fuzzy memory that he understood how pilots turned into procurement, which is why I took him seriously.",
+      "agent_reply": "That’s a strong commercial signal. I’d add it to the topics or network value field rather than changing the role.\n\nTightened version:\n\nname,location,role_guess,affiliations_or_org_hints,topics,network_value,relationship_context,memory_reason,confidence\n\"Victor Hale\",\"Chicago, IL\",\"Investor / operator / advisor (uncertain)\",\"Likely in orbit of a grid analytics company and may have had a connection into ComEd via Maya or another utility-side contact\",\"Climate tech; seed investing; climate finance; utility pilots; pilot-to-procurement conversion; SaaS pricing; procurement; public-sector buyers\",\"Investor intros; practical insight on turning utility pilots into procurement or paid deployment\",\"Victor was the main contact; utility/ComEd reference is secondary context\",\"Wanted to remember him mainly for future battery recycling relevance\",\"Medium\""
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Give me a plain-English note version of that row, like something I'd actually leave in a contacts app.",
+      "agent_reply": "Victor Hale — Chicago-based climate-tech contact, likely investor/operator/advisor type. Seemed close to grid analytics and utility pilot work, possibly with a ComEd-adjacent link through Maya or someone similar. I took him seriously because he seemed to understand how pilots become procurement, plus pricing and public-sector buyer complexity. Also potentially useful for investor intros. Main reason to remember: battery recycling."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Can you make that sound a little less polished and more like my own rough note?",
+      "agent_reply": "Sure:\n\nVictor Hale — Chicago climate/seed world, maybe investor/operator/advisor. I think he was around grid analytics / utility pilot stuff and maybe connected somehow to Maya at ComEd or that general utility circle. My memory is he actually understood the jump from pilot to procurement, not just the tech. Could be useful for investor intros too. Real reason I wanted to remember him: battery recycling."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "That sounds pretty close. What are the strongest facts vs the weaker guesses here?",
+      "agent_reply": "Here’s a clean split:\n\n**Stronger signals**\n- Victor Hale is the main contact you wanted to remember.\n- Chicago is part of the context.\n- He was relevant to climate tech / seed-investing-adjacent conversations.\n- He felt useful for investor introductions.\n- Battery recycling was the real reason you wanted to remember him later.\n\n**Moderate confidence**\n- He had overlap with grid analytics, utility pilots, procurement, SaaS pricing, and public-sector buyers.\n- He seemed credible on commercialization in regulated markets.\n- He understood pilot-to-procurement dynamics.\n\n**Weaker / supporting guesses**\n- He may have been tied to a specific grid analytics company.\n- Maya may have been at ComEd, or at least utility-adjacent.\n- Victor may have been connected to ComEd through Maya or a similar contact.\n- His exact title is unclear: investor, operator, advisor, or some mix."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Good distinction. If I wanted to follow up with him cold after a long gap, what would be the safest framing?",
+      "agent_reply": "Safest framing: anchor on the old climate/utility conversation broadly, then mention battery recycling as the reason you thought of him again.\n\nExample:\n\n\"Hi Victor — it’s been a while, but I was revisiting a few people I’d met around climate tech, utility pilots, and commercialization in regulated markets, and your name came back up. I remembered you as someone thoughtful on the investor/commercial side, especially around how these projects move from pilot to actual procurement. I’m now looking at battery recycling and thought it might be worth reconnecting if that’s still anywhere near your world.\"\n\nThat keeps everything accurate without overclaiming a specific shared history."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Can you make that shorter and a little more confident?",
+      "agent_reply": "Sure:\n\n\"Hi Victor — I was revisiting a few climate-tech contacts and thought of you, especially because I remembered your perspective on utility pilots, procurement, and commercialization in regulated markets. I’m spending time on battery recycling now and wanted to reconnect in case it overlaps with your world or network.\"\n\nIt’s concise, confident, and still leaves room for imperfect memory."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Before we stop, give me one final 'why Victor matters' line I can use as a header.",
+      "agent_reply": "Victor matters because he sits at the intersection of climate-tech investing, utility commercialization, and useful network access—with battery recycling as the main reason to keep him in view."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Great. Give me the final compact profile one more time, all in one place.",
+      "agent_reply": "**Victor Hale** — Chicago-based climate-tech contact; likely investor/operator/advisor type. Probably in orbit of seed investing, climate finance, grid analytics, utility pilots, and the messy commercial side of SaaS pricing, procurement, and public-sector buyers. May have had a ComEd-adjacent connection through Maya or another utility contact, but that part is secondary and uncertain. Useful for investor intros and for understanding how pilots become procurement in regulated markets. **Main reason to remember:** battery recycling."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually, I may want to store one more field: how I’d use him. Can you give me 3 short options for a 'best use' field?",
+      "agent_reply": "Sure — here are 3 concise options:\n\n1. **Best use:** Investor and partner introductions in climate/infra.\n2. **Best use:** Advice on utility pilots, procurement, and regulated-market go-to-market.\n3. **Best use:** Relevant connector if battery recycling touches utilities, public-sector buyers, or climate-finance networks."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Make them sound a little more like notes to myself, less CRM-ish.",
+      "agent_reply": "Got it:\n\n1. **Best use:** Good person for investor intros if I need warm climate-tech connections.\n2. **Best use:** Worth asking if I’m trying to understand pilot-to-procurement reality with utilities.\n3. **Best use:** Revisit if battery recycling starts overlapping with utility/public-sector or climate-finance people."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "I also remember he may have known someone at City of Chicago or another public buyer, but I’m not sure if that was him or someone nearby.",
+      "agent_reply": "That fits your existing pattern, but I’d keep it clearly tentative.\n\nYou could add:\n**Possible public-sector angle:** May have known someone at the City of Chicago or another public buyer, or been adjacent to that network through utility/procurement work.\n\nThat preserves an extractable organization hint — **City of Chicago** — without overstating that Victor personally held the relationship."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Can you fold that into the compact profile without making it too long?",
+      "agent_reply": "Yes:\n\n**Victor Hale** — Chicago-based climate-tech contact; likely investor/operator/advisor type. In orbit of seed investing, climate finance, grid analytics, utility pilots, and the pricing/procurement side of regulated or public-sector sales. May have had ComEd-adjacent context through Maya and possibly some connection into City of Chicago or other public buyers, though that part is fuzzy. Useful for investor intros and for understanding how pilots become procurement. Main reason to remember: battery recycling."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Nice. Now give me a super short version I could put in the first line of a contact note.",
+      "agent_reply": "Victor Hale — Chicago climate-tech connector; useful on utility/public-sector commercialization and investor intros; saved mainly for battery recycling."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Can you give me 5 tags only, the highest-signal ones?",
+      "agent_reply": "Sure: `Chicago`, `climate tech`, `utility pilots`, `investor intros`, `battery recycling`"
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Would you keep 'utility pilots' or swap it for 'procurement'?",
+      "agent_reply": "I’d keep **utility pilots** if the point is recall, and swap to **procurement** if the point is action.\n\n- **Utility pilots** = stronger memory trigger for who he was in your head\n- **Procurement** = stronger signal for why he’s commercially useful now\n\nIf I had to choose one for a working contact record, I’d probably use **procurement** because it captures the practical value more directly."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Okay, then revise the 5 tags for practical use, not memory.",
+      "agent_reply": "For practical use, I’d go with: `Chicago`, `climate tech`, `procurement`, `investor intros`, `battery recycling`"
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Last thing: give me a one-line caution so I don’t overstate what I know when I reach out.",
+      "agent_reply": "Caution: I’m confident on Victor’s climate-tech/investor-network relevance, but specific org ties like ComEd, Maya, or City of Chicago are memory-level only and should be treated as tentative."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect. I think that’s enough to save him properly now.",
+      "agent_reply": "Great — you now have a clean, cautious profile: Victor Hale is a Chicago climate-tech connector with likely value on procurement/commercialization and investor intros, and the main reason to keep him flagged is battery recycling. If you want later, I can turn this into a final copy-paste contact entry with fields exactly matching your address book or CRM."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Victor Hale",
+        "Maya",
+        "ComEd",
+        "City of Chicago"
+      ],
+      "relations": [
+        "Victor Hale is the main contact the user wanted to remember.",
+        "Victor Hale is tied to seed investing, climate finance, grid analytics, utility pilots, SaaS pricing, procurement, and public-sector buyers.",
+        "Victor Hale is useful for investor introductions and commercialization insight in regulated markets.",
+        "Victor Hale may have been connected to a grid analytics company.",
+        "Victor Hale may have had a ComEd-adjacent link through Maya or another utility-side contact.",
+        "Maya is a secondary supporting reference and not the main contact.",
+        "Victor Hale may have had some connection into City of Chicago or other public buyers, but this is uncertain."
+      ],
+      "contact_or_org_details": [
+        "Victor Hale is Chicago-based / Chicago, IL.",
+        "Victor Hale's likely role is investor / operator / advisor, with uncertainty.",
+        "ComEd is mentioned as a possible utility-related organization tied indirectly through Maya.",
+        "City of Chicago is mentioned as a possible public-buyer org hint."
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Why does Victor Hale matter enough to keep in my contacts if my real later follow-up is about battery recycling?",
+      "tester_hint_answer": "He was the main contact, valuable both as a connector and for relevant climate/utility commercialization context, with battery recycling as the key memory reason.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        2,
+        3,
+        5,
+        19,
+        20
+      ]
+    },
+    {
+      "question": "What broader background did I associate with Victor Hale around climate finance and early-stage climate tech?",
+      "tester_hint_answer": "He was framed as Chicago-based and likely investor/operator/advisor-adjacent, tied to seed investing, climate finance, and climate-tech commercialization.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        2,
+        3,
+        6,
+        20
+      ]
+    },
+    {
+      "question": "How was Victor Hale connected to grid analytics and utility pilots, and how certain was that?",
+      "tester_hint_answer": "The dialogue treats that as plausible but not fully certain: possibly tied to a grid analytics company and utility pilot work.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        5,
+        13,
+        16,
+        20
+      ]
+    },
+    {
+      "question": "Besides his own company or operating work, why did I think Victor Hale was useful as a network contact?",
+      "tester_hint_answer": "Because he could make investor intros and had broader ecosystem connectivity, not just domain expertise.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        5,
+        6,
+        9,
+        13,
+        21,
+        22
+      ]
+    },
+    {
+      "question": "What were the secondary people or org hints around Victor Hale, and which ones should I treat as tentative rather than solid facts?",
+      "tester_hint_answer": "Maya, ComEd, and possibly City of Chicago/public-buyer links were supporting context only and explicitly uncertain.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        8,
+        9,
+        12,
+        16,
+        23,
+        24,
+        29
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_keyword_cap_02",
+    "issue": "keyword_cap_truncation",
+    "required_qa_phrases": [
+      "battery recycling",
+      "climate finance",
+      "grid analytics"
+    ],
+    "stress_signal": "The decisive late reason for remembering a contact should not be overshadowed by earlier broad background."
+  }
+}

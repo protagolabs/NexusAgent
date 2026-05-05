@@ -1,0 +1,273 @@
+{
+  "sample_id": "sn_extraction_context_gap_01_20260421T041828Z",
+  "dialogue_seed": "The user has an ongoing relationship with Maya Solis, previously known as a recommendation-system expert. In this conversation, they remention Maya using related but different wording: recommender systems, ranking models, personalization, and retrieval ranking. The agent helps decide what to ask Maya next.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Maya Solis\", \"recommender systems\", and \"ranking models\". The questions should ask what she is known for and what the user planned to ask her next.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m catching up with Maya Solis next week. She used to be the person I’d ask about recommendation systems, but lately I think of her more as someone deep in ranking and personalization. I want to ask smart questions instead of vague ones. Can you help?",
+      "agent_reply": "Absolutely. Since Maya Solis seems to have moved from classic recommender systems into ranking models, personalization, and retrieval ranking, you can ask questions that show you understand that shift.\n\nA good starting set:\n1. \"How do you think about the boundary between retrieval and ranking now?\"\n2. \"What parts of personalization are actually delivering value versus just adding complexity?\"\n3. \"Have ranking models changed more because of data, modeling, or product constraints?\"\n4. \"What do teams still get wrong about recommender systems in practice?\"\n5. \"If you were building a system from scratch today, what would you design differently?\"\n\nIf you want, I can turn this into a tighter list tailored for either a casual coffee chat or a more professional career-style conversation."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "More like a coffee chat. We know each other pretty well, but I haven’t talked to her in a while. I also vaguely remember she was at Northstar Labs, though I’m not sure if that’s still current.",
+      "agent_reply": "Got it — warm, informed, but not interview-like.\n\nYou could frame it like this:\n- \"I still think of you as my go-to person for recommender systems, but I get the sense your work has broadened into ranking and personalization. What’s been most interesting lately?\"\n- \"Are you still at Northstar Labs, or have you moved on to something new?\"\n- \"What changed your thinking most: working on retrieval, ranking models, or product-side personalization?\"\n- \"What’s one thing about recommendation quality that people oversimplify?\"\n- \"Have user expectations changed faster than the models?\"\n\nThat mix lets you reconnect personally, confirm her current affiliation, and invite her to define her own work in her own words."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "I like that. I don’t want to sound like I’m quizzing her though. Also, I may want to ask if she knows anyone else I should talk to in this area.",
+      "agent_reply": "Then the key is to make it conversational and reflective rather than technical-checklist style.\n\nTry a flow like this:\n1. Reconnect: \"It’s been a while — I still associate you with all things recommender systems.\"\n2. Invite an update: \"What are you working on these days?\"\n3. Follow her lead: if she mentions retrieval ranking, personalization, or ranking models, ask one deeper follow-up.\n4. Then broaden: \"Who else do you think is doing especially thoughtful work in this space?\"\n5. If appropriate: \"Is there anyone you think I should talk to next?\"\n\nThat last question is natural because it comes after she’s already described the landscape.\n\nIf you want, I can draft 3-4 exact lines you could realistically say out loud."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Yes, give me exact lines. And maybe one version that’s a little more career-oriented, because I’m not job hunting exactly, but I am exploring.",
+      "agent_reply": "Here are two versions.\n\nCasual coffee-chat version:\n- \"It’s really good to see you. I still think of you as the person I’d ask about recommender systems, but I have a feeling your work has evolved beyond that. What’s been most interesting lately?\"\n- \"Are you still with Northstar Labs, or are you somewhere else now?\"\n- \"When you think about retrieval, ranking, and personalization, where do you feel the biggest changes are happening?\"\n- \"What do you think people underestimate about building good ranking systems?\"\n- \"Also, if there’s anyone else you think I should talk to in this space, I’d love your suggestions.\"\n\nLight career-oriented version:\n- \"I’ve been trying to get smarter about where recommendation and ranking work is headed, and you’re one of the first people I thought of.\"\n- \"How would you describe the space now compared with a few years ago?\"\n- \"If someone wanted to position themselves well around personalization or ranking models, what would you tell them to focus on?\"\n- \"What kinds of teams are doing especially strong work right now?\"\n- \"And if there’s anyone you think would be useful for me to meet, I’d really appreciate an introduction or even just a name.\"\n\nThese sound informed without feeling like a scripted interview."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "This helps. I’m also trying to remember whether she mentioned someone named Daniel before. Maybe Daniel Kim? I think he worked on retrieval or search ranking somewhere.",
+      "agent_reply": "That’s useful, and you can bring it up gently without pretending you remember perfectly.\n\nYou could say:\n- \"I may be misremembering this, but did you once mention Daniel Kim — someone working on retrieval or search ranking?\"\n- \"If that’s the right person, I’d be curious what kind of work he’s doing now.\"\n- \"Does his work overlap much with the personalization side, or is it more on the retrieval stack?\"\n\nThis does two things:\n1. It shows you remember prior conversations.\n2. It gives Maya an easy opening to connect people or clarify the landscape.\n\nIf Daniel Kim is real in her network, that could naturally lead to: \"Would you be open to introducing us?\""
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Right. I don’t want to jump to asking for an intro too fast. What’s a better way to get there?",
+      "agent_reply": "A softer path is best. Let the introduction feel like a consequence of the conversation, not the goal.\n\nA good progression:\n- First: \"I may be mixing this up, but did you mention Daniel Kim before?\"\n- Then: \"I’d be interested in how his work compares with what you’re seeing in ranking and personalization.\"\n- Then: \"I’m trying to get a clearer picture of the field from a few different angles.\"\n- Only after that: \"If you think it makes sense, I’d be glad to reach out to anyone you think would be useful to speak with. No pressure at all.\"\n\nThat wording gives Maya control. It sounds exploratory and respectful rather than transactional."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Can you help me make a short prep note? Just bullet points so I don’t forget what to ask her.",
+      "agent_reply": "Sure — here’s a compact prep note:\n\n- Reconnect warmly; mention I still associate Maya Solis with recommender systems\n- Ask what she’s focused on now: ranking models, personalization, retrieval ranking, or something else\n- Confirm whether she’s still at Northstar Labs\n- Ask what has changed most in the field over the last few years\n- Ask what people still misunderstand about recommendation or ranking quality\n- Ask where retrieval ends and ranking begins in practice\n- Ask what skills or areas matter most if someone is exploring this space now\n- Mention Daniel Kim carefully: \"I may be misremembering, but did you mention him before?\"\n- If relevant, ask who else she thinks is doing thoughtful work\n- Leave room for a possible intro later, without pushing\n\nIf you want, I can also turn this into a one-minute conversation opener plus 5 follow-up questions."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Yes, and make it sound natural. We’re meeting at Cedar & Finch, so I’ll probably only have a minute or two before we settle in.",
+      "agent_reply": "Here’s a natural opener you could use at Cedar & Finch:\n\n\"It’s so good to catch up. I still think of you as my recommender-systems person, but I get the sense your work has expanded into ranking and personalization. I’d love to hear what you’ve been most focused on lately — and whether you’re still at Northstar Labs. I’ve also been trying to understand how people think about retrieval versus ranking now, because the lines seem blurrier than they used to be.\"\n\nThen keep these follow-ups in mind:\n- \"What’s been the most interesting shift for you personally?\"\n- \"What do people still get wrong about building good personalized systems?\"\n- \"If someone were exploring this area now, what would you tell them to pay attention to?\"\n- \"Are there teams or people whose work you really respect right now?\"\n- \"I may be misremembering, but did you once mention Daniel Kim?\"\n\nThat should feel easy to say out loud and flexible enough to adapt to her response."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "This is good. One more thing: I don’t want to overuse jargon if she’s talking at a high level. Can you give me simpler wording too?",
+      "agent_reply": "Definitely. Here’s a simpler version that keeps the same substance:\n\n\"It’s really nice to catch up. I still think of you as the person I’d ask about recommendation systems, but I know your work has probably changed over time. What have you been spending most of your time on lately? Are you still at Northstar Labs? I’ve also been curious how people now think about finding the right content versus ordering it well, and how much personalization actually helps.\"\n\nSimpler follow-ups:\n- \"What’s changed the most in this work lately?\"\n- \"What do people tend to oversimplify?\"\n- \"Where do you think the biggest opportunities are now?\"\n- \"If I wanted to learn from a few smart people in this area, who would you suggest?\"\n- \"I might be remembering this wrong, but did you mention Daniel Kim before?\"\n\nThis keeps you informed without sounding overly technical."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Perfect. Can you end by giving me the top 5 questions only, in order, so I can save them in my notes app?",
+      "agent_reply": "Sure — top 5, in order:\n\n1. \"What have you been most focused on lately?\"\n2. \"Are you still at Northstar Labs, or are you somewhere new now?\"\n3. \"How do you think about finding the right content versus ordering it well — and where does personalization matter most?\"\n4. \"What do people still get wrong or oversimplify about this work?\"\n5. \"If I wanted to learn from a few smart people in this space, who would you suggest I talk to?\"\n\nOptional backup:\n- \"I may be remembering this wrong, but did you mention Daniel Kim before?\""
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Actually, can you make those even shorter? Like phone-notes short.",
+      "agent_reply": "Absolutely:\n\n1. What are you focused on now?\n2. Still at Northstar Labs?\n3. How do you think about finding vs ordering content?\n4. What do people get wrong about personalization/ranking?\n5. Who else should I talk to?\n\nBackup:\n- Did you mention Daniel Kim before?"
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Nice. I may text her beforehand to confirm the time. Can you help me write a casual text that also lightly signals what I’ve been thinking about?",
+      "agent_reply": "Sure — here’s a natural option:\n\n\"Hey Maya — looking forward to catching up next week. Just confirming we’re still on for Cedar & Finch at [time]? I’ve also been thinking a lot about how recommendation work has shifted into ranking/personalization lately, so I’m excited to hear what you’ve been working on.\"\n\nSofter version:\n\n\"Hey Maya — excited to see you next week. Just wanted to confirm Cedar & Finch at [time] still works. I’ve been thinking about some recommendation/ranking questions lately, so I’m really looking forward to hearing what you’re up to these days.\"\n\nIf you want, I can make it warmer, shorter, or less work-related."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Less work-related, but still enough context so it doesn’t feel random.",
+      "agent_reply": "Try this:\n\n\"Hey Maya — really looking forward to catching up. Just confirming Cedar & Finch at [time] still works for you? I’ve been thinking about some of our old recommender-systems conversations lately, so it’ll be fun to hear what you’re working on now.\"\n\nEven lighter:\n\n\"Hey Maya — excited to see you next week. Just checking that Cedar & Finch at [time] still works. I was randomly thinking about our old recommendation-system chats, so I’m especially curious what you’re into these days.\"\n\nThat gives context without making the meetup sound like an agenda."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Good. One concern: if she says she’s no longer at Northstar Labs, what’s the best follow-up so I don’t sound nosy?",
+      "agent_reply": "A good follow-up is to focus on her interests, not the circumstances of the move.\n\nYou could say:\n- \"Oh nice — what drew you there?\"\n- \"What kind of problems are you working on now?\"\n- \"Does it feel pretty different from what you were doing before?\"\n- \"Was the move more about the team, the problem space, or the product?\"\n\nThose sound curious, not intrusive. I’d avoid anything like \"Why did you leave?\" unless she opens that door herself."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "That makes sense. And if she is still there, I want a follow-up that doesn’t sound like I’m implying she should have left.",
+      "agent_reply": "Then keep it appreciative and forward-looking:\n\n- \"How has your role changed since we last talked?\"\n- \"What’s become more interesting there over time?\"\n- \"Are you working on similar problems, or has your focus shifted a lot?\"\n- \"What’s keeping you excited about the work?\"\n\nThose acknowledge continuity without sounding like you expected her to move on."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Can you give me a tiny decision tree? Like if she says X, I ask Y.",
+      "agent_reply": "Sure — very compact:\n\n- If she says she’s still at Northstar Labs -> \"How has your role changed?\"\n- If she says she left Northstar Labs -> \"What drew you to the new place?\"\n- If she mentions ranking models -> \"What’s changed most there lately?\"\n- If she mentions personalization -> \"Where does personalization actually help most?\"\n- If she mentions retrieval ranking or search -> \"How do you think about finding vs ordering now?\"\n- If she sounds broad/high-level -> \"What’s been most interesting to you personally?\"\n- If the conversation goes well -> \"Are there one or two people you think I should learn from?\"\n\nThat should be easy to glance at before you walk in."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Helpful. I’m also wondering whether to mention that I’ve heard a lot of people talk about LLMs changing recommendation and ranking. Is that a good question or too obvious?",
+      "agent_reply": "It’s a good question if you make it specific and non-hypey.\n\nBetter than \"How are LLMs changing everything?\" would be:\n- \"Are LLMs actually changing ranking or personalization in a meaningful way for the kinds of systems you think about?\"\n- \"Where do you think newer generative/LLM approaches are genuinely useful, versus mostly buzz?\"\n- \"Has this changed retrieval, ranking, or the user experience more?\"\n\nThat lets Maya Solis give a grounded answer instead of a generic trend take."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "I like the 'versus mostly buzz' angle, but maybe softer.",
+      "agent_reply": "Sure — softer versions:\n\n- \"Where do you think newer LLM-style approaches are genuinely useful, and where do you think the excitement is running ahead of the real impact?\"\n- \"Have these newer approaches changed the practical work much yet, or is it still early?\"\n- \"Do you see more impact on retrieval, ranking, or personalization so far?\"\n\nThese keep the skepticism, but in a more measured way."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Great. Last thing: if she does mention Daniel Kim, what’s a graceful way to ask whether he’d be a good person for me to talk to without pushing for an intro on the spot?",
+      "agent_reply": "You can keep it light and advisory:\n\n- \"Do you think Daniel Kim would be a useful person for me to talk to on this topic?\"\n- \"Would his perspective be complementary to yours, or pretty overlapping?\"\n- \"If you think he’d be relevant, I’d be happy just to make a note and reach out at some point.\"\n\nThat last line is especially good because it doesn’t force Maya to offer an introduction. It leaves room for her to say, \"I can connect you,\" if she wants."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Perfect. Can you give me one final ultra-short note with opener, 5 questions, and the Daniel line?",
+      "agent_reply": "Sure — ultra-short version:\n\nOpener:\n- Good to see you — I was thinking about our old recommender-systems conversations and wanted to hear what you’re focused on now.\n\n5 questions:\n1. What are you working on these days?\n2. Still at Northstar Labs?\n3. What’s changed most in ranking/personalization lately?\n4. Where does personalization help most in practice?\n5. Who else do you think is worth talking to?\n\nDaniel line:\n- Did you mention Daniel Kim before, and would his perspective be useful for me to hear?"
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually yes — can you make that note even more compact, like something I could screenshot before I walk into Cedar & Finch?",
+      "agent_reply": "Sure:\n\nMaya @ Cedar & Finch\n- Opener: good to see you / what are you focused on now?\n- Still at Northstar Labs?\n- What’s changed most in ranking + personalization?\n- Where does personalization help most?\n- What do people still get wrong?\n- Who else should I learn from?\n- Daniel Kim? Useful perspective?"
+    },
+    {
+      "turn_index": 22,
+      "user_message": "That’s good. I also want one line in case she asks what I’ve been thinking about lately, so I don’t ramble.",
+      "agent_reply": "Use something like:\n\n\"I’ve been trying to get a clearer picture of how recommendation work is evolving — especially where retrieval, ranking, and personalization actually make a difference in practice.\"\n\nSimpler version:\n\"I’ve mostly been trying to understand how people are thinking about recommendation and ranking now, beyond the old high-level version of it.\""
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Can you make it sound less polished? More like something I’d actually say over coffee.",
+      "agent_reply": "Of course. Try:\n\n\"I’ve just been thinking more about how this stuff actually works now — like recommendation, ranking, personalization, all of that — and how people draw the lines between them.\"\n\nOr even looser:\n\"I’ve been curious how people are thinking about recommendation and ranking these days, because it feels like the field has shifted a lot.\""
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Better. I also vaguely remember Maya mentioning someone at Meridian maybe? Or was Meridian the company Daniel was at?",
+      "agent_reply": "You can handle that with a low-stakes memory check:\n\n\"I may be mixing this up, but was Daniel Kim at Meridian, or am I remembering that wrong?\"\n\nOr:\n\"I vaguely remember you mentioning Meridian at some point — was that where Daniel was, or was that unrelated?\"\n\nThat lets Maya Solis correct the details without you sounding too certain."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Nice. If she says yes, Daniel is at Meridian, what should I ask next?",
+      "agent_reply": "A good next step:\n\n- \"What kind of work is he doing there — more retrieval/search, or closer to personalization?\"\n- \"Would his perspective be pretty different from yours?\"\n- \"Do you think he’d be useful for me to talk to if I’m trying to understand this space better?\"\n\nThat keeps it about fit, not about getting an introduction immediately."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "I’m realizing I may want to ask Maya whether the interesting work is happening more in product teams or infrastructure-heavy teams. Is that too inside-baseball?",
+      "agent_reply": "Not too inside-baseball if you phrase it simply.\n\nTry:\n- \"Where do you think the most interesting work is happening right now — closer to the product side, or deeper in the systems/modeling side?\"\n- \"Do the biggest gains come from better models, or from teams that are really close to the product?\"\n\nThat gives her room to answer at either a strategic or technical level."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Good. Also, I think part of why I’m asking is that I’m trying to figure out what kinds of teams I’d even want to learn from. Maybe at places like Northstar Labs or Meridian, or somewhere else entirely.",
+      "agent_reply": "Then you can make that explicit in a natural way:\n\n\"Part of what I’m trying to figure out is what kinds of teams are actually worth learning from right now — whether that’s places like Northstar Labs, Meridian, or somewhere totally different.\"\n\nFollow with:\n- \"What teams do you think are especially thoughtful?\"\n- \"Are there companies or orgs you think have a really good way of approaching ranking or personalization?\"\n\nThat invites Maya to map the landscape for you."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Can you give me a version that sounds curious, not strategic? I don’t want it to sound like I’m evaluating employers.",
+      "agent_reply": "Yes — soften it like this:\n\n\"I’m mostly just curious which teams you think are doing especially thoughtful work right now — whether that’s Northstar Labs, Meridian, or somewhere else.\"\n\nOr:\n\"I’ve been trying to get a feel for who’s approaching this well, just from a learning perspective.\"\n\nThat sounds exploratory rather than career-calculated."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "This is exactly the tone I wanted. Before we wrap, can you give me a final pocket version with: opener, what I say if she asks about me, and the best 4 questions?",
+      "agent_reply": "Absolutely:\n\nOpener:\n- \"Good to see you — I was thinking about our old recommender-systems conversations and was curious what you’re focused on these days.\"\n\nIf she asks about you:\n- \"I’ve just been trying to understand how recommendation, ranking, and personalization are evolving, and where the interesting work is now.\"\n\nBest 4 questions:\n1. \"What are you working on lately?\"\n2. \"Are you still at Northstar Labs?\"\n3. \"What’s changed most in ranking or personalization over the last few years?\"\n4. \"Who do you think is doing especially thoughtful work in this space?\""
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect. I’ll save that and maybe keep the Daniel Kim / Meridian question as backup. Thanks.",
+      "agent_reply": "That sounds like a solid plan. Backup line:\n\n\"I may be remembering this wrong, but was Daniel Kim at Meridian?\"\n\nYou’re set: warm opener, clear direction, and an easy backup if the conversation naturally goes there."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Maya Solis",
+        "Northstar Labs",
+        "Daniel Kim",
+        "Meridian",
+        "Cedar & Finch"
+      ],
+      "relations": [
+        "The user has an ongoing relationship with Maya Solis and plans to catch up with her next week.",
+        "Maya Solis was previously the user's go-to person for recommendation systems.",
+        "The user now associates Maya Solis with ranking, personalization, and retrieval ranking.",
+        "Maya Solis may be or may have been affiliated with Northstar Labs, but the user is unsure if that is still current.",
+        "Daniel Kim may be someone Maya previously mentioned to the user.",
+        "Daniel Kim may work on retrieval or search ranking.",
+        "Daniel Kim may be at Meridian."
+      ],
+      "contact_or_org_details": [
+        "The user and Maya are meeting at Cedar & Finch.",
+        "The user may text Maya beforehand to confirm the time.",
+        "Northstar Labs is the organization the user vaguely remembers Maya being at.",
+        "Meridian is a company possibly associated with Daniel Kim."
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "What is Maya Solis known for in the user's mind, and how has that description shifted over time?",
+      "tester_hint_answer": "She used to be the user's recommendation-systems person, and is now thought of more in terms of ranking, personalization, and retrieval ranking.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        7,
+        29
+      ]
+    },
+    {
+      "question": "What did the user plan to ask Maya Solis next about her current role or company affiliation?",
+      "tester_hint_answer": "The user wanted to ask what she's focused on now and whether she's still at Northstar Labs.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        10,
+        29
+      ]
+    },
+    {
+      "question": "How does the conversation describe Maya Solis in relation to recommender systems and ranking models?",
+      "tester_hint_answer": "She is framed as someone the user once relied on for recommender systems and now associates with ranking models and related work.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        4,
+        7
+      ]
+    },
+    {
+      "question": "Who else might Maya point the user to, and what details does the user remember about that person?",
+      "tester_hint_answer": "Possibly Daniel Kim, who may work on retrieval or search ranking and may be at Meridian.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        5,
+        24,
+        25
+      ]
+    },
+    {
+      "question": "What did the user plan to ask next about recommender systems contacts beyond Maya, after their coffee chat?",
+      "tester_hint_answer": "The user wanted to ask who else is doing thoughtful work and who they should talk to next, potentially including Daniel Kim.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        10,
+        20
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_extraction_context_gap_01",
+    "issue": "extraction_without_full_existing_context",
+    "required_qa_phrases": [
+      "Maya Solis",
+      "recommender systems",
+      "ranking models"
+    ],
+    "stress_signal": "A known contact is described again with several closely related phrases."
+  }
+}

@@ -1,0 +1,304 @@
+{
+  "sample_id": "sn_keyword_semantic_duplicate_01_20260421T035124Z",
+  "dialogue_seed": "The user discusses a collaboration plan involving Dr. Mira Rao, first calling her an ML expert, later a machine-learning specialist, and later an AI researcher who helps with model evaluation. The conversation should make clear that all descriptions refer to the same person, not separate contacts.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"ML help\", \"machine-learning specialist\", and \"AI researcher\". The questions should ask who Mira Rao is, what help she can provide, and whether the different descriptions refer to the same person.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m putting together a collaboration plan for our new evaluation project and want help organizing the people involved. Right now the main contact is Dr. Mira Rao, who I know as an ML expert.",
+      "agent_reply": "Absolutely. I can help turn that into a clean collaboration map. So far I have:\n\n- Dr. Mira Rao — ML expert\n- Involved in: the new evaluation project\n- Status: main contact\n\nTo make this useful, could you share any of the following you already know:\n- her organization or team\n- her role/title\n- what she owns in the project\n- any email or preferred contact method\n- who else she works with on this effort?"
+    },
+    {
+      "turn_index": 2,
+      "user_message": "She’s at Northbridge Labs and I think her title is Senior Research Scientist. Email should be mira.rao@northbridgelabs.org. She’ll probably advise on benchmarks and review our setup.",
+      "agent_reply": "Great, that gives us a solid starting profile:\n\n- Dr. Mira Rao\n- Title: Senior Research Scientist\n- Organization: Northbridge Labs\n- Email: mira.rao@northbridgelabs.org\n- Expected responsibilities: advise on benchmarks, review project setup\n\nIf you want, I can also help structure this as:\n1. stakeholder list\n2. responsibilities matrix\n3. outreach plan\n\nWho else is part of the collaboration?"
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Internally, Daniel Kim from our Product Analytics team is coordinating logistics. He reports to Priya Shah, our Director of Data Science.",
+      "agent_reply": "Noted. Current collaboration map:\n\n- Dr. Mira Rao — Senior Research Scientist, Northbridge Labs, mira.rao@northbridgelabs.org\n  - Likely contribution: benchmark advice, setup review\n- Daniel Kim — Product Analytics team\n  - Role in project: coordinating logistics\n- Priya Shah — Director of Data Science\n  - Relationship: Daniel Kim reports to Priya Shah\n\nThat gives us both an external research contact and internal operational ownership. Do you also want to capture decision-makers, or just working contacts?"
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Both. Also, the machine-learning specialist I mentioned before—Mira—is the same person, just to be clear. I use those labels loosely.",
+      "agent_reply": "Understood. I’ll treat those references as one person:\n\n- Dr. Mira Rao = the ML expert = the machine-learning specialist\n\nI won’t split them into separate contacts. That clarification is helpful, especially for stakeholder records.\n\nAt this point, we can classify people like this:\n- External subject-matter lead: Dr. Mira Rao\n- Internal coordinator: Daniel Kim\n- Internal manager/decision layer: Priya Shah\n\nIf there are approval owners, legal/procurement contacts, or technical reviewers, I can add those next."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Yes—procurement will go through Elena Torres in Finance Operations. She handles vendor onboarding. I only have her work number: 415-555-0186.",
+      "agent_reply": "Perfect. I’ll add:\n\n- Elena Torres — Finance Operations\n  - Responsibility: vendor onboarding / procurement coordination\n  - Contact: 415-555-0186\n\nCurrent working structure:\n- Dr. Mira Rao — Senior Research Scientist, Northbridge Labs, mira.rao@northbridgelabs.org\n- Daniel Kim — Product Analytics, logistics coordinator\n- Priya Shah — Director of Data Science, Daniel Kim’s manager\n- Elena Torres — Finance Operations, vendor onboarding, 415-555-0186\n\nWould you like me to draft a concise stakeholder table next, or outline communication flows between them?"
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Let’s do communication flows. Also, later I may describe Mira as an AI researcher who helps with model evaluation—that’s still the same Dr. Rao.",
+      "agent_reply": "Got it. I’ll keep all of these as the same individual:\n- Dr. Mira Rao\n- ML expert\n- machine-learning specialist\n- AI researcher who helps with model evaluation\n\nSuggested communication flow:\n\n1. Project design and evaluation approach\n- Your team ↔ Dr. Mira Rao\n- Topics: benchmarks, evaluation design, model assessment, setup review\n\n2. Internal scheduling and logistics\n- Your team ↔ Daniel Kim\n- Topics: meeting coordination, timelines, document collection, follow-ups\n\n3. Internal approvals / management visibility\n- Daniel Kim ↔ Priya Shah\n- Topics: status updates, resourcing, internal approval escalations\n\n4. External onboarding and paperwork\n- Your team ↔ Elena Torres\n- Topics: vendor onboarding, procurement forms, administrative processing\n\n5. Cross-functional escalation path\n- Operational issue: Daniel Kim first\n- Budget/procurement issue: Elena Torres\n- Strategic/internal management issue: Priya Shah\n- Evaluation-method issue: Dr. Mira Rao\n\nIf you want, I can turn this into a one-page collaboration plan with owners and next steps."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Yes, and include that Northbridge Labs is the outside research partner. We’re hoping to start a pilot in mid-May.",
+      "agent_reply": "Here’s a concise collaboration plan draft:\n\nProject: Evaluation Pilot\nTarget start: mid-May\nExternal research partner: Northbridge Labs\n\nKey stakeholders\n- Dr. Mira Rao — Senior Research Scientist, Northbridge Labs\n  - Contact: mira.rao@northbridgelabs.org\n  - Role: external research lead / evaluation advisor\n  - Scope: benchmarks, setup review, model evaluation guidance\n- Daniel Kim — Product Analytics\n  - Role: internal logistics coordinator\n- Priya Shah — Director of Data Science\n  - Role: internal decision-maker / management oversight\n  - Relationship: Daniel Kim reports to Priya Shah\n- Elena Torres — Finance Operations\n  - Contact: 415-555-0186\n  - Role: procurement and vendor onboarding\n\nWorkstreams\n1. Evaluation design\n   - Owner: Dr. Mira Rao with your team\n2. Scheduling and coordination\n   - Owner: Daniel Kim\n3. Internal approvals and leadership updates\n   - Owner: Priya Shah\n4. Vendor onboarding and procurement\n   - Owner: Elena Torres\n\nTimeline\n- Early May: finalize scope and pilot success criteria\n- Early to mid-May: complete onboarding and scheduling\n- Mid-May: pilot kickoff\n\nIf you want, I can also draft a kickoff email that introduces everyone with the right roles."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Please do. The email should make it obvious that Mira is our external expert from Northbridge Labs, but not overdo the title stuff.",
+      "agent_reply": "Sure — here’s a polished kickoff draft:\n\nSubject: Kickoff for Evaluation Pilot Collaboration\n\nHi everyone,\n\nI’d like to get our evaluation pilot moving toward a mid-May start and align on responsibilities.\n\nFrom Northbridge Labs, Dr. Mira Rao will be our primary external research contact and will help advise on benchmarks, evaluation design, and model review.\n\nOn our side, Daniel Kim will coordinate logistics and scheduling. Priya Shah will provide internal oversight, and Elena Torres will support vendor onboarding and procurement steps.\n\nProposed immediate next steps:\n- confirm pilot scope and success criteria\n- identify required benchmark and evaluation inputs\n- complete onboarding paperwork\n- schedule a kickoff meeting\n\nIf this looks right, Daniel can circulate scheduling options for a first working session.\n\nBest,\n[Your Name]\n\nIf you want, I can make it either more formal or more executive-friendly."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Make it a bit more executive-friendly, and add one line saying Mira may also support model evaluation directly.",
+      "agent_reply": "Of course. Here’s a tighter executive-friendly version:\n\nSubject: Evaluation Pilot Kickoff\n\nHi everyone,\n\nWe’re preparing to launch the evaluation pilot in mid-May and wanted to align on key roles and next steps.\n\nDr. Mira Rao from Northbridge Labs will serve as our primary external research contact, advising on benchmarks and evaluation design, and may also support model evaluation directly.\n\nInternally, Daniel Kim will coordinate logistics and scheduling, Priya Shah will provide leadership oversight, and Elena Torres will manage vendor onboarding and procurement.\n\nOur immediate focus is to:\n- confirm pilot scope and success criteria\n- align on evaluation inputs and timeline\n- complete onboarding requirements\n- schedule the kickoff session\n\nDaniel will follow up with scheduling options unless there are any changes to roles or scope.\n\nBest,\n[Your Name]\n\nIf you’d like, I can also create a matching stakeholder summary you can paste below the email."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Yes, give me that summary. And just so it’s documented: every time I referred to Mira as an ML expert, machine-learning specialist, or AI researcher helping with model evaluation, I meant the same person: Dr. Mira Rao.",
+      "agent_reply": "Here’s a compact stakeholder summary you can paste under the email:\n\nStakeholder Summary\n- Dr. Mira Rao — Senior Research Scientist, Northbridge Labs\n  - External research partner and primary external contact\n  - Supports benchmarks, evaluation design, setup review, and potentially model evaluation\n  - Email: mira.rao@northbridgelabs.org\n- Daniel Kim — Product Analytics\n  - Internal logistics and scheduling lead\n- Priya Shah — Director of Data Science\n  - Internal leadership oversight\n  - Daniel Kim reports to Priya Shah\n- Elena Torres — Finance Operations\n  - Vendor onboarding and procurement\n  - Phone: 415-555-0186\n\nDocumentation note:\nAll references to Mira as an ML expert, machine-learning specialist, or AI researcher helping with model evaluation refer to the same person: Dr. Mira Rao of Northbridge Labs.\n\nIf you want, I can next convert all of this into a CRM-style contact record set or a RACI table."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "A RACI table would help. Add me as the project lead: Jordan Lee, Research Program Manager. Use jordan.lee@acmehealth.com.",
+      "agent_reply": "Absolutely. Here’s a simple RACI draft for the pilot:\n\nRACI Table\n\n1. Define pilot scope and success criteria\n- Responsible: Jordan Lee\n- Accountable: Priya Shah\n- Consulted: Dr. Mira Rao\n- Informed: Daniel Kim, Elena Torres\n\n2. Design benchmarks and evaluation approach\n- Responsible: Dr. Mira Rao\n- Accountable: Jordan Lee\n- Consulted: Priya Shah\n- Informed: Daniel Kim\n\n3. Support model evaluation execution\n- Responsible: Dr. Mira Rao\n- Accountable: Jordan Lee\n- Consulted: Daniel Kim\n- Informed: Priya Shah\n\n4. Coordinate meetings, timeline, and logistics\n- Responsible: Daniel Kim\n- Accountable: Jordan Lee\n- Consulted: Priya Shah\n- Informed: Dr. Mira Rao, Elena Torres\n\n5. Handle vendor onboarding and procurement steps\n- Responsible: Elena Torres\n- Accountable: Jordan Lee\n- Consulted: Priya Shah\n- Informed: Daniel Kim, Dr. Mira Rao\n\n6. Provide internal leadership oversight\n- Responsible: Priya Shah\n- Accountable: Priya Shah\n- Consulted: Jordan Lee\n- Informed: Daniel Kim, Elena Torres\n\nAdded contact:\n- Jordan Lee — Research Program Manager, Acme Health\n- Email: jordan.lee@acmehealth.com\n\nIf you want, I can also turn this into a clean contact roster with organization, role, relationship, and contact fields."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Yes, do the contact roster. Also Acme Health is our company, in case that wasn’t obvious.",
+      "agent_reply": "Got it. Here’s a structured contact roster:\n\nContact Roster\n\n- Jordan Lee\n  - Role: Research Program Manager\n  - Organization: Acme Health\n  - Project function: project lead\n  - Contact: jordan.lee@acmehealth.com\n\n- Dr. Mira Rao\n  - Role: Senior Research Scientist\n  - Organization: Northbridge Labs\n  - Project function: primary external research contact\n  - Responsibilities: benchmarks, evaluation design, setup review, model evaluation support\n  - Contact: mira.rao@northbridgelabs.org\n  - Note: all references to ML expert / machine-learning specialist / AI researcher refer to this same person\n\n- Daniel Kim\n  - Role: Product Analytics team member\n  - Organization: Acme Health\n  - Project function: logistics and scheduling coordinator\n  - Relationship: reports to Priya Shah\n\n- Priya Shah\n  - Role: Director of Data Science\n  - Organization: Acme Health\n  - Project function: internal oversight and decision support\n  - Relationship: manager of Daniel Kim\n\n- Elena Torres\n  - Role: Finance Operations\n  - Organization: Acme Health\n  - Project function: vendor onboarding and procurement\n  - Contact: 415-555-0186\n\nOrganizations\n- Acme Health — internal project owner\n- Northbridge Labs — external research partner\n\nIf useful, I can next add a “decision rights” section so it’s clear who approves what."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Please add decision rights. One more person: Samir Patel from Legal will review the agreement with Northbridge Labs. His email is samir.patel@acmehealth.com.",
+      "agent_reply": "Here’s a clear decision-rights section with Samir added.\n\nDecision Rights\n- Pilot scope and timeline\n  - Final approver: Jordan Lee\n  - Executive oversight: Priya Shah\n  - Input from: Dr. Mira Rao, Daniel Kim\n\n- Evaluation methodology and benchmark approach\n  - Final approver: Jordan Lee\n  - Primary advisor: Dr. Mira Rao\n  - Oversight input: Priya Shah\n\n- Scheduling and operational coordination\n  - Decision owner: Daniel Kim\n  - Escalation point: Jordan Lee\n\n- Vendor onboarding and procurement processing\n  - Decision owner: Elena Torres\n  - Final business owner: Jordan Lee\n\n- Legal agreement review with Northbridge Labs\n  - Reviewer: Samir Patel\n  - Business owner: Jordan Lee\n  - Escalation/oversight: Priya Shah\n\nAdded contact\n- Samir Patel\n  - Role: Legal reviewer\n  - Organization: Acme Health\n  - Responsibility: review agreement with Northbridge Labs\n  - Contact: samir.patel@acmehealth.com\n\nUpdated roster note:\n- Northbridge Labs is the external research partner.\n- Acme Health is the internal project owner.\n\nIf you want, I can now produce a compact one-page collaboration brief with all six contacts."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Yes, but before that: Daniel’s title is actually Senior Analyst, Product Analytics. And Samir reports to General Counsel Rebecca Wong.",
+      "agent_reply": "Thanks — I’ll update both records.\n\nRevisions\n- Daniel Kim\n  - Title: Senior Analyst, Product Analytics\n  - Organization: Acme Health\n  - Project function: logistics and scheduling coordinator\n\n- Samir Patel\n  - Organization: Acme Health Legal\n  - Responsibility: agreement review\n  - Relationship: Samir Patel reports to Rebecca Wong, General Counsel\n\nHere’s the updated one-page collaboration brief:\n\nCollaboration Brief: Evaluation Pilot\nTarget start: mid-May\nInternal organization: Acme Health\nExternal research partner: Northbridge Labs\n\nCore team\n- Jordan Lee — Research Program Manager, Acme Health\n  - Project lead\n  - Contact: jordan.lee@acmehealth.com\n\n- Dr. Mira Rao — Senior Research Scientist, Northbridge Labs\n  - Primary external research contact\n  - Advises on benchmarks, evaluation design, setup review, and model evaluation support\n  - Contact: mira.rao@northbridgelabs.org\n  - Note: ML expert / machine-learning specialist / AI researcher all refer to Dr. Mira Rao\n\n- Daniel Kim — Senior Analyst, Product Analytics, Acme Health\n  - Coordinates logistics and scheduling\n  - Reports to Priya Shah\n\n- Priya Shah — Director of Data Science, Acme Health\n  - Provides internal oversight and decision support\n\n- Elena Torres — Finance Operations, Acme Health\n  - Handles vendor onboarding and procurement\n  - Contact: 415-555-0186\n\n- Samir Patel — Legal, Acme Health\n  - Reviews agreement with Northbridge Labs\n  - Contact: samir.patel@acmehealth.com\n  - Reports to Rebecca Wong, General Counsel\n\nDecision structure\n- Scope/timeline: Jordan Lee\n- Evaluation approach: Jordan Lee with consultation from Dr. Mira Rao\n- Logistics: Daniel Kim\n- Procurement: Elena Torres\n- Legal review: Samir Patel\n- Executive oversight: Priya Shah\n\nIf you’d like, I can make this even more presentation-ready with bullets grouped as Internal Team vs External Partner."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Group it that way, and add Rebecca Wong to the roster too, even though she may not join the kickoff.",
+      "agent_reply": "Certainly. Here’s the presentation-ready version.\n\nCollaboration Brief: Evaluation Pilot\nTarget start: mid-May\nInternal organization: Acme Health\nExternal research partner: Northbridge Labs\n\nInternal Team — Acme Health\n- Jordan Lee — Research Program Manager\n  - Project lead\n  - Contact: jordan.lee@acmehealth.com\n\n- Daniel Kim — Senior Analyst, Product Analytics\n  - Logistics and scheduling coordinator\n  - Reports to Priya Shah\n\n- Priya Shah — Director of Data Science\n  - Internal oversight and decision support\n\n- Elena Torres — Finance Operations\n  - Vendor onboarding and procurement\n  - Contact: 415-555-0186\n\n- Samir Patel — Legal\n  - Agreement review for Northbridge Labs collaboration\n  - Contact: samir.patel@acmehealth.com\n  - Reports to Rebecca Wong\n\n- Rebecca Wong — General Counsel\n  - Senior legal oversight\n  - May not attend kickoff, but relevant for escalation and approval context\n\nExternal Partner — Northbridge Labs\n- Dr. Mira Rao — Senior Research Scientist\n  - Primary external research contact\n  - Supports benchmarks, evaluation design, setup review, and model evaluation\n  - Contact: mira.rao@northbridgelabs.org\n  - Clarification: references to ML expert, machine-learning specialist, and AI researcher all refer to Dr. Mira Rao\n\nWorking relationships\n- Daniel Kim reports to Priya Shah\n- Samir Patel reports to Rebecca Wong\n- Dr. Mira Rao is affiliated with Northbridge Labs, the outside research partner\n\nIf helpful, I can now draft a kickoff attendee list and suggest who should be optional versus required."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Do that. I think Rebecca and Elena can be optional unless contracts come up. Mira should be required.",
+      "agent_reply": "Here’s a practical kickoff attendee recommendation.\n\nKickoff Attendee List\n\nRequired\n- Jordan Lee — project lead\n- Dr. Mira Rao — external research lead from Northbridge Labs\n- Daniel Kim — logistics and scheduling coordinator\n- Priya Shah — internal oversight / decision support\n\nOptional\n- Elena Torres — join if onboarding or procurement steps need discussion\n- Samir Patel — join if agreement terms or review timing need to be discussed\n- Rebecca Wong — optional only if legal escalation or higher-level approval questions are expected\n\nSuggested rationale\n- Required attendees cover project scope, evaluation planning, operational coordination, and internal decision visibility.\n- Optional attendees can be pulled in for contracting, procurement, or legal questions without making the first meeting too heavy.\n\nSuggested agenda\n1. Pilot goals and success criteria\n2. Evaluation scope and benchmark approach\n3. Roles and responsibilities\n4. Timeline to mid-May kickoff\n5. Onboarding / legal / procurement dependencies\n6. Next actions and owners\n\nIf you want, I can also write a short attendee note you can paste into the calendar invite."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Yes, and mention that Mira may contribute hands-on to model evaluation, not just advise. Keep it short.",
+      "agent_reply": "Here’s a short calendar note:\n\nKickoff for the Acme Health evaluation pilot with Northbridge Labs. We’ll align on pilot scope, success criteria, evaluation approach, timeline, and key dependencies. Dr. Mira Rao will join as our primary external research contact and may contribute directly to model evaluation in addition to advising on benchmarks and design.\n\nIf you want, I can also give you a one-line meeting objective for the invite header."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Give me the one-line objective, and then a final cleaned stakeholder list I can drop into our tracker.",
+      "agent_reply": "Meeting objective:\nAlign internal and external stakeholders on scope, evaluation approach, ownership, and launch steps for the mid-May pilot.\n\nCleaned Stakeholder List\n\n- Jordan Lee | Research Program Manager | Acme Health | Project lead | jordan.lee@acmehealth.com\n- Dr. Mira Rao | Senior Research Scientist | Northbridge Labs | Primary external research contact; benchmarks, evaluation design, setup review, and model evaluation support | mira.rao@northbridgelabs.org\n- Daniel Kim | Senior Analyst, Product Analytics | Acme Health | Logistics and scheduling coordinator | Reports to Priya Shah\n- Priya Shah | Director of Data Science | Acme Health | Internal oversight and decision support |\n- Elena Torres | Finance Operations | Acme Health | Vendor onboarding and procurement | 415-555-0186\n- Samir Patel | Legal | Acme Health | Agreement review for Northbridge Labs collaboration | samir.patel@acmehealth.com | Reports to Rebecca Wong\n- Rebecca Wong | General Counsel | Acme Health | Senior legal oversight |\n\nTracker note:\nAll mentions of Mira as an ML expert, machine-learning specialist, or AI researcher helping with model evaluation refer to the same person: Dr. Mira Rao of Northbridge Labs."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Looks good. One correction: Priya is also the budget approver for this pilot. Can you update the list and note where that matters?",
+      "agent_reply": "Absolutely. Here’s the updated version with Priya’s budget role included.\n\nUpdated Stakeholder List\n\n- Jordan Lee | Research Program Manager | Acme Health | Project lead | jordan.lee@acmehealth.com\n- Dr. Mira Rao | Senior Research Scientist | Northbridge Labs | Primary external research contact; benchmarks, evaluation design, setup review, and model evaluation support | mira.rao@northbridgelabs.org\n- Daniel Kim | Senior Analyst, Product Analytics | Acme Health | Logistics and scheduling coordinator | Reports to Priya Shah\n- Priya Shah | Director of Data Science | Acme Health | Internal oversight, decision support, and budget approver for the pilot |\n- Elena Torres | Finance Operations | Acme Health | Vendor onboarding and procurement | 415-555-0186\n- Samir Patel | Legal | Acme Health | Agreement review for Northbridge Labs collaboration | samir.patel@acmehealth.com | Reports to Rebecca Wong\n- Rebecca Wong | General Counsel | Acme Health | Senior legal oversight |\n\nWhere Priya’s budget-approver role matters\n- Procurement and vendor onboarding: Elena handles processing, but budget approval sits with Priya Shah.\n- Pilot scope changes with cost impact: Jordan leads, Priya approves budget implications.\n- Agreement timing if tied to spend authorization: Samir reviews legal terms, Priya approves budget-related go-ahead.\n\nIf you want, I can give you one final version formatted as CSV-style lines for easy tracker import."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Yes, CSV-style would be perfect. Include a notes field so the Mira identity clarification stays attached.",
+      "agent_reply": "Sure — here’s a CSV-style version you can paste into a tracker:\n\nName,Title,Organization,Project Role,Contact,Reports To,Notes\nJordan Lee,Research Program Manager,Acme Health,Project lead,jordan.lee@acmehealth.com,,Owns pilot scope and coordination\nDr. Mira Rao,Senior Research Scientist,Northbridge Labs,Primary external research contact,mira.rao@northbridgelabs.org,,Same person as the ML expert / machine-learning specialist / AI researcher references; supports benchmarks, evaluation design, setup review, and model evaluation\nDaniel Kim,Senior Analyst, Product Analytics,Acme Health,Logistics and scheduling coordinator,,Priya Shah,Coordinates meetings and timelines\nPriya Shah,Director of Data Science,Acme Health,Internal oversight and budget approver,,,Approves budget for the pilot and provides decision support\nElena Torres,Finance Operations,Acme Health,Vendor onboarding and procurement,415-555-0186,,Handles onboarding and procurement processing\nSamir Patel,Legal,Acme Health,Agreement reviewer,samir.patel@acmehealth.com,Rebecca Wong,Reviews agreement with Northbridge Labs\nRebecca Wong,General Counsel,Acme Health,Senior legal oversight,,,May not attend kickoff unless escalation is needed\n\nIf you’d like, I can also provide the same data with separate columns for Required at Kickoff and Optional at Kickoff."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Yes, add kickoff attendance columns. Also mark Mira as required and Rebecca as optional.",
+      "agent_reply": "Here’s the updated CSV-style version with kickoff attendance fields:\n\nName,Title,Organization,Project Role,Contact,Reports To,Kickoff Status,Notes\nJordan Lee,Research Program Manager,Acme Health,Project lead,jordan.lee@acmehealth.com,,Required,Owns pilot scope and coordination\nDr. Mira Rao,Senior Research Scientist,Northbridge Labs,Primary external research contact,mira.rao@northbridgelabs.org,,Required,Same person as the ML expert / machine-learning specialist / AI researcher references; supports benchmarks, evaluation design, setup review, and model evaluation\nDaniel Kim,Senior Analyst, Product Analytics,Acme Health,Logistics and scheduling coordinator,,Priya Shah,Required,Coordinates meetings and timelines\nPriya Shah,Director of Data Science,Acme Health,Internal oversight and budget approver,,,Required,Approves budget for the pilot and provides decision support\nElena Torres,Finance Operations,Acme Health,Vendor onboarding and procurement,415-555-0186,,Optional,Join if onboarding or procurement discussion is needed\nSamir Patel,Legal,Acme Health,Agreement reviewer,samir.patel@acmehealth.com,Rebecca Wong,Optional,Join if agreement review timing or terms need discussion\nRebecca Wong,General Counsel,Acme Health,Senior legal oversight,,,Optional,May not attend kickoff unless escalation is needed\n\nIf you want, I can also add a final column for \"Decision Area\" so the tracker shows who owns scope, budget, legal, and logistics."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Do that, and add one more contact: Olivia Chen from Security. She’ll review data access before the pilot. Email is olivia.chen@acmehealth.com.",
+      "agent_reply": "Absolutely. Here’s the revised version with Olivia Chen and a Decision Area column:\n\nName,Title,Organization,Project Role,Contact,Reports To,Kickoff Status,Decision Area,Notes\nJordan Lee,Research Program Manager,Acme Health,Project lead,jordan.lee@acmehealth.com,,Required,Scope and coordination,Owns pilot scope and coordination\nDr. Mira Rao,Senior Research Scientist,Northbridge Labs,Primary external research contact,mira.rao@northbridgelabs.org,,Required,Evaluation approach,Same person as the ML expert / machine-learning specialist / AI researcher references; supports benchmarks, evaluation design, setup review, and model evaluation\nDaniel Kim,Senior Analyst, Product Analytics,Acme Health,Logistics and scheduling coordinator,,Priya Shah,Required,Logistics,Coordinates meetings and timelines\nPriya Shah,Director of Data Science,Acme Health,Internal oversight and budget approver,,,Required,Budget and oversight,Approves budget for the pilot and provides decision support\nElena Torres,Finance Operations,Acme Health,Vendor onboarding and procurement,415-555-0186,,Optional,Procurement,Join if onboarding or procurement discussion is needed\nSamir Patel,Legal,Acme Health,Agreement reviewer,samir.patel@acmehealth.com,Rebecca Wong,Optional,Legal review,Join if agreement review timing or terms need discussion\nRebecca Wong,General Counsel,Acme Health,Senior legal oversight,,,Optional,Legal escalation,May not attend kickoff unless escalation is needed\nOlivia Chen,Security,Acme Health,Data access reviewer,olivia.chen@acmehealth.com,,Optional,Security review,Reviews data access before pilot start\n\nThat adds a clear owner area for each person while keeping the roster tracker-friendly. If you know Olivia’s exact title, I can tighten that row too."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Her title is Security Engineer. She probably doesn’t need the kickoff, but she does need to be looped in right after.",
+      "agent_reply": "Perfect — I’d update Olivia like this:\n\nOlivia Chen,Security Engineer,Acme Health,Data access reviewer,olivia.chen@acmehealth.com,,Optional,Security review,Does not need kickoff; should be looped in immediately after to review data access before pilot start\n\nThat suggests a useful distinction:\n- Kickoff attendee status: Optional\n- Post-kickoff follow-up: Required for security review\n\nIf helpful, I can produce a second compact table showing follow-up sequence after the kickoff: legal, procurement, security, and evaluation planning."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Yes, give me that follow-up sequence. Keep it practical.",
+      "agent_reply": "Here’s a practical post-kickoff follow-up sequence:\n\nPost-Kickoff Follow-Up Sequence\n\n1. Evaluation planning\n- Owner: Jordan Lee\n- Participants: Dr. Mira Rao, Daniel Kim\n- Goal: confirm scope, benchmarks, success criteria, and working timeline\n\n2. Budget confirmation\n- Owner: Priya Shah\n- Participants: Jordan Lee\n- Goal: approve spend needed for the pilot and any external engagement costs\n\n3. Legal review\n- Owner: Samir Patel\n- Participants: Jordan Lee; Rebecca Wong if escalation is needed\n- Goal: review agreement terms with Northbridge Labs\n\n4. Procurement / vendor onboarding\n- Owner: Elena Torres\n- Participants: Jordan Lee\n- Goal: complete onboarding paperwork and purchasing steps\n\n5. Security review\n- Owner: Olivia Chen\n- Participants: Jordan Lee, Daniel Kim\n- Goal: confirm data access, handling expectations, and any security requirements before pilot work begins\n\n6. Scheduling the working sessions\n- Owner: Daniel Kim\n- Participants: all required contributors as needed\n- Goal: lock meetings and milestones leading up to the mid-May pilot start\n\nIf you want, I can convert that into a simple timeline with \"Immediately after kickoff,\" \"Within 3 days,\" and \"Before pilot start\" labels."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "That would be useful. Also, Samir is actually Senior Counsel, not just Legal.",
+      "agent_reply": "Thanks — I’ll update Samir’s title to Senior Counsel.\n\nHere’s the same sequence as a simple timeline:\n\nPost-Kickoff Timeline\n\nImmediately after kickoff\n- Evaluation planning — Jordan Lee with Dr. Mira Rao and Daniel Kim\n- Budget confirmation — Priya Shah with Jordan Lee\n- Security review handoff — Jordan Lee loops in Olivia Chen\n\nWithin 3 business days\n- Legal review — Samir Patel, Senior Counsel, reviews the Northbridge Labs agreement\n- Procurement / vendor onboarding — Elena Torres begins onboarding steps\n\nBefore pilot start\n- Security review completed — Olivia Chen confirms data access requirements\n- Working sessions scheduled — Daniel Kim finalizes meetings and timeline checkpoints\n- Final evaluation plan aligned — Jordan Lee and Dr. Mira Rao confirm readiness\n\nUpdated role note:\n- Samir Patel — Senior Counsel, Acme Health\n\nIf you’d like, I can now refresh the full CSV one last time so all titles and notes are fully consistent."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Please refresh the full CSV. Also include Olivia’s follow-up requirement in a notes field.",
+      "agent_reply": "Here is the refreshed full CSV with the latest updates included:\n\nName,Title,Organization,Project Role,Contact,Reports To,Kickoff Status,Decision Area,Notes\nJordan Lee,Research Program Manager,Acme Health,Project lead,jordan.lee@acmehealth.com,,Required,Scope and coordination,Owns pilot scope and coordination\nDr. Mira Rao,Senior Research Scientist,Northbridge Labs,Primary external research contact,mira.rao@northbridgelabs.org,,Required,Evaluation approach,Same person as the ML expert / machine-learning specialist / AI researcher references; supports benchmarks, evaluation design, setup review, and model evaluation\nDaniel Kim,Senior Analyst, Product Analytics,Acme Health,Logistics and scheduling coordinator,,Priya Shah,Required,Logistics,Coordinates meetings and timelines\nPriya Shah,Director of Data Science,Acme Health,Internal oversight and budget approver,,,Required,Budget and oversight,Approves budget for the pilot and provides decision support\nElena Torres,Finance Operations,Acme Health,Vendor onboarding and procurement,415-555-0186,,Optional,Procurement,Join if onboarding or procurement discussion is needed\nSamir Patel,Senior Counsel,Acme Health,Agreement reviewer,samir.patel@acmehealth.com,Rebecca Wong,Optional,Legal review,Reviews agreement with Northbridge Labs; join if agreement timing or terms need discussion\nRebecca Wong,General Counsel,Acme Health,Senior legal oversight,,,Optional,Legal escalation,May not attend kickoff unless escalation is needed\nOlivia Chen,Security Engineer,Acme Health,Data access reviewer,olivia.chen@acmehealth.com,,Optional,Security review,Does not need kickoff; must be looped in immediately after to review data access before pilot start\n\nIf you want, I can also give you a version with quote-wrapped fields so it’s safer to paste into spreadsheet software."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Yes, quote-wrap it. And one more thing: Daniel will be Olivia’s point of contact for the security review.",
+      "agent_reply": "Absolutely — and that relationship is useful to capture.\n\nHere’s the quote-wrapped CSV:\n\n\"Name\",\"Title\",\"Organization\",\"Project Role\",\"Contact\",\"Reports To\",\"Kickoff Status\",\"Decision Area\",\"Notes\"\n\"Jordan Lee\",\"Research Program Manager\",\"Acme Health\",\"Project lead\",\"jordan.lee@acmehealth.com\",\"\",\"Required\",\"Scope and coordination\",\"Owns pilot scope and coordination\"\n\"Dr. Mira Rao\",\"Senior Research Scientist\",\"Northbridge Labs\",\"Primary external research contact\",\"mira.rao@northbridgelabs.org\",\"\",\"Required\",\"Evaluation approach\",\"Same person as the ML expert / machine-learning specialist / AI researcher references; supports benchmarks, evaluation design, setup review, and model evaluation\"\n\"Daniel Kim\",\"Senior Analyst, Product Analytics\",\"Acme Health\",\"Logistics and scheduling coordinator\",\"\",\"Priya Shah\",\"Required\",\"Logistics\",\"Coordinates meetings and timelines; point of contact for Olivia Chen during security review\"\n\"Priya Shah\",\"Director of Data Science\",\"Acme Health\",\"Internal oversight and budget approver\",\"\",\"\",\"Required\",\"Budget and oversight\",\"Approves budget for the pilot and provides decision support\"\n\"Elena Torres\",\"Finance Operations\",\"Acme Health\",\"Vendor onboarding and procurement\",\"415-555-0186\",\"\",\"Optional\",\"Procurement\",\"Join if onboarding or procurement discussion is needed\"\n\"Samir Patel\",\"Senior Counsel\",\"Acme Health\",\"Agreement reviewer\",\"samir.patel@acmehealth.com\",\"Rebecca Wong\",\"Optional\",\"Legal review\",\"Reviews agreement with Northbridge Labs; join if agreement timing or terms need discussion\"\n\"Rebecca Wong\",\"General Counsel\",\"Acme Health\",\"Senior legal oversight\",\"\",\"\",\"Optional\",\"Legal escalation\",\"May not attend kickoff unless escalation is needed\"\n\"Olivia Chen\",\"Security Engineer\",\"Acme Health\",\"Data access reviewer\",\"olivia.chen@acmehealth.com\",\"\",\"Optional\",\"Security review\",\"Does not need kickoff; must be looped in immediately after to review data access before pilot start; Daniel Kim is her project point of contact\"\n\nIf you want, I can also add a separate \"Point of Contact\" column instead of burying that in notes."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Add the Point of Contact column. And make Jordan the point of contact for Mira and Samir too.",
+      "agent_reply": "Good idea. Here’s the revised quote-wrapped CSV with a dedicated Point of Contact column:\n\n\"Name\",\"Title\",\"Organization\",\"Project Role\",\"Contact\",\"Reports To\",\"Point of Contact\",\"Kickoff Status\",\"Decision Area\",\"Notes\"\n\"Jordan Lee\",\"Research Program Manager\",\"Acme Health\",\"Project lead\",\"jordan.lee@acmehealth.com\",\"\",\"\",\"Required\",\"Scope and coordination\",\"Owns pilot scope and coordination\"\n\"Dr. Mira Rao\",\"Senior Research Scientist\",\"Northbridge Labs\",\"Primary external research contact\",\"mira.rao@northbridgelabs.org\",\"\",\"Jordan Lee\",\"Required\",\"Evaluation approach\",\"Same person as the ML expert / machine-learning specialist / AI researcher references; supports benchmarks, evaluation design, setup review, and model evaluation\"\n\"Daniel Kim\",\"Senior Analyst, Product Analytics\",\"Acme Health\",\"Logistics and scheduling coordinator\",\"\",\"Priya Shah\",\"Jordan Lee\",\"Required\",\"Logistics\",\"Coordinates meetings and timelines\"\n\"Priya Shah\",\"Director of Data Science\",\"Acme Health\",\"Internal oversight and budget approver\",\"\",\"\",\"Jordan Lee\",\"Required\",\"Budget and oversight\",\"Approves budget for the pilot and provides decision support\"\n\"Elena Torres\",\"Finance Operations\",\"Acme Health\",\"Vendor onboarding and procurement\",\"415-555-0186\",\"\",\"Jordan Lee\",\"Optional\",\"Procurement\",\"Join if onboarding or procurement discussion is needed\"\n\"Samir Patel\",\"Senior Counsel\",\"Acme Health\",\"Agreement reviewer\",\"samir.patel@acmehealth.com\",\"Rebecca Wong\",\"Jordan Lee\",\"Optional\",\"Legal review\",\"Reviews agreement with Northbridge Labs; join if agreement timing or terms need discussion\"\n\"Rebecca Wong\",\"General Counsel\",\"Acme Health\",\"Senior legal oversight\",\"\",\"\",\"Samir Patel\",\"Optional\",\"Legal escalation\",\"May not attend kickoff unless escalation is needed\"\n\"Olivia Chen\",\"Security Engineer\",\"Acme Health\",\"Data access reviewer\",\"olivia.chen@acmehealth.com\",\"\",\"Daniel Kim\",\"Optional\",\"Security review\",\"Does not need kickoff; must be looped in immediately after to review data access before pilot start\"\n\nThis now makes it explicit that:\n- Jordan Lee is the project-facing point of contact for Mira, Samir, and most internal functions\n- Daniel Kim is the operating point of contact for Olivia Chen on security review\n\nIf you’d like, I can do one final pass to normalize whether blank manager fields stay blank or use \"N/A.\""
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Leave blanks blank. Can you also give me 3 short tracker notes: one on the Mira identity clarification, one on approvals, and one on post-kickoff dependencies?",
+      "agent_reply": "Sure — here are three short tracker notes you can paste separately:\n\n1. Mira identity clarification\nAll references to Mira as an ML expert, machine-learning specialist, or AI researcher supporting model evaluation refer to the same person: Dr. Mira Rao, Senior Research Scientist at Northbridge Labs.\n\n2. Approvals\nJordan Lee leads scope and coordination; Priya Shah is the budget approver; Samir Patel handles legal review with escalation to Rebecca Wong if needed.\n\n3. Post-kickoff dependencies\nImmediately after kickoff, loop in Olivia Chen for security review, begin legal review with Samir Patel, and start vendor onboarding with Elena Torres before pilot launch.\n\nIf you want, I can compress those into even shorter single-line notes for a narrow tracker field."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "That’s enough. Before I close this out, give me a final plain-English summary of the collaboration setup in 5 bullets max.",
+      "agent_reply": "- Acme Health is running the evaluation pilot, with Jordan Lee as project lead and Priya Shah providing oversight and budget approval.\n- Northbridge Labs is the external research partner, and Dr. Mira Rao is the main external contact for benchmarks, evaluation design, and possible hands-on model evaluation.\n- Daniel Kim manages logistics and scheduling and also serves as the point of contact for Olivia Chen on security review.\n- Elena Torres handles procurement, Samir Patel reviews the agreement, and Rebecca Wong is the legal escalation point if needed.\n- After kickoff, the key dependencies are security review, legal review, vendor onboarding, and final alignment on the evaluation plan before the mid-May pilot start."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Dr. Mira Rao",
+        "Northbridge Labs",
+        "Daniel Kim",
+        "Priya Shah",
+        "Elena Torres",
+        "Jordan Lee",
+        "Acme Health",
+        "Samir Patel",
+        "Rebecca Wong",
+        "Olivia Chen"
+      ],
+      "relations": [
+        "Dr. Mira Rao is the main/primary external research contact for the evaluation project.",
+        "Dr. Mira Rao is a Senior Research Scientist at Northbridge Labs.",
+        "Northbridge Labs is the outside/external research partner.",
+        "All references to Mira as ML expert, machine-learning specialist, and AI researcher helping with model evaluation refer to the same person: Dr. Mira Rao.",
+        "Daniel Kim coordinates logistics and scheduling.",
+        "Daniel Kim reports to Priya Shah.",
+        "Priya Shah is Director of Data Science and provides oversight.",
+        "Priya Shah is the budget approver for the pilot.",
+        "Elena Torres handles vendor onboarding and procurement.",
+        "Jordan Lee is the project lead and Research Program Manager at Acme Health.",
+        "Samir Patel is Senior Counsel and reviews the agreement with Northbridge Labs.",
+        "Samir Patel reports to Rebecca Wong.",
+        "Rebecca Wong is General Counsel and legal escalation point.",
+        "Olivia Chen is Security Engineer and reviews data access before the pilot.",
+        "Daniel Kim is Olivia Chen's project point of contact for the security review.",
+        "Jordan Lee is the point of contact for Mira Rao and Samir Patel."
+      ],
+      "contact_or_org_details": [
+        "Dr. Mira Rao email: mira.rao@northbridgelabs.org",
+        "Dr. Mira Rao organization: Northbridge Labs",
+        "Jordan Lee email: jordan.lee@acmehealth.com",
+        "Elena Torres phone: 415-555-0186",
+        "Samir Patel email: samir.patel@acmehealth.com",
+        "Olivia Chen email: olivia.chen@acmehealth.com",
+        "Acme Health is the internal company/project owner",
+        "Northbridge Labs is the external research partner"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is Dr. Mira Rao in this collaboration setup, and which organization is she with?",
+      "tester_hint_answer": "She is the primary external research contact, a Senior Research Scientist at Northbridge Labs.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        2,
+        7,
+        10,
+        12
+      ]
+    },
+    {
+      "question": "What kind of ML help is Mira expected to provide on the project?",
+      "tester_hint_answer": "She helps with benchmarks, evaluation design/setup review, and may directly support model evaluation.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        6,
+        9,
+        10,
+        30
+      ]
+    },
+    {
+      "question": "Does the machine-learning specialist mentioned earlier refer to a different contact, or to Mira Rao?",
+      "tester_hint_answer": "It is the same person; the user explicitly said those labels for Mira are used loosely.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        6,
+        10,
+        15,
+        29
+      ]
+    },
+    {
+      "question": "When the user later calls Mira an AI researcher who helps with model evaluation, is that still the same person as Dr. Mira Rao?",
+      "tester_hint_answer": "Yes, the conversation repeatedly documents that all those descriptions point to Dr. Mira Rao.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        6,
+        10,
+        12,
+        18,
+        29
+      ]
+    },
+    {
+      "question": "Besides Mira, who are the main internal contacts and what are their relationships or responsibilities?",
+      "tester_hint_answer": "Jordan leads the project; Daniel handles logistics and reports to Priya; Priya oversees and approves budget; Elena handles procurement; Samir handles legal and reports to Rebecca; Olivia handles security review.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        5,
+        11,
+        13,
+        14,
+        19,
+        22,
+        28
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_keyword_semantic_duplicate_01",
+    "issue": "keyword_semantic_duplicates",
+    "required_qa_phrases": [
+      "ML help",
+      "machine-learning specialist",
+      "AI researcher"
+    ],
+    "stress_signal": "User asks about one person's expertise using different ordinary phrases across questions."
+  }
+}

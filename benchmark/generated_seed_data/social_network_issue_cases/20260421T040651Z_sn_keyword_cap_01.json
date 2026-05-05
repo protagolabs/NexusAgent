@@ -1,0 +1,300 @@
+{
+  "sample_id": "sn_keyword_cap_01_20260421T040651Z",
+  "dialogue_seed": "The user describes Nadia Brooks, a robotics teammate with many associations: drones, SLAM, mapping, edge AI, Python, PyTorch, Berkeley, open-source work, autonomy, computer vision, and later an important new medical-imaging project. The late medical-imaging detail should be clearly important for future follow-up.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"robotics teammate\", \"computer vision\", and \"medical-imaging project\". The questions should ask what Nadia Brooks is broadly connected to and why the later medical-imaging work matters.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m trying to organize notes about someone in my network: Nadia Brooks. She’s a robotics teammate, and I want a clean summary I can refer back to later.",
+      "agent_reply": "Absolutely. I can help turn rough notes into a structured profile. To start, what do you already know about Nadia Brooks—her work areas, affiliations, skills, projects, and how you know her?"
+    },
+    {
+      "turn_index": 2,
+      "user_message": "She and I worked together on a drone autonomy project. Nadia is very into SLAM, mapping, edge AI, and computer vision. She codes mostly in Python and PyTorch.",
+      "agent_reply": "Got it. So far I’d summarize her as:\n- Name: Nadia Brooks\n- Relationship to you: robotics teammate\n- Shared work: drone autonomy project\n- Core interests: SLAM, mapping, edge AI, computer vision\n- Technical stack: Python, PyTorch\n\nIf you want, I can keep building this into a compact profile with affiliations, research background, open-source work, and current priorities."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Yes. She also has a Berkeley connection—pretty sure UC Berkeley, maybe from grad school or a lab affiliation. I don’t want to overstate it if I’m not certain.",
+      "agent_reply": "That makes sense. We can record it carefully as a tentative affiliation rather than a confirmed credential. For example:\n- Possible affiliation: UC Berkeley (likely grad school or lab connection; unconfirmed)\n\nThat preserves the signal without claiming more than you know. Do you also know whether she’s more research-oriented, product-oriented, or active in open-source communities?"
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Definitely active in open source. A lot of her work seemed tied to autonomy stacks and vision tooling. She’s one of those people who can bridge research and implementation.",
+      "agent_reply": "Helpful distinction. I’d extend the profile like this:\n- Open-source involvement: active contributor\n- Focus areas: autonomy stacks, vision tooling\n- Working style: bridges research and implementation\n- Domain orientation: robotics/autonomy\n\nThat paints her as someone who can move ideas from prototype to practical systems. Are there any named people, labs, companies, or teams she’s connected with that you want included?"
+    },
+    {
+      "turn_index": 5,
+      "user_message": "She used to collaborate with Ethan Cole on perception for small UAVs. And I think she spent time around the Redwood Robotics Lab, though I’m not sure if that was formal.",
+      "agent_reply": "Great, those are useful network links. I’d capture them with uncertainty where needed:\n- Collaborator: Ethan Cole\n- Relationship: Nadia Brooks collaborated with Ethan Cole on perception for small UAVs\n- Possible organization/lab affiliation: Redwood Robotics Lab (informal or unconfirmed)\n\nThis gives you both a person-to-person relationship and a likely organizational connection. Do you want the summary to stay neutral and factual, or should it also reflect your impression of her strengths?"
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Add strengths. She’s especially good at making messy sensor data usable, and she’s practical about deployment constraints. Also, I have an old contact for her: nadia.brooks@protonmail.com, but I’m not sure it’s current.",
+      "agent_reply": "Understood. I’d note both the strengths and the contact carefully:\n- Strengths: turning messy sensor data into usable pipelines; practical about deployment constraints\n- Contact detail: nadia.brooks@protonmail.com (older email, current status unknown)\n\nSo the profile is becoming quite solid. One thing that would help is whether her current work is still mainly robotics/autonomy, or if she has shifted into a different field recently."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "That’s actually the big update. She recently moved into a medical-imaging project, and I think that’s the most important thing to remember now.",
+      "agent_reply": "That sounds like a major change and definitely worth highlighting prominently. I’d treat it as the key current note:\n- Important current update: Nadia Brooks is now involved in a medical-imaging project\n- Significance: this may represent a shift from robotics/autonomy into healthcare or imaging-focused applied AI\n\nIf you know anything else—like whether it’s research, startup, hospital collaboration, or what kind of imaging—that would be especially valuable for future follow-up."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "I don’t know the exact imaging type yet, but I got the impression it wasn’t a side project. It sounded like a serious new direction, maybe even her main focus.",
+      "agent_reply": "Then I’d elevate it even more clearly:\n- Current primary focus: likely medical imaging\n- Confidence: moderate, based on your impression that it is a serious new direction rather than a side effort\n- Follow-up priority: clarify imaging modality, role, and organization involved\n\nThat way, anyone reading the note later will immediately see that the robotics background is important context, but the medical-imaging transition is the most time-sensitive detail."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Can you draft a concise profile paragraph and then a bullet list of extractable facts?",
+      "agent_reply": "Sure.\n\nProfile paragraph:\nNadia Brooks is a robotics teammate of mine with a strong background in drone autonomy, SLAM, mapping, edge AI, and computer vision. She works heavily in Python and PyTorch, has been active in open-source autonomy and vision tooling, and is especially strong at turning messy sensor data into practical, deployable systems. She has collaborated with Ethan Cole on perception for small UAVs and may have ties to UC Berkeley and the Redwood Robotics Lab, though those affiliations are not fully confirmed. The most important current update is that she appears to have shifted into a serious medical-imaging project, which may now be her main focus.\n\nExtractable facts:\n- Person: Nadia Brooks\n- Relationship to user: robotics teammate\n- Shared project: drone autonomy project\n- Skills/interests: SLAM, mapping, edge AI, computer vision\n- Programming languages/tools: Python, PyTorch\n- Domain: robotics, autonomy\n- Open-source involvement: yes\n- Strengths: sensor data pipeline work; deployment-minded implementation\n- Collaborator: Ethan Cole\n- Collaboration topic: perception for small UAVs\n- Possible affiliation: UC Berkeley\n- Possible affiliation: Redwood Robotics Lab\n- Contact detail: nadia.brooks@protonmail.com\n- Important current update: involved in a serious medical-imaging project\n- Likely current focus: medical imaging"
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Good. Make one final version that is optimized for future follow-up, especially around the medical-imaging shift.",
+      "agent_reply": "Here’s a follow-up-optimized version:\n\nNadia Brooks is a robotics teammate with a strong technical base in drone autonomy, SLAM, mapping, edge AI, and computer vision, working primarily in Python and PyTorch. She has contributed to open-source autonomy and vision tooling and is notably strong at converting noisy sensor data into practical systems that can actually be deployed. In the past, she collaborated with Ethan Cole on perception for small UAVs, and she may have connections to UC Berkeley and the Redwood Robotics Lab, though those affiliations should be verified. An older email on file is nadia.brooks@protonmail.com.\n\nMost important for follow-up: Nadia appears to have made a meaningful move into a medical-imaging project, and this is likely her main current focus rather than a side effort. The next questions to verify are what type of medical imaging she is working on, what her role is, and which organization or team the project is tied to.\n\nSuggested follow-up fields:\n- Confirmed current organization\n- Current title or role\n- Medical imaging modality\n- Whether the work is research, clinical, or product-focused\n- Start date of the transition from robotics to medical imaging"
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Let’s make those follow-up fields more concrete. I vaguely remember the project might be connected to Mira Patel, possibly a radiologist, but I’m not fully sure.",
+      "agent_reply": "That’s useful and worth capturing carefully. I’d add:\n- Possible contact/person linked to current work: Mira Patel\n- Possible role: radiologist\n- Confidence: low to moderate; needs verification\n- Potential relationship: Nadia Brooks may be connected to Mira Patel through the medical-imaging project\n\nThat gives you a concrete person to anchor future follow-up around without overstating it. If you remember whether Mira Patel was at a hospital, startup, or university, that would narrow things down a lot."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "I think there was a hospital angle. Maybe UCSF, or at least something in the Bay Area medical world. Again, I’m fuzzy on it.",
+      "agent_reply": "Then I’d record it as a tentative organizational link:\n- Possible organization: UCSF\n- Alternative framing: Bay Area medical institution or hospital-affiliated project\n- Confidence: low; location/context remembered, exact institution uncertain\n- Possible network link: Nadia Brooks may be collaborating with a clinical partner in the Bay Area\n\nThis is especially relevant because it suggests the medical-imaging work may involve real clinical stakeholders, not just a technical prototype."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Yes, that sounds right. Also, the way she talked about it made it sound more applied than academic—like something that could actually be used by clinicians.",
+      "agent_reply": "That’s an important signal. I’d update the current-work section to say:\n- Current project orientation: applied medical imaging\n- Likely end users: clinicians\n- Inferred style: practical deployment focus rather than purely academic research\n\nThat lines up well with the strengths you already noted about Nadia—she tends to turn difficult data problems into usable systems. It may also mean her robotics background transferred into handling noisy imaging workflows and real-world constraints."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Exactly. I also remember she mentioned annotation bottlenecks and model reliability, which felt very different from the drone stuff but also kind of related.",
+      "agent_reply": "That’s a strong detail. I’d capture it as:\n- Current problem areas: annotation bottlenecks; model reliability\n- Cross-domain continuity: applying prior experience with noisy data and deployment constraints to medical imaging\n- Possible focus themes: data quality, robustness, trustworthy model behavior\n\nThose details make the transition feel more coherent: different domain, but similar underlying strengths. They also give you better future prompts if you reconnect with her."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Can you rewrite the profile so the transition story is clearer—robotics roots, then medical imaging, with the open questions called out?",
+      "agent_reply": "Sure.\n\nNadia Brooks is a robotics teammate with deep experience in drone autonomy, SLAM, mapping, edge AI, and computer vision, working mainly in Python and PyTorch. She has been active in open-source autonomy and vision tooling and is particularly strong at turning noisy sensor data into practical systems that can operate under real deployment constraints. Earlier in her career, she collaborated with Ethan Cole on perception for small UAVs, and she may have ties to UC Berkeley and the Redwood Robotics Lab, though those affiliations should be confirmed.\n\nThe most important current development is that Nadia appears to have shifted in a serious way into applied medical imaging, likely as a primary focus rather than a side project. The move seems consistent with her strengths: she reportedly cares about annotation bottlenecks, model reliability, and building systems clinicians could actually use. There may be a connection to Mira Patel, possibly a radiologist, and potentially to UCSF or another Bay Area medical institution, but those links remain unverified. Key open questions are the exact imaging domain, Nadia’s role, the organization involved, and whether the work is clinical, product, or translational research."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Good. Now give me a compact relationship map in plain English.",
+      "agent_reply": "Here’s a compact relationship map:\n- You know Nadia Brooks as a robotics teammate.\n- Nadia Brooks collaborated with Ethan Cole on perception for small UAVs.\n- Nadia Brooks may have an affiliation or past connection with UC Berkeley.\n- Nadia Brooks may have spent time around the Redwood Robotics Lab, though possibly informally.\n- Nadia Brooks may now be connected to Mira Patel, who may be a radiologist.\n- Nadia Brooks may be involved with UCSF or another Bay Area medical organization through her current medical-imaging work.\n- Nadia Brooks’s current work appears to be shifting from robotics/autonomy toward applied medical imaging for clinical use."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Add one more detail: I think she said the medical-imaging effort involved a small startup team, not just a hospital collaboration.",
+      "agent_reply": "That sharpens things a lot. I’d add:\n- Possible team context: small startup team\n- Current work structure: startup effort with possible hospital or clinical collaboration\n- Inferred environment: applied, fast-moving, product-oriented medical imaging work\n\nThat combination—startup team plus possible clinical partner—makes the current transition even more important to flag, because it suggests Nadia may now be operating at the intersection of product, AI, and healthcare deployment."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Please update the extractable facts list with that, and separate confirmed vs uncertain.",
+      "agent_reply": "Absolutely.\n\nConfirmed or strongly supported:\n- Person: Nadia Brooks\n- Relationship to user: robotics teammate\n- Shared project: drone autonomy project\n- Skills/interests: SLAM, mapping, edge AI, computer vision\n- Programming/tools: Python, PyTorch\n- Open-source involvement: yes\n- Strengths: turning messy sensor data into usable pipelines; practical about deployment constraints\n- Collaborator: Ethan Cole\n- Collaboration topic: perception for small UAVs\n- Important current update: involved in a serious medical-imaging effort\n- Likely current orientation: applied medical imaging\n- Current problem themes: annotation bottlenecks; model reliability\n\nUncertain or needs verification:\n- Possible affiliation: UC Berkeley\n- Possible affiliation: Redwood Robotics Lab\n- Contact detail: nadia.brooks@protonmail.com (older email, current status unknown)\n- Possible contact in current work: Mira Patel\n- Possible role of Mira Patel: radiologist\n- Possible organization: UCSF\n- Possible geography/context: Bay Area medical institution\n- Possible team structure: small startup team\n- Possible work model: startup effort with hospital or clinical collaboration\n- Open question: exact imaging modality\n- Open question: Nadia’s current title or role\n- Open question: whether the work is clinical, product, or translational research"
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Nice. Can you also suggest 5 follow-up questions I could ask someone who knows her, without sounding intrusive?",
+      "agent_reply": "Sure—here are five low-pressure follow-up questions:\n1. “Is Nadia still mainly focused on robotics, or has she fully shifted into medical imaging now?”\n2. “Do you know what kind of medical-imaging work she’s doing these days?”\n3. “Is her current project more startup-oriented, research-oriented, or tied to a hospital team?”\n4. “Do you happen to know who she’s working with on that medical-imaging effort?”\n5. “What role is Nadia playing there—more on the modeling side, systems side, or product/deployment side?”\n\nThese should help you verify the key unknowns without sounding like you’re digging for sensitive details."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Great. Finish by giving me a final note I could paste into a contact tracker, with a clear headline about the medical-imaging shift.",
+      "agent_reply": "Medical-imaging shift is the key current update for Nadia Brooks.\n\nNadia Brooks is a robotics teammate with a background in drone autonomy, SLAM, mapping, edge AI, and computer vision, working primarily in Python and PyTorch. She has been active in open-source autonomy and vision tooling and is especially strong at turning noisy data into practical, deployment-ready systems. She previously collaborated with Ethan Cole on perception for small UAVs and may have ties to UC Berkeley and the Redwood Robotics Lab. An older email on file is nadia.brooks@protonmail.com.\n\nPriority follow-up: Nadia appears to have made a serious move into applied medical imaging, likely as a primary focus. The work seems oriented toward real clinical use and may involve issues like annotation bottlenecks and model reliability. There may be a connection to Mira Patel, possibly a radiologist, and possibly to UCSF or another Bay Area medical organization. It also may be happening within a small startup team, potentially with hospital collaboration. Main items to verify: exact imaging area, Nadia’s current role, the organization/team, and whether the work is clinical, product, or translational."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually, one more memory came back: I think the startup might have been called Lumisight Health, or something close to that. Not certain on the spelling.",
+      "agent_reply": "That’s a very useful lead. I’d capture it as a tentative organization name rather than a confirmed one:\n- Possible organization: Lumisight Health (spelling uncertain)\n- Confidence: low to moderate\n- Context: may be the small startup team tied to Nadia Brooks’s medical-imaging work\n\nThat gives you a much better anchor for future follow-up. If you want, I can now update the tracker note so Lumisight Health appears alongside Mira Patel, UCSF, and the startup/hospital angle."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Yes, update it, and make the uncertain parts really obvious.",
+      "agent_reply": "Here’s a revised tracker note with uncertainty clearly marked:\n\nHeadline: Important current shift — Nadia Brooks may now be focused on medical imaging.\n\nNadia Brooks is a robotics teammate with prior work in drone autonomy, SLAM, mapping, edge AI, and computer vision, using Python and PyTorch. She has contributed to open-source autonomy and vision tooling and is strong at turning noisy data into practical, deployment-ready systems. She previously collaborated with Ethan Cole on perception for small UAVs. She may also have past ties to UC Berkeley and the Redwood Robotics Lab, but those affiliations are not confirmed. Older contact on file: nadia.brooks@protonmail.com (may be outdated).\n\nMost important current note: Nadia appears to have made a serious move into applied medical imaging, likely as a primary focus rather than a side project. The work seems oriented toward real clinical use and may involve annotation bottlenecks and model reliability.\n\nUnverified but important leads:\n- Possible collaborator/contact: Mira Patel, possibly a radiologist\n- Possible organization: UCSF or another Bay Area medical institution\n- Possible startup: Lumisight Health (name/spelling uncertain)\n- Possible team structure: small startup team with hospital or clinical collaboration\n\nPriority follow-up questions: confirm the organization, Nadia’s role, imaging area, and whether the work is product, clinical, or translational."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Can you also turn this into a CRM-style entry with fields like company, role, relationship, and next step?",
+      "agent_reply": "Sure.\n\nCRM-style entry\n- Name: Nadia Brooks\n- Relationship: Robotics teammate\n- Known from: Drone autonomy project\n- Background: Robotics, autonomy, computer vision\n- Core areas: SLAM, mapping, edge AI, computer vision\n- Technical stack: Python, PyTorch\n- Strengths: Noisy data pipelines, deployment-minded implementation\n- Open-source: Active in autonomy/vision tooling\n- Past collaborator: Ethan Cole\n- Past collaboration: Perception for small UAVs\n- Possible past affiliations: UC Berkeley; Redwood Robotics Lab\n- Contact: nadia.brooks@protonmail.com (old/unverified)\n\nCurrent company:\n- Unconfirmed\n- Possible startup: Lumisight Health (spelling uncertain)\n- Possible institutional tie: UCSF or another Bay Area medical organization\n\nCurrent role:\n- Unconfirmed\n- Likely involved in applied medical-imaging work\n- Possible emphasis: modeling, reliability, annotation workflow, or deployment\n\nCurrent priority signal:\n- Major career shift from robotics/autonomy toward medical imaging\n- This appears important and likely current\n\nAssociated people:\n- Ethan Cole — past collaborator on UAV perception\n- Mira Patel — possible current contact; possibly a radiologist\n\nNext step:\n- Verify current organization and exact startup name\n- Confirm Nadia’s role/title\n- Identify imaging domain/modality\n- Clarify whether work is startup product, hospital collaboration, or translational research"
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Make the 'next step' part more actionable. I may reach out to a mutual contact next week.",
+      "agent_reply": "Absolutely. Here’s a more actionable version:\n\nNext steps\n1. Ask a mutual contact whether Nadia is now primarily in medical imaging or still partly in robotics.\n2. Verify the company name: “Was it Lumisight Health, or something similar?”\n3. Ask whether her work is tied to UCSF or another Bay Area hospital/clinical partner.\n4. Confirm Nadia’s role: research, ML engineering, deployment, product, or technical lead.\n5. Clarify the imaging area if appropriate: modality, workflow, or use case.\n6. Check whether Mira Patel is part of the same project and, if so, in what capacity.\n7. Confirm whether nadia.brooks@protonmail.com is still a valid contact.\n\nSuggested outreach goal:\n- Leave the conversation with one confirmed organization, one confirmed role, and one confirmed description of the medical-imaging project."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Good. I also remember hearing that she was helping with imaging workflow tooling, not just model training. That feels important.",
+      "agent_reply": "Yes, that is important because it broadens her likely role beyond pure ML modeling. I’d add:\n- Possible responsibility: imaging workflow tooling\n- Implication: Nadia may be working across infrastructure, data flow, annotation, review, or deployment—not just model training\n- Fit with prior profile: consistent with her strength in making messy technical systems usable in practice\n\nThat detail makes her transition look even more coherent: from robotics pipelines and deployment constraints to clinical/imaging workflows and reliability."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Can you revise the CRM entry one more time with that included?",
+      "agent_reply": "Of course.\n\nCRM-style entry\n- Name: Nadia Brooks\n- Relationship: Robotics teammate\n- Known from: Drone autonomy project\n- Background: Robotics, autonomy, computer vision\n- Core areas: SLAM, mapping, edge AI, computer vision\n- Technical stack: Python, PyTorch\n- Strengths: Noisy data pipelines, deployment-minded implementation, making complex workflows usable\n- Open-source: Active in autonomy/vision tooling\n- Past collaborator: Ethan Cole\n- Past collaboration: Perception for small UAVs\n- Possible past affiliations: UC Berkeley; Redwood Robotics Lab\n- Contact: nadia.brooks@protonmail.com (old/unverified)\n\nCurrent company\n- Unconfirmed\n- Possible startup: Lumisight Health (spelling uncertain)\n- Possible institutional tie: UCSF or another Bay Area medical organization\n\nCurrent role\n- Unconfirmed\n- Likely focused on applied medical imaging\n- Possible responsibilities: model reliability, annotation bottlenecks, imaging workflow tooling, deployment-oriented ML systems\n\nCurrent priority signal\n- Major likely shift from robotics/autonomy into medical imaging\n- Appears to be a serious, current focus\n- Work seems practical and clinician-facing rather than purely academic\n\nAssociated people\n- Ethan Cole — past collaborator on UAV perception\n- Mira Patel — possible current contact; possibly a radiologist\n\nNext step\n- Verify organization name\n- Confirm role/title\n- Confirm whether the work includes clinical workflow tooling\n- Identify imaging domain/modality\n- Clarify startup vs hospital vs joint collaboration"
+    },
+    {
+      "turn_index": 27,
+      "user_message": "I want a really short version too—like 4 lines max—for a people database preview.",
+      "agent_reply": "Nadia Brooks — former robotics teammate with strengths in autonomy, computer vision, Python/PyTorch, and deployment-minded systems.\nPreviously worked on drone autonomy and collaborated with Ethan Cole on small-UAV perception.\nNow appears to be focused on applied medical imaging, possibly via a startup called Lumisight Health and/or a Bay Area clinical partner.\nKey follow-up: confirm organization, role, imaging area, and whether Mira Patel/UCSF are involved."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Nice. Could you give me 3 tags and 3 caution notes I should attach?",
+      "agent_reply": "Sure.\n\nTags:\n- Robotics-to-medical-imaging\n- Computer-vision-and-deployment\n- Bay-Area-healthtech-lead\n\nCaution notes:\n- Several current-work details are unverified, including organization name and exact role.\n- Lumisight Health may be misspelled or only approximately remembered.\n- Mira Patel, UCSF, and the hospital-collaboration angle should be treated as leads, not confirmed facts."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Before we wrap, what are the highest-value facts here from a network-mapping perspective?",
+      "agent_reply": "From a network-mapping perspective, the highest-value facts are:\n- Nadia Brooks is directly connected to you as a robotics teammate.\n- Nadia Brooks had a working relationship with Ethan Cole on small-UAV perception.\n- Nadia Brooks may have ties to UC Berkeley and Redwood Robotics Lab, which could link her into robotics research circles.\n- Nadia Brooks appears to be transitioning into healthtech/medical imaging, creating a cross-domain bridge from robotics to clinical AI.\n- Mira Patel is a potentially important connector because she may be a radiologist tied to Nadia’s current work.\n- UCSF or another Bay Area medical institution may be part of Nadia’s current network.\n- Lumisight Health, if confirmed, could be the key organizational node connecting Nadia, startup work, and clinical collaboration.\n\nIn short: the most valuable map is the transition path—robotics/open-source/autonomy on one side, then startup/clinical medical imaging on the other."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect. End with one final network-oriented summary I can save as the canonical version.",
+      "agent_reply": "Canonical network summary:\n\nNadia Brooks is a robotics teammate in my network with a background in drone autonomy, SLAM, mapping, edge AI, and computer vision, working mainly in Python and PyTorch. She is active in open-source autonomy and vision tooling and is especially strong at turning noisy real-world data into practical, deployment-ready systems. A confirmed historical connection is her collaboration with Ethan Cole on perception for small UAVs. Possible earlier affiliations include UC Berkeley and Redwood Robotics Lab, though those remain unverified.\n\nThe most important current network development is that Nadia appears to have shifted significantly into applied medical imaging. This seems to be a serious current focus and may involve model reliability, annotation bottlenecks, and imaging workflow tooling for real clinical use. Key unverified network links are Mira Patel, possibly a radiologist; UCSF or another Bay Area medical institution; and a small startup that may be called Lumisight Health. The highest-priority follow-up is to confirm the organization, Nadia’s role, and the exact structure of the startup/clinical relationship."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Nadia Brooks",
+        "Ethan Cole",
+        "Mira Patel",
+        "UC Berkeley",
+        "Redwood Robotics Lab",
+        "UCSF",
+        "Lumisight Health"
+      ],
+      "relations": [
+        "Nadia Brooks is the user's robotics teammate",
+        "The user and Nadia Brooks worked together on a drone autonomy project",
+        "Nadia Brooks collaborated with Ethan Cole on perception for small UAVs",
+        "Nadia Brooks may have a UC Berkeley connection, possibly through grad school or a lab affiliation",
+        "Nadia Brooks may have spent time around Redwood Robotics Lab",
+        "Nadia Brooks may be connected to Mira Patel through her medical-imaging work",
+        "Mira Patel may be a radiologist",
+        "Nadia Brooks may be linked to UCSF or another Bay Area medical institution",
+        "Nadia Brooks may be involved with a small startup team tied to medical imaging",
+        "That startup may be called Lumisight Health, with uncertain spelling",
+        "Nadia Brooks appears to be shifting from robotics/autonomy into applied medical imaging"
+      ],
+      "contact_or_org_details": [
+        "Older email on file for Nadia Brooks: nadia.brooks@protonmail.com, current status unknown",
+        "UC Berkeley connection is explicitly uncertain",
+        "Redwood Robotics Lab connection may have been informal and is unconfirmed",
+        "UCSF link is tentative and framed as a possible hospital or Bay Area medical institution connection",
+        "Lumisight Health is a tentative startup name with uncertain spelling",
+        "Medical-imaging work may involve startup and hospital collaboration"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "What is Nadia Brooks broadly connected to in my network, starting from her role as a robotics teammate?",
+      "tester_hint_answer": "She is tied to the user via robotics, plus UAV perception work, possible Berkeley/Redwood links, and newer medical-imaging connections.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        2,
+        5,
+        16,
+        29,
+        30
+      ]
+    },
+    {
+      "question": "What areas and communities is Nadia Brooks associated with, especially around computer vision and autonomy work?",
+      "tester_hint_answer": "Her profile centers on drone autonomy, SLAM, mapping, edge AI, computer vision, open-source vision/autonomy tooling, and practical deployment work.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        4,
+        9,
+        20,
+        30
+      ]
+    },
+    {
+      "question": "Who are the main people and organizations linked to Nadia Brooks, and which of those links are uncertain?",
+      "tester_hint_answer": "Confirmed person-link is Ethan Cole; Mira Patel, UC Berkeley, Redwood Robotics Lab, UCSF, and Lumisight Health are all presented as tentative leads.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        5,
+        11,
+        12,
+        18,
+        21,
+        22,
+        23,
+        30
+      ]
+    },
+    {
+      "question": "Why does the later medical-imaging project matter so much for future follow-up on Nadia Brooks?",
+      "tester_hint_answer": "It is framed as a serious current shift, likely her main focus, and the most important update to verify because it changes her network and domain context.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        7,
+        8,
+        10,
+        15,
+        20,
+        30
+      ]
+    },
+    {
+      "question": "What do we know about Nadia Brooks’s current medical-imaging project context, including possible clinical or startup ties, and what still needs confirmation?",
+      "tester_hint_answer": "It seems applied and clinician-facing, possibly tied to a small startup, hospital collaboration, UCSF, Mira Patel, and maybe Lumisight Health, but organization, role, and modality remain unverified.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        12,
+        13,
+        14,
+        17,
+        18,
+        21,
+        22,
+        26,
+        30
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_keyword_cap_01",
+    "issue": "keyword_cap_truncation",
+    "required_qa_phrases": [
+      "robotics teammate",
+      "computer vision",
+      "medical-imaging project"
+    ],
+    "stress_signal": "Late but important user-facing detail should remain retrievable after many earlier associations."
+  }
+}

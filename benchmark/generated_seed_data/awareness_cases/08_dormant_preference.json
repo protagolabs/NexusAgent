@@ -1,0 +1,72 @@
+{
+  "sample_id": "awareness_dormant_preference_v1",
+  "seed": {
+    "preset_name": "awareness_dormant_preference",
+    "seed_type": "dormant_preference",
+    "description": "Tests preference persistence over a long dialogue. A clear preference is set early (turn 3) and then never mentioned again for 25+ turns. Behavior probes at turns 28 and 30 check whether the agent still applies the dormant preference. Tests both (a) profile durability and (b) read-after-write adherence in long dialogues."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {"turn_index": 1, "user_message": "Helping me prep for an investor meeting next month.", "agent_reply": "Got it. What's the round and the audience?", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 2, "user_message": "Series A. Three top-tier funds, five second-tier.", "agent_reply": "OK.", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 3, "user_message": "One firm rule for all our work going forward: never use exclamation marks. I find them unprofessional in writing.", "agent_reply": "Understood — no exclamation marks anywhere from now on.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 4, "user_message": "Outline the pitch deck.", "agent_reply": "Problem, solution, traction, team, market, ask, vision.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 5, "user_message": "Draft the problem slide.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 6, "user_message": "Solution slide.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 7, "user_message": "Traction — focus on net retention and ARR growth.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 8, "user_message": "Team slide.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 9, "user_message": "Market sizing.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 10, "user_message": "Ask: 25M at 150M post.", "agent_reply": "Captured.", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 11, "user_message": "Vision slide — make it bold.", "agent_reply": "(drafts vision)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 12, "user_message": "Now appendix — financial model summary.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 13, "user_message": "And competitive landscape.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 14, "user_message": "Walk me through investor objections we should pre-empt.", "agent_reply": "Likely concerns: market timing, churn risk, hiring runway, defensibility.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 15, "user_message": "Draft responses for each.", "agent_reply": "(drafts 4 responses)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 16, "user_message": "Now talking points for the partner meeting.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 17, "user_message": "Write a 1-paragraph executive summary.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 18, "user_message": "Tighten it to 4 sentences.", "agent_reply": "(tightens)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 19, "user_message": "Followup email template after the meeting.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 20, "user_message": "And a 'no thanks' polite decline template in case they pass.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 21, "user_message": "Pricing slide — should we include or save it.", "agent_reply": "Save for the data room, not in the deck.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 22, "user_message": "Data room checklist.", "agent_reply": "(drafts checklist)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 23, "user_message": "Cap table summary slide.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 24, "user_message": "Bridge round option — should we mention it.", "agent_reply": "Skip in deck, address only if asked.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 25, "user_message": "Practice answer for 'why now'.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 26, "user_message": "And 'why you'.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 27, "user_message": "Closing line for the pitch.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 28, "user_message": "I'm pumped about this. Write me a celebratory message I can send to the team after we close.", "agent_reply": "PROBE — agent must NOT use exclamation marks despite the celebratory framing, per the dormant preference set in turn 3.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "communication", "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 29, "user_message": "Now an enthusiastic LinkedIn post about the round.", "agent_reply": "PROBE — should remain enthusiastic in tone but without exclamation marks.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "communication", "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 30, "user_message": "What firm style rules do you remember about my writing?", "agent_reply": "PROBE — should recall the no-exclamation-marks rule.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "communication", "signal_strength": null, "expected_action": "ignore"}}
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [1, 2],
+    "expected_profile_must_contain": [
+      {"section": "Communication Style", "phrase_or_synonym": "exclamation"}
+    ],
+    "expected_profile_must_not_contain": [
+      "Series A",
+      "25M",
+      "150M post",
+      "ARR"
+    ],
+    "behavior_probe_turns": [28, 29, 30]
+  },
+  "qa_items": [
+    {
+      "question": "What firm writing rule have I set for all our work?",
+      "tester_hint_answer": "Never use exclamation marks. I find them unprofessional.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [3]
+    },
+    {
+      "question": "When you write enthusiastic content for me, can you use exclamation marks?",
+      "tester_hint_answer": "No. The no-exclamation-marks rule applies even when the content is enthusiastic.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [3]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

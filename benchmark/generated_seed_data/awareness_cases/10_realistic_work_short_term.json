@@ -1,0 +1,86 @@
+{
+  "sample_id": "awareness_realistic_work_short_term_v1",
+  "seed": {
+    "preset_name": "awareness_realistic_work_short_term",
+    "seed_type": "realistic_work_short_term",
+    "description": "25-turn realistic short-term work scenario (sales rep managing weekly deals). Awareness signals are scattered naturally across the dialogue at varying density. Tests whether the agent picks up on preferences in a realistic, moderately noisy setting where most turns are deal-specific work, not preference-related."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {"turn_index": 1, "user_message": "It's Monday — let's go through this week's deal pipeline.", "agent_reply": "Sure. How many deals are active?", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 2, "user_message": "Eight active. Three at proposal stage, four at negotiation, one closing.", "agent_reply": "Got it.", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 3, "user_message": "When you summarize deal status, I want a fixed format every time: deal name, stage, ARR, blockers, next step. Always those five fields, in that order.", "agent_reply": "Understood — five-field format, fixed order, every status summary.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 4, "user_message": "Status on Acme.", "agent_reply": "- Deal: Acme\n- Stage: negotiation\n- ARR: 240K\n- Blockers: legal review\n- Next: send revised MSA Wed", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 5, "user_message": "Status on Beacon.", "agent_reply": "- Deal: Beacon\n- Stage: proposal\n- ARR: 80K\n- Blockers: procurement timeline\n- Next: discovery call Thu", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 6, "user_message": "Tasks for Acme — pull together the revised MSA section on indemnity.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 7, "user_message": "Make sure to flag any liability cap changes for me before sending. I never want to send legal redlines without my eyes on them first.", "agent_reply": "Confirmed — any liability or legal redlines, I flag first, never send without your review.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "task", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 8, "user_message": "Beacon discovery prep — what should I research?", "agent_reply": "(suggests research items)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 9, "user_message": "Status on Catalyst.", "agent_reply": "- Deal: Catalyst\n- Stage: closing\n- ARR: 410K\n- Blockers: signature awaited\n- Next: ping CFO Tuesday", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 10, "user_message": "Catalyst is the priority — push hard.", "agent_reply": "Understood, Catalyst-first this week.", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 11, "user_message": "Draft a follow-up email for Catalyst CFO.", "agent_reply": "(drafts)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 12, "user_message": "Tone should be warm but no fluff. That's how I write to all my customers — friendly but never gushing.", "agent_reply": "Got it — warm-but-no-fluff tone for all customer comms.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 13, "user_message": "Status on Delta.", "agent_reply": "- Deal: Delta\n- Stage: negotiation\n- ARR: 180K\n- Blockers: pricing disagreement\n- Next: pricing rework call Wed", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 14, "user_message": "Pricing rework — what concessions can we offer?", "agent_reply": "(suggests concession options)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 15, "user_message": "Echo, Forge, Glow status — give me all three at once.", "agent_reply": "(provides 3 status summaries in 5-field format)", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 16, "user_message": "Rough total ARR across the pipeline?", "agent_reply": "Approx 1.8M weighted by stage.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 17, "user_message": "Quick CRM update — drop Forge to lost, they went with a competitor.", "agent_reply": "Updated.", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 18, "user_message": "Hmm. Postmortem on Forge — what did we miss?", "agent_reply": "(walks through likely factors)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 19, "user_message": "Loss postmortem rule going forward: every time we lose a deal, generate a structured postmortem (cause, missed signal, lesson). Always.", "agent_reply": "Got it — automatic structured postmortem on every loss.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "task", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 20, "user_message": "Status on Hammer.", "agent_reply": "- Deal: Hammer\n- Stage: proposal\n- ARR: 120K\n- Blockers: champion changing roles\n- Next: rebuild relationship next quarter", "signal_annotation": {"signal_type": "none", "module_scope": "memory", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 21, "user_message": "Followup email for Acme on liability cap — draft.", "agent_reply": "Draft ready. Flagging: I narrowed the liability cap from 12 months fees to 6 months fees per their request — please confirm before I send.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "task", "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 22, "user_message": "Approved, send it.", "agent_reply": "Sent.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 23, "user_message": "End of week — give me the weekly recap.", "agent_reply": "PROBE — should follow established rhythm and tone.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 24, "user_message": "What's the format you use for status?", "agent_reply": "PROBE — should recall five-field format.", "signal_annotation": {"signal_type": "none", "module_scope": "awareness", "dimension": "communication", "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 25, "user_message": "Closing for the week.", "agent_reply": "Have a good weekend.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}}
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [2, 5],
+    "expected_profile_must_contain": [
+      {"section": "Communication Style", "phrase_or_synonym": "five-field"},
+      {"section": "Communication Style", "phrase_or_synonym": "warm"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "flag"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "postmortem"}
+    ],
+    "expected_profile_must_not_contain": [
+      "Acme",
+      "Beacon",
+      "Catalyst",
+      "Delta",
+      "Forge",
+      "240K",
+      "410K",
+      "1.8M"
+    ],
+    "behavior_probe_turns": [23, 24]
+  },
+  "qa_items": [
+    {
+      "question": "What format do I want for deal status updates?",
+      "tester_hint_answer": "Five fields in fixed order: deal name, stage, ARR, blockers, next step.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [3]
+    },
+    {
+      "question": "Can you send legal redlines without my review?",
+      "tester_hint_answer": "No. Always flag any liability or legal redlines for my review before sending.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [7]
+    },
+    {
+      "question": "What's my preferred tone for customer communications?",
+      "tester_hint_answer": "Warm but no fluff — friendly but not gushing.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [12]
+    },
+    {
+      "question": "What should you do automatically when a deal is lost?",
+      "tester_hint_answer": "Generate a structured postmortem with cause, missed signal, lesson.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [19]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

@@ -1,0 +1,276 @@
+{
+  "sample_id": "sn_composite_query_03_20260421T043220Z",
+  "dialogue_seed": "The user introduces Omar Aziz as an architect responsible for platform security reviews. Later they mention Omar has been studying zero-trust access patterns and service-to-service authentication. Later the user expects to remember Omar by connecting his architect role with the zero-trust security context.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"architect connected to zero-trust\", \"Omar Aziz\", and \"service-to-service authentication\". The questions should ask who matched that combined role-and-domain description.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I want to remember someone from work: Omar Aziz.",
+      "agent_reply": "Sure — tell me a bit about Omar Aziz, and I’ll help you create a strong memory hook."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "He’s an architect and he’s responsible for platform security reviews.",
+      "agent_reply": "Got it: Omar Aziz is an architect who handles platform security reviews. A simple first anchor could be: “Omar the architect reviews platform security.” If you want, we can make that more memorable with project context or topics he focuses on."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Yes, add more context. He’s been studying zero-trust access patterns lately.",
+      "agent_reply": "Great, that gives us a stronger link. So far: Omar Aziz is an architect responsible for platform security reviews, and he’s been studying zero-trust access patterns. That connects his role with a specific security theme, which makes him easier to recall."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Also service-to-service authentication.",
+      "agent_reply": "Perfect. Now the picture is sharper: Omar Aziz is the architect for platform security reviews, with current focus on zero-trust access patterns and service-to-service authentication. A compact memory line could be: “Omar Aziz — architect for platform security reviews, focused on zero-trust and service-to-service auth.”"
+    },
+    {
+      "turn_index": 5,
+      "user_message": "He works with the Platform Engineering group.",
+      "agent_reply": "That helps. We can tie him to an organization too: Omar Aziz works with the Platform Engineering group as an architect responsible for platform security reviews, especially around zero-trust access patterns and service-to-service authentication."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "He often collaborates with Priya Nair, who leads identity engineering.",
+      "agent_reply": "Excellent — that relationship makes Omar even easier to place. We now have: Omar Aziz works with Platform Engineering as an architect responsible for platform security reviews, and he often collaborates with Priya Nair, who leads Identity Engineering. That suggests Omar’s security review work overlaps closely with identity and access design."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Can you make me a short way to remember him?",
+      "agent_reply": "Try this: “Omar Aziz — Platform Engineering architect tied to security reviews, zero-trust, and service-to-service authentication; often works with Priya in Identity Engineering.”\n\nIf you want something even shorter: “Omar = architect + platform security reviews + zero-trust.”"
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Make it sound more natural, like something I’d say to myself.",
+      "agent_reply": "Sure: “Omar Aziz — he’s the architect connected to platform security reviews, especially zero-trust and service-to-service auth.”\n\nOr even more conversational: “Omar’s the security-review architect who’s been deep in zero-trust stuff.”"
+    },
+    {
+      "turn_index": 9,
+      "user_message": "That second one is close. Add the architect part more clearly so I don’t forget his role.",
+      "agent_reply": "Here’s a cleaner version: “Omar’s the architect who handles platform security reviews and has been deep in zero-trust and service-to-service auth.”\n\nThat keeps his role front and center while linking it to the security topics."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Good. Also, his email is omar.aziz@northbridge.io in case I need another anchor.",
+      "agent_reply": "Perfect — that gives you a concrete detail. Final memory anchor: “Omar Aziz — the architect who handles platform security reviews at Platform Engineering, focused on zero-trust and service-to-service auth.” Extra cue: he collaborates with Priya Nair in Identity Engineering, and his email is omar.aziz@northbridge.io.\n\nIf you want, I can also turn this into a one-line contact note or a flashcard-style reminder."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Make it a one-line contact note I could drop into my address book.",
+      "agent_reply": "Omar Aziz — Architect, Platform Engineering at Northbridge; handles platform security reviews, focused on zero-trust access patterns and service-to-service authentication; collaborates with Priya Nair (Identity Engineering); omar.aziz@northbridge.io."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Can you shorten that for a phone contact note field?",
+      "agent_reply": "Sure: Omar Aziz — Platform architect, security reviews; zero-trust + service-to-service auth; works with Priya Nair; Northbridge."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "I also met Daniel Cho in the same meeting, and I don’t want to mix them up.",
+      "agent_reply": "A good distinction is role and topic. Omar Aziz = architect in Platform Engineering tied to platform security reviews, zero-trust, and service-to-service auth. Daniel Cho should be anchored to a different function, team, or topic. If you give me one or two details about Daniel, I can help separate them cleanly."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Daniel is a product manager on the developer platform side.",
+      "agent_reply": "Great — then the split is straightforward:\n- Omar Aziz: architect, platform security reviews, zero-trust, service-to-service auth\n- Daniel Cho: product manager, developer platform\n\nA quick mental divider: Omar = security architecture; Daniel = product direction."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "That helps. Can you give me a two-person note so I can save both?",
+      "agent_reply": "Sure:\nOmar Aziz — Platform Engineering architect at Northbridge; owns platform security reviews; focused on zero-trust and service-to-service authentication; works with Priya Nair in Identity Engineering; omar.aziz@northbridge.io.\nDaniel Cho — Product Manager on the developer platform side."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Actually, make Omar’s entry the stronger one. He’s the one I’m more likely to need later.",
+      "agent_reply": "Absolutely:\nOmar Aziz — Architect, Platform Engineering, Northbridge. Main contact for platform security reviews. Strongly associated with zero-trust access patterns and service-to-service authentication. Frequently collaborates with Priya Nair, who leads Identity Engineering. Email: omar.aziz@northbridge.io.\n\nDaniel Cho — Product Manager, developer platform."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Can you make a memory hook that links Omar specifically to Priya too?",
+      "agent_reply": "Yes: “Omar is the architect reviewing platform security, and Priya is the identity lead he works with when zero-trust and service-to-service auth come up.”\n\nShorter version: “Omar reviews the platform; Priya handles identity.”"
+    },
+    {
+      "turn_index": 18,
+      "user_message": "I want that to sound more like a quick thought, not a formal sentence.",
+      "agent_reply": "Try one of these:\n- “Omar — architect on security reviews; usually think of Priya when identity comes up.”\n- “Omar does the platform security review side, Priya’s the identity counterpart.”\n- “Omar = security-review architect, tied to Priya on identity and zero-trust.”"
+    },
+    {
+      "turn_index": 19,
+      "user_message": "The third one is good. Can you make it even tighter?",
+      "agent_reply": "Sure: “Omar = security architect; Priya = identity; together = zero-trust.”"
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Nice. Give me a final compact summary of Omar only, with the strongest details.",
+      "agent_reply": "Omar Aziz — Northbridge Platform Engineering architect who handles platform security reviews; strongly tied to zero-trust access patterns and service-to-service authentication; often works with Priya Nair in Identity Engineering; omar.aziz@northbridge.io."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Can you turn that into a really fast mental cue, like 5 to 7 words?",
+      "agent_reply": "Sure: “Omar: architect, zero-trust, security reviews.”"
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Give me three options so I can pick one.",
+      "agent_reply": "Here are three:\n1. “Omar: architect for zero-trust reviews.”\n2. “Omar: platform security architect, zero-trust.”\n3. “Omar: security reviews, service-auth architect.”"
+    },
+    {
+      "turn_index": 23,
+      "user_message": "I like the second one. Can you make it just a little more specific without getting long?",
+      "agent_reply": "Yes: “Omar: Platform Engineering security architect, zero-trust.”"
+    },
+    {
+      "turn_index": 24,
+      "user_message": "That’s good. I may need to introduce him to someone later. Give me a clean one-sentence intro.",
+      "agent_reply": "Omar Aziz is an architect in Platform Engineering at Northbridge who leads platform security reviews, with a focus on zero-trust access patterns and service-to-service authentication."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Make it sound more conversational, like I’m saying it in a meeting.",
+      "agent_reply": "This is Omar Aziz — he’s an architect with Platform Engineering at Northbridge and he’s the person I think of for platform security reviews, especially around zero-trust and service-to-service auth."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Good. Add Priya naturally, but keep Omar as the main person.",
+      "agent_reply": "This is Omar Aziz — he’s an architect with Platform Engineering at Northbridge and leads platform security reviews, especially around zero-trust and service-to-service auth; he works closely with Priya Nair on the identity side."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Can you also give me a version that helps me not confuse him with Daniel Cho?",
+      "agent_reply": "Sure: “This is Omar Aziz — he’s the Platform Engineering architect focused on security reviews, zero-trust, and service-to-service auth, not Daniel Cho, who’s on the product side of the developer platform.”"
+    },
+    {
+      "turn_index": 28,
+      "user_message": "That’s helpful. Now give me a private note version just for myself, not an intro.",
+      "agent_reply": "Private note: Omar Aziz — Northbridge Platform Engineering architect; main anchor is platform security reviews + zero-trust + service-to-service authentication; closely linked with Priya Nair in Identity Engineering; distinct from Daniel Cho, who is product-focused."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Can you make that note a little more compact but keep Northbridge and his email?",
+      "agent_reply": "Omar Aziz — Architect, Platform Engineering at Northbridge; platform security reviews, zero-trust, service-to-service auth; works with Priya Nair (Identity Engineering); omar.aziz@northbridge.io."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect. Last thing: what’s the single strongest association I should use if I only remember one thing?",
+      "agent_reply": "If you keep just one thing, use: Omar Aziz = the Northbridge architect for platform security reviews tied to zero-trust."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Omar Aziz",
+        "Priya Nair",
+        "Daniel Cho",
+        "Platform Engineering",
+        "Identity Engineering",
+        "Northbridge"
+      ],
+      "relations": [
+        "Omar Aziz is an architect responsible for platform security reviews",
+        "Omar Aziz works with the Platform Engineering group",
+        "Omar Aziz focuses on zero-trust access patterns",
+        "Omar Aziz focuses on service-to-service authentication",
+        "Omar Aziz often collaborates with Priya Nair",
+        "Priya Nair leads Identity Engineering",
+        "Daniel Cho is a product manager on the developer platform side",
+        "Omar Aziz is distinct from Daniel Cho by role and topic",
+        "Omar Aziz is associated with Northbridge"
+      ],
+      "contact_or_org_details": [
+        "Omar Aziz email: omar.aziz@northbridge.io",
+        "Omar Aziz is in Platform Engineering at Northbridge",
+        "Priya Nair is in Identity Engineering",
+        "Daniel Cho is on the developer platform side"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is the architect connected to zero-trust and platform security reviews?",
+      "tester_hint_answer": "It is Omar Aziz, the Platform Engineering architect tied to security reviews and zero-trust.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        3,
+        30
+      ]
+    },
+    {
+      "question": "When I think of Omar Aziz together with service-to-service authentication, who am I supposed to remember?",
+      "tester_hint_answer": "The person is Omar Aziz, linked to service-to-service authentication and security review work.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        10,
+        24
+      ]
+    },
+    {
+      "question": "Who matched the combined description of an architect connected to zero-trust and service-to-service authentication?",
+      "tester_hint_answer": "Omar Aziz matches that combined role-and-domain description.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        9,
+        20
+      ]
+    },
+    {
+      "question": "If I only remember the person as the architect connected to zero-trust at Northbridge, who is that?",
+      "tester_hint_answer": "That refers to Omar Aziz at Northbridge in Platform Engineering.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        11,
+        23,
+        30
+      ]
+    },
+    {
+      "question": "Who was the person described as handling platform security reviews, studying zero-trust, and tied to service-to-service authentication rather than Daniel Cho?",
+      "tester_hint_answer": "It is Omar Aziz, not Daniel Cho.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        14,
+        15,
+        27
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_composite_query_03",
+    "issue": "composite_search_terms",
+    "required_qa_phrases": [
+      "architect connected to zero-trust",
+      "Omar Aziz",
+      "service-to-service authentication"
+    ],
+    "stress_signal": "User combines architecture role and zero-trust/security context that were mentioned separately."
+  }
+}

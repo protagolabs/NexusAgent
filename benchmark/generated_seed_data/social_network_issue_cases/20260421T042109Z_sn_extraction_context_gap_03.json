@@ -1,0 +1,272 @@
+{
+  "sample_id": "sn_extraction_context_gap_03_20260421T042109Z",
+  "dialogue_seed": "The user discusses Sara Kim, who is already a product-management contact. Later in the conversation they call Sara a PM, product lead, roadmap owner, and discovery lead while asking how to involve her in a launch review. The agent should keep the identity and role stable.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Sara Kim\", \"PM\", and \"product lead\". The questions should ask what she does, why she should be involved in the launch review, and how those role descriptions relate to her planning role.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m getting ready for a launch review and want to make sure Sara Kim is involved in the right way. She’s already one of our product-management contacts. How should I pull her in?",
+      "agent_reply": "A good default is to involve Sara Kim early as the product-management point person, not just as a last-minute reviewer. For a launch review, I’d suggest:\n\n1. Invite her to the core review meeting.\n2. Send her the draft materials 2–3 days in advance.\n3. Ask for input on scope, launch risks, and success metrics.\n4. Clarify whether you want approval, feedback, or just visibility.\n\nA simple message could be:\n“Hi Sara — we’re preparing the launch review for [project]. Since you’re our product-management contact, I’d love to get your perspective on scope, risks, and readiness. Could you join the review on [date], and I can send materials ahead of time?”\n\nIf you want, I can help you tailor that for a more formal or more casual internal note."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "That helps. She’s basically the PM on this effort, but not the engineering manager. Does that change anything?",
+      "agent_reply": "Yes—slightly. If Sara Kim is the PM, then her role in the launch review should center on product judgment rather than engineering execution. That usually means she should:\n\n- confirm the user problem and launch goals,\n- validate prioritization and tradeoffs,\n- speak to timeline expectations from the product side,\n- help decide whether the release matches the roadmap intent.\n\nThe engineering manager would usually cover implementation readiness, operational risks, and staffing. Sara, as the PM, should be positioned as the product decision-maker or at least the primary product voice.\n\nSo instead of framing her as optional context, you can frame her as a key reviewer."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Makes sense. I’m also working with Miguel Torres from BrightPath Marketing, and he wants to know who owns the final product call. I don’t want to create confusion.",
+      "agent_reply": "Then I’d be explicit. Since Miguel Torres is with BrightPath Marketing, he likely needs a clean decision path.\n\nYou could say something like:\n“Sara Kim is the PM and primary product contact for this launch review. She’ll provide the product perspective and help drive the final product recommendation. Engineering readiness will be covered separately by the engineering manager.”\n\nThat keeps roles distinct:\n- Sara Kim: PM / product contact / product decision input\n- Engineering manager: technical readiness\n- Miguel Torres at BrightPath Marketing: downstream launch coordination and messaging input\n\nIf the final sign-off sits elsewhere, say that directly too. Otherwise people often assume the PM has absolute approval authority."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "I’ve heard people refer to Sara as the product lead too. Is it okay if I use that title in the review notes?",
+      "agent_reply": "Yes, as long as you use it consistently and it reflects how she functions on this effort. If Sara Kim is already known as the PM, calling her the product lead in review notes is usually fine, especially if you mean she leads product direction for the launch.\n\nTo avoid ambiguity, the first mention can combine both:\n“Sara Kim, PM and product lead for this effort”\n\nAfter that, you can usually use either one. If the audience includes external partners like BrightPath Marketing, clarity matters more than title precision."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Right. She’s also the roadmap owner for this area, so I want that reflected. I’m drafting an attendee list for a review next Thursday at 2 PM.",
+      "agent_reply": "That strengthens the case for including her as a central participant. If Sara Kim is the roadmap owner for this area, your attendee list or agenda can reflect that by naming her role clearly.\n\nFor example:\n- Sara Kim — PM / Product Lead / Roadmap Owner\n- Engineering Manager — technical readiness\n- Miguel Torres, BrightPath Marketing — launch messaging and go-to-market alignment\n\nFor the meeting note, you could write:\n“Launch Review — Thursday, 2:00 PM. Sara Kim will attend as PM, product lead, and roadmap owner for the initiative.”\n\nThat signals that she is not just informed; she is materially responsible for product direction."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Good. I may send her a quick Slack first, then the calendar invite. Can you draft the Slack? Her email is sara.kim@northstar.io in case I include it in the follow-up.",
+      "agent_reply": "Sure—here’s a concise Slack draft:\n\n“Hi Sara — I’m pulling together the launch review for next Thursday at 2 PM and wanted to make sure you’re included. Since you’re the PM / product lead and roadmap owner for this area, your input on readiness, scope, and product tradeoffs would be really important. I’ll send a calendar invite shortly, but wanted to check in first in case there’s anything specific you want covered.”\n\nIf you want a slightly more direct version:\n\n“Hi Sara — I’m setting up the launch review for next Thursday at 2 PM. Since you own the roadmap for this area and are the PM on the effort, I’d like to include you as a core reviewer. I’ll send the invite next, and I’d love any input on what we should make sure to cover.”\n\nThen your follow-up email can go to sara.kim@northstar.io if needed."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "One more wrinkle: she’s been leading a lot of the customer interviews too, so some people call her the discovery lead. I want to mention that without making it sound like a different person.",
+      "agent_reply": "That’s easy to handle if you anchor everything to her name once and then stack the functions. Since Sara Kim is the same person throughout, you can describe her as holding multiple product-related responsibilities.\n\nFor example:\n“Sara Kim is the PM for this effort and serves as product lead, roadmap owner, and discovery lead.”\n\nThat makes it clear these are all facets of one role profile, not separate people. In the launch review context, mentioning discovery lead is useful because it shows she brings customer insight, not just roadmap ownership.\n\nYou can also shorten it in notes to:\n“Sara Kim — PM; product lead; roadmap owner; discovery lead.”"
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Can you turn that into a clean attendee section plus a short intro paragraph for the doc?",
+      "agent_reply": "Absolutely.\n\nIntro paragraph:\n“This launch review brings together the core stakeholders responsible for product direction, technical readiness, and go-to-market coordination. Sara Kim will participate as the PM for this effort and serves as product lead, roadmap owner, and discovery lead, bringing both product judgment and customer-insight context into the review.”\n\nAttendee section:\n- Sara Kim — PM; Product Lead; Roadmap Owner; Discovery Lead\n- [Engineering Manager Name] — Engineering Manager; technical readiness\n- Miguel Torres — BrightPath Marketing; launch messaging and go-to-market alignment\n\nIf you want, I can also convert that into a more executive tone or a more lightweight internal-doc style."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Make it a little more executive. Also, I need one sentence that explains why Sara should be in the decision loop for launch readiness.",
+      "agent_reply": "Here’s a more executive version.\n\nIntro paragraph:\n“This launch review convenes the key stakeholders accountable for product direction, delivery readiness, and market coordination. Sara Kim will participate as the PM for this initiative and serves as product lead, roadmap owner, and discovery lead, ensuring the review incorporates strategic product context, customer insight, and launch decision alignment.”\n\nAttendees:\n- Sara Kim — PM; Product Lead; Roadmap Owner; Discovery Lead\n- [Engineering Manager Name] — Engineering Manager; delivery and technical readiness\n- Miguel Torres — BrightPath Marketing; go-to-market coordination and messaging alignment\n\nDecision-loop sentence:\n“Sara Kim should be included in the launch-readiness decision loop because she owns the product direction for the initiative and can evaluate whether the release aligns with roadmap priorities, customer learnings, and intended launch outcomes.”"
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Perfect. Last thing: give me a very short email invite blurb I can send to Sara and cc Miguel.",
+      "agent_reply": "Sure:\n\nSubject: Launch Review Invite — Next Thursday at 2 PM\n\nHi Sara — inviting you to the launch review for [project] next Thursday at 2 PM. As PM, product lead, roadmap owner, and discovery lead for this effort, your input on launch readiness, scope, and product alignment will be important. CC’ing Miguel Torres from BrightPath Marketing for visibility on go-to-market coordination.\n\nBest,\n[Your Name]"
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Actually, I also want to copy our engineering manager, Priya Nair at Northstar, so it’s clear Sara owns the product side and Priya owns technical readiness. Can you revise the blurb?",
+      "agent_reply": "Absolutely.\n\nSubject: Launch Review Invite — Next Thursday at 2 PM\n\nHi Sara — inviting you to the launch review for [project] next Thursday at 2 PM. As PM, product lead, roadmap owner, and discovery lead for this effort, your input on product alignment, scope, and launch readiness will be important. I’m also copying Priya Nair, Engineering Manager at Northstar, who will represent technical readiness, and Miguel Torres from BrightPath Marketing for go-to-market visibility.\n\nBest,\n[Your Name]"
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Good, but I don’t want it to sound like Sara and Priya are equal approvers if the final product call runs through Sara.",
+      "agent_reply": "Then make Sara’s role explicit and Priya’s role advisory on the technical side.\n\nRevised blurb:\n\nSubject: Launch Review Invite — Next Thursday at 2 PM\n\nHi Sara — inviting you to the launch review for [project] next Thursday at 2 PM. As the PM, product lead, roadmap owner, and discovery lead for this effort, I’d like you in the core decision loop on product alignment and launch readiness. I’m also copying Priya Nair, Engineering Manager at Northstar, to cover technical readiness, and Miguel Torres from BrightPath Marketing for go-to-market visibility.\n\nBest,\n[Your Name]\n\nIf you want, I can make it even more explicit by saying Sara will drive the product recommendation."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Yes, give me that stronger version. Keep it polished, not political.",
+      "agent_reply": "Here’s a stronger but still neutral version:\n\nSubject: Launch Review Invite — Next Thursday at 2 PM\n\nHi Sara — inviting you to the launch review for [project] next Thursday at 2 PM. As the PM, product lead, roadmap owner, and discovery lead for this effort, I’d like you to help drive the product recommendation and launch-readiness discussion. I’m also copying Priya Nair, Engineering Manager at Northstar, to represent technical readiness, and Miguel Torres from BrightPath Marketing for go-to-market coordination and visibility.\n\nBest,\n[Your Name]"
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Nice. Now I need a one-line note for the agenda that says Sara is the product decision-maker for the review.",
+      "agent_reply": "You could use:\n\n“Sara Kim will serve as the primary product decision-maker for this review, with input from engineering on technical readiness and marketing on launch coordination.”"
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Can you soften “decision-maker” just a little? She does drive the call, but I don’t want it to sound too absolute in writing.",
+      "agent_reply": "Sure. A softer version is:\n\n“Sara Kim will serve as the primary product lead for this review, guiding the product recommendation with input from engineering on technical readiness and marketing on launch coordination.”\n\nIf you want an even more executive phrasing, I can give you 2–3 alternatives."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Give me three alternatives. One executive, one neutral, one very concise.",
+      "agent_reply": "Here are three options:\n\nExecutive:\n- “Sara Kim will provide primary product leadership for the review, guiding the launch recommendation in alignment with roadmap priorities and customer insight.”\n\nNeutral:\n- “Sara Kim will lead the product perspective in the review and help guide the launch recommendation, with supporting input from engineering and marketing.”\n\nVery concise:\n- “Sara Kim will lead the product recommendation for the review.”"
+    },
+    {
+      "turn_index": 17,
+      "user_message": "I like the neutral one. Can you also give me a matching line for Priya so the pairing feels balanced?",
+      "agent_reply": "Yes:\n\n“Priya Nair will lead the technical readiness perspective in the review, with input on implementation status, operational risk, and delivery confidence.”\n\nPaired together, they read cleanly:\n- “Sara Kim will lead the product perspective in the review and help guide the launch recommendation, with supporting input from engineering and marketing.”\n- “Priya Nair will lead the technical readiness perspective in the review, with input on implementation status, operational risk, and delivery confidence.”"
+    },
+    {
+      "turn_index": 18,
+      "user_message": "That works. I’m adding a contact block at the bottom of the doc too. What’s a clean format using Sara, Priya, and Miguel?",
+      "agent_reply": "A simple format would be:\n\nContacts\n- Sara Kim — PM / Product Lead / Roadmap Owner / Discovery Lead, Northstar — sara.kim@northstar.io\n- Priya Nair — Engineering Manager, Northstar — [priya.nair@northstar.io]\n- Miguel Torres — BrightPath Marketing — go-to-market coordination and messaging — [miguel@brightpathmarketing.com]\n\nIf you don’t want to list emails publicly in the doc, you can replace them with just names, roles, and organizations."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Let’s not invent Priya or Miguel’s emails. Can you rewrite that without placeholders and make Sara’s line the most detailed?",
+      "agent_reply": "Of course.\n\nContacts\n- Sara Kim — PM / Product Lead / Roadmap Owner / Discovery Lead, Northstar — sara.kim@northstar.io\n- Priya Nair — Engineering Manager, Northstar\n- Miguel Torres — BrightPath Marketing — go-to-market coordination and messaging\n\nThat keeps Sara’s entry detailed and uses only confirmed contact information."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Great. Before I send this, give me one final paragraph I can paste at the top of the doc that ties everything together: Sara leads product, Priya covers technical readiness, and Miguel is there for GTM visibility.",
+      "agent_reply": "Here’s a polished top paragraph:\n\n“This launch review brings together the core stakeholders responsible for product direction, technical readiness, and go-to-market visibility. Sara Kim will lead the product perspective for the review in her capacity as PM, product lead, roadmap owner, and discovery lead, helping guide the launch recommendation based on roadmap priorities and customer insight. Priya Nair will represent technical readiness, and Miguel Torres from BrightPath Marketing will participate to ensure alignment on go-to-market coordination and messaging visibility.”"
+    },
+    {
+      "turn_index": 21,
+      "user_message": "This is close. I also want to make clear that Miguel is not part of the product call itself—he just needs visibility so BrightPath Marketing can prep timing and messaging.",
+      "agent_reply": "Got it. Here’s a tighter version that draws that boundary clearly:\n\n“This launch review brings together the core stakeholders responsible for product direction and technical readiness, while also providing go-to-market visibility. Sara Kim will lead the product perspective for the review in her capacity as PM, product lead, roadmap owner, and discovery lead, helping guide the launch recommendation based on roadmap priorities and customer insight. Priya Nair will represent technical readiness. Miguel Torres from BrightPath Marketing is included for visibility so his team can align on launch timing and messaging, but he is not part of the product decision path.”"
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Good. Can you make that last clause a little softer? I don’t want to sound exclusionary with Miguel.",
+      "agent_reply": "Yes—softer wording would keep the boundary without sounding sharp:\n\n“This launch review brings together the core stakeholders responsible for product direction and technical readiness, while also providing go-to-market visibility. Sara Kim will lead the product perspective for the review in her capacity as PM, product lead, roadmap owner, and discovery lead, helping guide the launch recommendation based on roadmap priorities and customer insight. Priya Nair will represent technical readiness. Miguel Torres from BrightPath Marketing is included for visibility so his team can align on launch timing and messaging, while the product recommendation will be led internally by Sara.”"
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Nice. I’m also adding a RACI-style section. For Sara, would you put Responsible or Accountable?",
+      "agent_reply": "For the product side, I’d usually put Sara Kim as Accountable if she is the one guiding the final product recommendation for launch readiness. That fits everything you’ve described: she’s the PM, product lead, roadmap owner, and discovery lead.\n\nA simple split could be:\n- Sara Kim — Accountable for product recommendation\n- Priya Nair — Responsible for technical readiness input\n- Miguel Torres — Consulted for go-to-market timing and messaging\n\nIf your team uses RACI very literally, Sara could also be both Responsible and Accountable for product decisions, but if you want the cleanest signal, Accountable is probably the better label."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Our templates do use RACI pretty literally. Could you suggest a compact version where Sara is both responsible and accountable without looking odd?",
+      "agent_reply": "Yes. In that case, I’d make the ownership specific enough that it feels intentional.\n\nFor example:\n- Sara Kim — Responsible / Accountable: product recommendation and launch alignment\n- Priya Nair — Responsible: technical readiness assessment\n- Miguel Torres, BrightPath Marketing — Consulted: GTM timing and messaging visibility\n\nIf you want it even more polished for a doc table:\n- Product recommendation and launch alignment — Sara Kim (R/A)\n- Technical readiness assessment — Priya Nair (R)\n- GTM timing and messaging visibility — Miguel Torres, BrightPath Marketing (C)\n\nThat usually reads more naturally than assigning RACI by person alone."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "That table-style version is better. Add one row for stakeholders who just need to be kept informed after the review.",
+      "agent_reply": "Sure—here’s a compact version:\n\n- Product recommendation and launch alignment — Sara Kim (R/A)\n- Technical readiness assessment — Priya Nair (R)\n- GTM timing and messaging visibility — Miguel Torres, BrightPath Marketing (C)\n- Post-review launch communication and stakeholder awareness — Relevant team stakeholders (I)\n\nIf you want, I can also make “Relevant team stakeholders” more specific, like leadership, support, or sales enablement."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Make that last row specific to internal leadership and customer-facing teams.",
+      "agent_reply": "Absolutely:\n\n- Product recommendation and launch alignment — Sara Kim (R/A)\n- Technical readiness assessment — Priya Nair (R)\n- GTM timing and messaging visibility — Miguel Torres, BrightPath Marketing (C)\n- Post-review awareness and rollout communication — Internal leadership and customer-facing teams (I)\n\nThat keeps the informed group concrete without overloading the section."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Can you now give me a final doc-ready block with: top paragraph, attendee list, contacts, and that RACI section?",
+      "agent_reply": "Of course.\n\n**Overview**\nThis launch review brings together the core stakeholders responsible for product direction and technical readiness, while also providing go-to-market visibility. Sara Kim will lead the product perspective for the review in her capacity as PM, product lead, roadmap owner, and discovery lead, helping guide the launch recommendation based on roadmap priorities and customer insight. Priya Nair will represent technical readiness. Miguel Torres from BrightPath Marketing is included for visibility so his team can align on launch timing and messaging, while the product recommendation will be led internally by Sara.\n\n**Attendees**\n- Sara Kim — PM; Product Lead; Roadmap Owner; Discovery Lead\n- Priya Nair — Engineering Manager\n- Miguel Torres — BrightPath Marketing; go-to-market coordination and messaging visibility\n\n**Contacts**\n- Sara Kim — PM / Product Lead / Roadmap Owner / Discovery Lead, Northstar — sara.kim@northstar.io\n- Priya Nair — Engineering Manager, Northstar\n- Miguel Torres — BrightPath Marketing — go-to-market coordination and messaging\n\n**RACI**\n- Product recommendation and launch alignment — Sara Kim (R/A)\n- Technical readiness assessment — Priya Nair (R)\n- GTM timing and messaging visibility — Miguel Torres, BrightPath Marketing (C)\n- Post-review awareness and rollout communication — Internal leadership and customer-facing teams (I)"
+    },
+    {
+      "turn_index": 28,
+      "user_message": "This is strong. One small thing: in the attendee list, should I say “Miguel Torres — BrightPath Marketing” or “Miguel Torres — BrightPath Marketing, go-to-market visibility”?",
+      "agent_reply": "Use “Miguel Torres — BrightPath Marketing; go-to-market visibility” if you want the attendee list to do a little explanatory work.\n\nUse just “Miguel Torres — BrightPath Marketing” if the audience already knows why he is there.\n\nGiven the confusion you were trying to avoid, I’d keep the fuller version:\n- Miguel Torres — BrightPath Marketing; go-to-market visibility\n\nThat makes his role clear without implying he owns product decisions."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Agreed. Last polish pass: can you shorten the overview paragraph by about 20% without losing Sara’s full role stack?",
+      "agent_reply": "Yes—here’s a shorter version:\n\n“This launch review brings together the stakeholders responsible for product direction and technical readiness, while providing go-to-market visibility. Sara Kim will lead the product perspective as PM, product lead, roadmap owner, and discovery lead, guiding the launch recommendation based on roadmap priorities and customer insight. Priya Nair will represent technical readiness. Miguel Torres from BrightPath Marketing is included for visibility so his team can align on launch timing and messaging.”"
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect. I think that’s the final version. Can you give me just the finished text in one clean block with no commentary so I can paste it into the doc?",
+      "agent_reply": "**Overview**\nThis launch review brings together the stakeholders responsible for product direction and technical readiness, while providing go-to-market visibility. Sara Kim will lead the product perspective as PM, product lead, roadmap owner, and discovery lead, guiding the launch recommendation based on roadmap priorities and customer insight. Priya Nair will represent technical readiness. Miguel Torres from BrightPath Marketing is included for visibility so his team can align on launch timing and messaging.\n\n**Attendees**\n- Sara Kim — PM; Product Lead; Roadmap Owner; Discovery Lead\n- Priya Nair — Engineering Manager\n- Miguel Torres — BrightPath Marketing; go-to-market visibility\n\n**Contacts**\n- Sara Kim — PM / Product Lead / Roadmap Owner / Discovery Lead, Northstar — sara.kim@northstar.io\n- Priya Nair — Engineering Manager, Northstar\n- Miguel Torres — BrightPath Marketing — go-to-market coordination and messaging\n\n**RACI**\n- Product recommendation and launch alignment — Sara Kim (R/A)\n- Technical readiness assessment — Priya Nair (R)\n- GTM timing and messaging visibility — Miguel Torres, BrightPath Marketing (C)\n- Post-review awareness and rollout communication — Internal leadership and customer-facing teams (I)"
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Sara Kim",
+        "Miguel Torres",
+        "BrightPath Marketing",
+        "Priya Nair",
+        "Northstar"
+      ],
+      "relations": [
+        "Sara Kim is already one of the user's product-management contacts.",
+        "Sara Kim is the PM on the effort.",
+        "Sara Kim is also referred to as product lead, roadmap owner, and discovery lead for the same effort.",
+        "Miguel Torres is from BrightPath Marketing and is involved for go-to-market visibility, timing, and messaging alignment.",
+        "Priya Nair is the Engineering Manager at Northstar and covers technical readiness.",
+        "Sara leads the product perspective and recommendation path, while Priya leads technical readiness and Miguel is consulted for GTM visibility."
+      ],
+      "contact_or_org_details": [
+        "Sara Kim is associated with Northstar.",
+        "Sara Kim's email is sara.kim@northstar.io.",
+        "Priya Nair is identified as Engineering Manager at Northstar.",
+        "Miguel Torres is identified with BrightPath Marketing."
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is Sara Kim in this launch review setup, and what role does she play?",
+      "tester_hint_answer": "She is the user's existing product-management contact and the same person serving as the PM leading the product side of the review.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        2,
+        30
+      ]
+    },
+    {
+      "question": "Why should Sara Kim be involved in the launch review, especially if she is the PM?",
+      "tester_hint_answer": "Because she provides the core product perspective and helps guide the launch recommendation based on scope, roadmap priorities, risks, and customer insight.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        9,
+        30
+      ]
+    },
+    {
+      "question": "Is it okay to describe Sara Kim as a product lead, and how does that relate to her PM role?",
+      "tester_hint_answer": "Yes; product lead is presented as a compatible label for the same person, with the first mention often combining PM and product lead.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        5,
+        30
+      ]
+    },
+    {
+      "question": "How do the labels PM, product lead, roadmap owner, and discovery lead all relate to Sara Kim’s planning role?",
+      "tester_hint_answer": "They are all stacked responsibilities for the same person and together explain her ownership of product direction, roadmap planning, and customer-insight input.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        7,
+        9,
+        30
+      ]
+    },
+    {
+      "question": "How are Sara Kim, Priya Nair, and Miguel Torres differentiated in the review so there is no confusion about who owns what?",
+      "tester_hint_answer": "Sara leads the product recommendation, Priya covers technical readiness, and Miguel from BrightPath Marketing is there for go-to-market visibility rather than the product call.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        11,
+        21,
+        30
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_extraction_context_gap_03",
+    "issue": "extraction_without_full_existing_context",
+    "required_qa_phrases": [
+      "Sara Kim",
+      "PM",
+      "product lead"
+    ],
+    "stress_signal": "A known contact is re-described with abbreviations and role paraphrases."
+  }
+}

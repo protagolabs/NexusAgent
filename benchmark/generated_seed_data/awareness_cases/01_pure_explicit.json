@@ -1,0 +1,130 @@
+{
+  "sample_id": "awareness_pure_explicit_v1",
+  "seed": {
+    "preset_name": "awareness_pure_explicit",
+    "seed_type": "pure_explicit",
+    "description": "Baseline recall test: dialogue contains 3 unambiguous explicit awareness signals across 3 different dimensions. Tests whether the agent reliably triggers update_awareness when signals are textbook clear."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I need help drafting a weekly report template for my team.",
+      "agent_reply": "Sure. What kind of structure do you have in mind, and how long is each section?",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Please always keep things concise — bullet points only, no long paragraphs. This applies to everything we work on, not just the report.",
+      "agent_reply": "Understood. From now on I'll default to bullet points and keep responses tight unless you ask for more detail.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "communication",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Section 1 should be 'Last week's outcomes'. Draft something for me.",
+      "agent_reply": "- Outcome 1: ...\n- Outcome 2: ...\n- Blockers resolved: ...",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 4,
+      "user_message": "From now on, always show me a draft before finalizing anything. I want to review before you commit.",
+      "agent_reply": "Got it — I'll always present a draft for your review first, no auto-finalizing.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "task",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Section 2 is 'This week's plan'. Draft it.",
+      "agent_reply": "- Goal A: ...\n- Goal B: ...\n- Risks to flag: ...\n\nDraft above for your review.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 6,
+      "user_message": "You're my weekly-reporting copilot — focus only on weekly cadence things. Don't suggest monthly or quarterly stuff unless I ask.",
+      "agent_reply": "Understood. Scoping strictly to weekly cadence going forward.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "role",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Looks good. Save this template for next time.",
+      "agent_reply": "Saved. Ready when you need next week's report.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    }
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [1, 3],
+    "expected_profile_must_contain": [
+      {"section": "Communication Style", "phrase_or_synonym": "concise"},
+      {"section": "Communication Style", "phrase_or_synonym": "bullet"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "draft"},
+      {"section": "Role and Identity", "phrase_or_synonym": "weekly"}
+    ],
+    "expected_profile_must_not_contain": [],
+    "behavior_probe_turns": []
+  },
+  "qa_items": [
+    {
+      "question": "What is my preferred response format?",
+      "tester_hint_answer": "Concise, bullet points, no long paragraphs.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [2]
+    },
+    {
+      "question": "Should you finalize edits without my review?",
+      "tester_hint_answer": "No. Always show me a draft first before finalizing.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [4]
+    },
+    {
+      "question": "What is your role in our work together?",
+      "tester_hint_answer": "Weekly-reporting copilot — focused on weekly cadence, not monthly or quarterly unless asked.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [6]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

@@ -1,0 +1,52 @@
+{
+  "sample_id": "awareness_single_dimension_only_v1",
+  "seed": {
+    "preset_name": "awareness_single_dimension_only",
+    "seed_type": "single_dimension_only",
+    "description": "Tests whether the agent stays in scope when only one dimension has signal. All explicit preferences in this dialogue belong to ONE section (Communication Style). The other three sections (Narrative, Task, Role) should remain empty / placeholder. Failure mode: agent fabricates content for sections it has no signal about."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {"turn_index": 1, "user_message": "Got an hour to brainstorm with you. Tell me about effective brainstorming structures.", "agent_reply": "Common ones: divergent-then-converge, SCAMPER, six thinking hats, crazy-eights.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 2, "user_message": "I prefer all your responses to be in plain English — no jargon, no acronyms unless I introduce them.", "agent_reply": "Got it — plain English, no jargon, no acronyms unless you start them.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 3, "user_message": "Walk me through divergent-then-converge.", "agent_reply": "First, you generate as many ideas as possible without judgment. Then you narrow down by clustering, voting, or scoring. Two distinct phases, and you don't mix them.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 4, "user_message": "Always write in second person — talk to me, not at me.", "agent_reply": "Will do — addressing you directly going forward.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 5, "user_message": "Try crazy-eights with me on the topic of pricing.", "agent_reply": "(walks through 8 ideas)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 6, "user_message": "When you give examples, always give three — never just one. One feels lazy, three shows you've thought about it.", "agent_reply": "Got it — three examples, always.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 7, "user_message": "Give me three pricing strategies for this.", "agent_reply": "(provides 3)", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 8, "user_message": "Wrap up.", "agent_reply": "Done.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}}
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [1, 3],
+    "expected_profile_must_contain": [
+      {"section": "Communication Style", "phrase_or_synonym": "plain English"},
+      {"section": "Communication Style", "phrase_or_synonym": "second person"},
+      {"section": "Communication Style", "phrase_or_synonym": "three examples"}
+    ],
+    "expected_profile_must_not_contain": [
+      "brainstorming",
+      "SCAMPER",
+      "six thinking hats",
+      "pricing strategies"
+    ],
+    "behavior_probe_turns": []
+  },
+  "qa_items": [
+    {
+      "question": "What communication preferences have I established?",
+      "tester_hint_answer": "Plain English with no jargon or acronyms, second-person voice, always three examples instead of one.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [2, 4, 6]
+    },
+    {
+      "question": "What task or role preferences have I established?",
+      "tester_hint_answer": "None. I only set communication-style preferences in this conversation.",
+      "target_modules": ["awareness"],
+      "evidence_turns": []
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

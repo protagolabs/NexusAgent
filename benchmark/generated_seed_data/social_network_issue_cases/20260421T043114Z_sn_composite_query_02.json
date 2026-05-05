@@ -1,0 +1,288 @@
+{
+  "sample_id": "sn_composite_query_02_20260421T043114Z",
+  "dialogue_seed": "The user describes Nora Patel as a researcher in the materials group. In another turn, they say her current work focuses on battery recycling and second-life storage. Later the user expects to remember Nora by connecting her researcher role with the battery-recycling topic.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"researcher connected to battery recycling\", \"Nora Patel\", and \"second-life storage\". The questions should ask who matched that combined role-and-domain description and what Nora works on.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m trying to keep track of people I meet at work. Can you help me remember Nora Patel?",
+      "agent_reply": "Absolutely. Tell me anything you know about Nora Patel—her role, team, projects, or how you met her—and I’ll help turn it into a memorable note."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Nora Patel is a researcher in the materials group.",
+      "agent_reply": "Got it: Nora Patel is a researcher in the Materials Group. A simple memory hook could be: \"Nora Patel — researcher in Materials.\" If you want, we can add what she works on or where you met her so it sticks better."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Her current work focuses on battery recycling and second-life storage.",
+      "agent_reply": "Perfect. Now we have a stronger association: Nora Patel is a researcher in the Materials Group, and her current work focuses on battery recycling and second-life storage. That gives you a clean mental link between her role and topic area."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "She’s at Helio Materials Lab, I think.",
+      "agent_reply": "Noted: Nora Patel is a researcher in the Materials Group at Helio Materials Lab. So far the profile is:\n- Nora Patel\n- Researcher\n- Materials Group\n- Helio Materials Lab\n- Focus: battery recycling and second-life storage\nIf you're unsure about the lab name, we can mark that as tentative."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Yes, tentative is fine. I met her after a talk that Daniel Kim organized.",
+      "agent_reply": "Great context. I’d record it as: you met Nora Patel after a talk organized by Daniel Kim. That creates a useful social connection too:\n- Nora Patel — researcher in the Materials Group at Helio Materials Lab (tentative)\n- Works on battery recycling and second-life storage\n- You met her after a talk organized by Daniel Kim\nThis kind of event-based cue often makes recall easier."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Daniel is the program manager for energy partnerships.",
+      "agent_reply": "Helpful detail. Now there’s a clearer relationship around the event:\n- Daniel Kim — Program Manager, Energy Partnerships\n- Daniel organized the talk where you met Nora Patel\nThat gives you both a person-to-person link and an organization-style role detail. Nora is now connected to Daniel through that event."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "I also have her email somewhere: nora.patel@heliomatlab.org",
+      "agent_reply": "Excellent—adding the contact detail makes the note much more useful.\nUpdated entry:\n- Nora Patel\n- Researcher, Materials Group\n- Helio Materials Lab (tentative affiliation)\n- Focus: battery recycling and second-life storage\n- Met after a talk organized by Daniel Kim, Program Manager for Energy Partnerships\n- Email: nora.patel@heliomatlab.org\nIf you'd like, I can also turn this into a one-line memory cue."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Yes, make it easy to remember.",
+      "agent_reply": "Here’s a compact memory cue:\n\"Nora Patel — Materials Group researcher at Helio Materials Lab, focused on battery recycling and second-life storage; met after Daniel Kim’s energy-partnerships talk.\"\nAn even shorter version:\n\"Nora Patel = materials researcher + battery recycling/second-life storage.\"\nThe second one is probably best if your main goal is fast recall."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "I mainly want to remember her by connecting her researcher role with the battery-recycling topic.",
+      "agent_reply": "Then I’d use this as the primary association:\n\"Nora Patel is the Materials Group researcher who works on battery recycling and second-life storage.\"\nThat directly ties her role to the topic, which is exactly the kind of pairing that tends to stick."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Can you give me a final note I could save?",
+      "agent_reply": "Sure:\n\nNora Patel is a researcher in the Materials Group at Helio Materials Lab (affiliation tentative). Her current work focuses on battery recycling and second-life storage. I met her after a talk organized by Daniel Kim, who is Program Manager for Energy Partnerships. Email: nora.patel@heliomatlab.org.\n\nBest quick recall cue: Nora Patel = Materials Group researcher working on battery recycling."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Add that she mentioned pilot work with retired EV packs.",
+      "agent_reply": "Added. That fits neatly with her second-life storage work.\n\nUpdated note:\nNora Patel is a researcher in the Materials Group at Helio Materials Lab (affiliation tentative). Her current work focuses on battery recycling, second-life storage, and pilot work with retired EV packs. I met her after a talk organized by Daniel Kim, Program Manager for Energy Partnerships. Email: nora.patel@heliomatlab.org.\n\nQuick recall cue: Nora Patel = Materials Group researcher working on battery recycling and retired EV packs."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "She also said she collaborates with Maya Chen on cell diagnostics.",
+      "agent_reply": "Great, that adds another useful person-link.\n\nI’d record it as:\n- Nora Patel collaborates with Maya Chen on cell diagnostics.\n\nUpdated summary:\n- Nora Patel — Researcher, Materials Group\n- Helio Materials Lab (tentative)\n- Focus: battery recycling, second-life storage, pilot work with retired EV packs\n- Collaborates with Maya Chen on cell diagnostics\n- Met after a talk organized by Daniel Kim, Program Manager for Energy Partnerships\n- Email: nora.patel@heliomatlab.org\n\nThat gives you a strong network cue: Nora is tied both to Daniel Kim through the event and to Maya Chen through collaboration."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "I’m not sure whether Maya is in the same group though.",
+      "agent_reply": "No problem—we can keep that uncertain rather than assume it.\n\nA careful version would be:\n\"Nora Patel collaborates with Maya Chen on cell diagnostics; Maya’s group affiliation is unclear.\"\n\nThat preserves the relationship without overcommitting on Maya’s role or team."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Can you rewrite the note so the uncertain parts are clearly marked?",
+      "agent_reply": "Of course.\n\nSaved note:\nNora Patel is a researcher in the Materials Group. She is possibly affiliated with Helio Materials Lab. Her current work focuses on battery recycling, second-life storage, and pilot work with retired EV packs. She said she collaborates with Maya Chen on cell diagnostics, though Maya’s group affiliation is unclear. I met Nora after a talk organized by Daniel Kim, Program Manager for Energy Partnerships. Email: nora.patel@heliomatlab.org.\n\nPrimary memory cue: Nora Patel = Materials Group researcher connected with battery recycling."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Make it a little shorter, like something I’d paste into a contact note.",
+      "agent_reply": "Sure:\n\nNora Patel — researcher in the Materials Group; possibly at Helio Materials Lab. Works on battery recycling, second-life storage, and pilot projects using retired EV packs. Collaborates with Maya Chen on cell diagnostics (Maya’s affiliation unclear). Met after a talk organized by Daniel Kim, Program Manager for Energy Partnerships. nora.patel@heliomatlab.org"
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Can you give me a version with just the essentials and no email?",
+      "agent_reply": "Yes:\n\nNora Patel — researcher in the Materials Group, possibly at Helio Materials Lab. Focuses on battery recycling, second-life storage, and retired EV pack pilot work. Met after a talk organized by Daniel Kim; collaborates with Maya Chen on cell diagnostics."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "What’s the strongest one-line memory hook now?",
+      "agent_reply": "The strongest one-line hook is:\n\nNora Patel = Materials Group researcher working on battery recycling and second-life use of retired EV packs.\n\nThat keeps the role-topic link front and center, which you said matters most."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Give me two alternatives in case one sticks better.",
+      "agent_reply": "Sure:\n\n1. Nora Patel = researcher in Materials focused on battery recycling and retired EV packs.\n2. Nora Patel = the battery-recycling researcher connected to second-life storage.\n\nOption 1 is more concrete; option 2 is more compact."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "I like the second one. Can you make it sound a bit more natural?",
+      "agent_reply": "Absolutely:\n\nNora Patel = the Materials researcher working on battery recycling and second-life storage.\n\nThat sounds more natural while keeping the same core association."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Great, save that as the main reminder and keep the longer note too.",
+      "agent_reply": "Done. Here’s the final pair:\n\nMain reminder:\nNora Patel = the Materials researcher working on battery recycling and second-life storage.\n\nLonger note:\nNora Patel is a researcher in the Materials Group, possibly at Helio Materials Lab. Her work focuses on battery recycling, second-life storage, and pilot work using retired EV packs. She collaborates with Maya Chen on cell diagnostics, though Maya’s affiliation is unclear. I met Nora after a talk organized by Daniel Kim, Program Manager for Energy Partnerships. Email on file: nora.patel@heliomatlab.org."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually, I found her title in a follow-up message: senior researcher, not just researcher.",
+      "agent_reply": "Good catch. I’d update both versions to use the more specific title.\n\nMain reminder:\nNora Patel = the Materials senior researcher working on battery recycling and second-life storage.\n\nLonger note:\nNora Patel is a senior researcher in the Materials Group, possibly at Helio Materials Lab. Her work focuses on battery recycling, second-life storage, and pilot work using retired EV packs. She collaborates with Maya Chen on cell diagnostics, though Maya’s affiliation is unclear. I met Nora after a talk organized by Daniel Kim, Program Manager for Energy Partnerships. Email on file: nora.patel@heliomatlab.org."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Maybe “Materials senior researcher” sounds a little awkward.",
+      "agent_reply": "Agreed. A more natural version is:\n\nMain reminder:\nNora Patel = a senior researcher in the Materials Group working on battery recycling and second-life storage.\n\nThat keeps the role-topic link strong without sounding clipped."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Yes, that’s better. Also, the talk was at the Clean Energy Forum, not just some general talk.",
+      "agent_reply": "Nice detail—that makes the event easier to place.\n\nUpdated longer note:\nNora Patel is a senior researcher in the Materials Group, possibly at Helio Materials Lab. Her work focuses on battery recycling, second-life storage, and pilot work using retired EV packs. She collaborates with Maya Chen on cell diagnostics, though Maya’s affiliation is unclear. I met Nora after the Clean Energy Forum talk organized by Daniel Kim, Program Manager for Energy Partnerships. Email on file: nora.patel@heliomatlab.org.\n\nIf you want, I can also make the event line shorter for a contact-style note."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Yes, make the event part shorter.",
+      "agent_reply": "Sure. A compact version would be:\n\nMet after Daniel Kim’s Clean Energy Forum talk.\n\nSo the shorter note becomes:\nNora Patel — senior researcher in the Materials Group, possibly at Helio Materials Lab. Works on battery recycling, second-life storage, and retired EV pack pilots. Collaborates with Maya Chen on cell diagnostics (Maya affiliation unclear). Met after Daniel Kim’s Clean Energy Forum talk."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "I think Daniel might be at Helio too, but I’m not certain.",
+      "agent_reply": "We can mark that carefully.\n\nI’d phrase it as:\nDaniel Kim — Program Manager for Energy Partnerships, possibly at Helio Materials Lab.\n\nAnd in the note:\nMet after Daniel Kim’s Clean Energy Forum talk; Daniel is Program Manager for Energy Partnerships and may also be at Helio Materials Lab.\n\nThat preserves the possible organizational link without treating it as confirmed."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Can you show me the current structured version with confirmed vs uncertain?",
+      "agent_reply": "Absolutely.\n\nConfirmed:\n- Nora Patel\n- Senior researcher\n- Materials Group\n- Focus: battery recycling, second-life storage, retired EV pack pilot work\n- Collaborates with Maya Chen on cell diagnostics\n- Met after a Clean Energy Forum talk organized by Daniel Kim\n- Daniel Kim is Program Manager for Energy Partnerships\n- Email: nora.patel@heliomatlab.org\n\nUncertain:\n- Nora Patel may be affiliated with Helio Materials Lab\n- Maya Chen’s group affiliation is unclear\n- Daniel Kim may also be affiliated with Helio Materials Lab\n\nMain reminder:\nNora Patel = a senior researcher in the Materials Group working on battery recycling and second-life storage."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "That’s helpful. Add one more thing: she said the recycling work is mostly on lithium-ion packs.",
+      "agent_reply": "Added. That sharpens the technical focus.\n\nUpdated confirmed details:\n- Nora Patel\n- Senior researcher\n- Materials Group\n- Focus: battery recycling, second-life storage, retired EV pack pilot work\n- Recycling work is mostly on lithium-ion packs\n- Collaborates with Maya Chen on cell diagnostics\n- Met after a Clean Energy Forum talk organized by Daniel Kim\n- Daniel Kim is Program Manager for Energy Partnerships\n- Email: nora.patel@heliomatlab.org\n\nUpdated main reminder:\nNora Patel = a senior researcher in the Materials Group working on lithium-ion battery recycling and second-life storage."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Nice. Make the main reminder just a touch shorter without losing lithium-ion.",
+      "agent_reply": "Sure:\n\nNora Patel = senior Materials researcher focused on lithium-ion battery recycling and second-life storage.\n\nThat’s shorter, still natural, and keeps the strongest recall terms."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "I want one final contact-note version and one final memory hook version.",
+      "agent_reply": "Here you go.\n\nContact note:\nNora Patel — senior researcher in the Materials Group, possibly at Helio Materials Lab. Focuses on lithium-ion battery recycling, second-life storage, and retired EV pack pilot work. Collaborates with Maya Chen on cell diagnostics (Maya affiliation unclear). Met after Daniel Kim’s Clean Energy Forum talk; Daniel is Program Manager for Energy Partnerships and may also be at Helio. nora.patel@heliomatlab.org\n\nMemory hook:\nNora Patel = senior Materials researcher focused on lithium-ion battery recycling and second-life storage."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect. Before we stop, what are the key links I should mentally use to remember her fastest?",
+      "agent_reply": "Use these three links:\n\n1. Role: senior researcher in the Materials Group\n2. Topic: lithium-ion battery recycling + second-life storage\n3. Context: met after Daniel Kim’s Clean Energy Forum talk\n\nFastest recall formula:\nNora Patel → senior Materials researcher → lithium-ion battery recycling.\n\nThat role-to-topic chain is still your strongest memory path."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Nora Patel",
+        "Daniel Kim",
+        "Maya Chen",
+        "Materials Group",
+        "Helio Materials Lab",
+        "Clean Energy Forum",
+        "Energy Partnerships"
+      ],
+      "relations": [
+        "Nora Patel is a researcher in the Materials Group, later refined to senior researcher",
+        "Nora Patel's work focuses on battery recycling and second-life storage, later specified as lithium-ion battery recycling",
+        "Nora Patel may be affiliated with Helio Materials Lab",
+        "The user met Nora Patel after a Clean Energy Forum talk organized by Daniel Kim",
+        "Daniel Kim is Program Manager for Energy Partnerships",
+        "Daniel Kim may also be affiliated with Helio Materials Lab",
+        "Nora Patel collaborates with Maya Chen on cell diagnostics",
+        "Maya Chen's group affiliation is unclear"
+      ],
+      "contact_or_org_details": [
+        "Nora Patel email: nora.patel@heliomatlab.org",
+        "Helio Materials Lab affiliation is tentative for Nora Patel",
+        "Daniel Kim role: Program Manager for Energy Partnerships",
+        "Clean Energy Forum is the event context for meeting Nora Patel"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is the researcher connected to battery recycling that I wanted to remember?",
+      "tester_hint_answer": "It is Nora Patel, the Materials Group researcher later clarified as a senior researcher.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        3,
+        9,
+        14,
+        21,
+        22
+      ]
+    },
+    {
+      "question": "What does Nora Patel work on, including second-life storage?",
+      "tester_hint_answer": "She works on battery recycling and second-life storage, later expanded with retired EV pack pilots and lithium-ion focus.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        11,
+        17,
+        27,
+        29
+      ]
+    },
+    {
+      "question": "Which person matched the combined description of Nora Patel as a Materials Group researcher working on battery recycling and second-life storage?",
+      "tester_hint_answer": "The person is Nora Patel.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        8,
+        9,
+        19,
+        20,
+        22
+      ]
+    },
+    {
+      "question": "Who is Nora Patel in terms of role and group, and what organization was she possibly affiliated with?",
+      "tester_hint_answer": "She is a senior researcher in the Materials Group and may be at Helio Materials Lab.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        14,
+        21,
+        26,
+        29
+      ]
+    },
+    {
+      "question": "Besides being the researcher connected to battery recycling, what other people or event links help me remember Nora Patel?",
+      "tester_hint_answer": "She was met after Daniel Kim's Clean Energy Forum talk and collaborates with Maya Chen on cell diagnostics.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        5,
+        6,
+        12,
+        23,
+        24,
+        30
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_composite_query_02",
+    "issue": "composite_search_terms",
+    "required_qa_phrases": [
+      "researcher connected to battery recycling",
+      "Nora Patel",
+      "second-life storage"
+    ],
+    "stress_signal": "User combines role and domain that were mentioned separately."
+  }
+}

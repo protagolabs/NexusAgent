@@ -1,0 +1,285 @@
+{
+  "sample_id": "sn_extraction_context_gap_02_20260421T042015Z",
+  "dialogue_seed": "The user talks about Jordan Lee, who was already known to them as a renewable-energy contact. During the conversation, the user describes Jordan as working on clean power, climate tech partnerships, distributed energy, and utility programs. The conversation should make these related descriptions point to the same existing contact.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Jordan Lee\", \"clean power\", and \"distributed energy\". The questions should ask who he is, what kind of energy work he is connected to, and why the user might reach out to him.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m trying to clean up my contacts. I already know Jordan Lee as a renewable-energy contact, but I’ve got a few notes scattered around and I’m not sure if they all refer to the same person.",
+      "agent_reply": "I can help consolidate that. Share the notes or descriptions you have for Jordan Lee, and I’ll help determine whether they point to one existing contact or multiple people."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "One note says Jordan works on clean power. Another says climate tech partnerships. A third mentions distributed energy, and another says utility programs.",
+      "agent_reply": "Those sound closely related and could easily describe the same person, especially in the energy sector. At face value, all four notes are consistent with one contact: Jordan Lee, your renewable-energy connection. If you have any company name, title, email, or where you met Jordan, that would help confirm."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "I think I met Jordan through Maya Patel at GridForward, maybe at a conference panel.",
+      "agent_reply": "That helps. So far the picture is: Jordan Lee is connected to you through Maya Patel, who is affiliated with GridForward, and Jordan’s work spans clean power, climate tech partnerships, distributed energy, and utility programs. That still reads like one person rather than separate contacts."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "I also wrote down that Jordan was leading partnership conversations with utilities and startups.",
+      "agent_reply": "That fits very well with the earlier notes. Someone working in climate tech partnerships could absolutely be handling relationships between utilities and startups, especially around distributed energy and clean power programs. This strengthens the case that all the notes refer to the same Jordan Lee."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "There’s an old email: jordan.lee@sunweaveenergy.com. Does that help?",
+      "agent_reply": "Yes. That gives you a concrete affiliation: Jordan Lee appears to be associated with Sunweave Energy. Based on everything you’ve shared, a clean consolidated contact would be:\n\n- Jordan Lee\n- Affiliation: Sunweave Energy\n- Focus areas: clean power, climate tech partnerships, distributed energy, utility programs\n- Likely role context: partnerships/business development or utility-facing strategy\n- Referred or connected via: Maya Patel at GridForward\n- Contact detail: jordan.lee@sunweaveenergy.com\n\nAt this point, I’d treat these as one existing contact unless you have conflicting details."
+    },
+    {
+      "turn_index": 6,
+      "user_message": "I do have one more note that says Jordan was talking with Pacific Gas & Electric about pilot programs.",
+      "agent_reply": "That still aligns. Pacific Gas & Electric is exactly the kind of utility organization someone in distributed energy and utility partnerships would engage with on pilot programs. So that note supports the same profile rather than creating a separate Jordan."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Can you help me write a single clean contact summary for Jordan?",
+      "agent_reply": "Sure. Here’s a concise summary you could save:\n\nJordan Lee is an existing renewable-energy contact affiliated with Sunweave Energy. Jordan works across clean power, climate tech partnerships, distributed energy, and utility programs, and appears to lead or support partnership discussions with utilities and startups. I was connected to Jordan through Maya Patel at GridForward, and Jordan has been involved in pilot-program conversations with Pacific Gas & Electric. Email: jordan.lee@sunweaveenergy.com."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Make it a little shorter and more like a CRM note.",
+      "agent_reply": "Here’s a shorter CRM-style version:\n\nJordan Lee — renewable-energy contact at Sunweave Energy. Focused on clean power, climate tech partnerships, distributed energy, and utility programs. Connected via Maya Patel (GridForward). Has discussed utility/startup partnerships and pilot programs, including with Pacific Gas & Electric. Email: jordan.lee@sunweaveenergy.com."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Can you also give me 4 tags I should attach to this contact?",
+      "agent_reply": "Yes — these four would fit well:\n\n- Renewable Energy\n- Climate Tech Partnerships\n- Distributed Energy\n- Utility Programs"
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Great. Final check: you’d treat all those descriptions as the same Jordan Lee I already knew, right?",
+      "agent_reply": "Yes. Based on the notes you shared, I would consolidate them into the same existing contact: Jordan Lee at Sunweave Energy. The descriptions are complementary, not conflicting, and they consistently point to one renewable-energy professional working across partnerships, distributed energy, and utility-facing clean power programs."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "One scribble says “Director-level, maybe strategic partnerships,” but I never confirmed the title. Should I include that?",
+      "agent_reply": "I’d mark that as tentative rather than definitive. A good CRM-safe version would be:\n\n\"Likely director-level / strategic partnerships role at Sunweave Energy; title unconfirmed.\"\n\nThat preserves the signal without overstating it."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "I also found “works with utility innovation teams” in my notes.",
+      "agent_reply": "That fits cleanly with the same Jordan Lee profile. It reinforces the utility-programs and pilot-partnership angle, especially alongside the Pacific Gas & Electric note. I’d fold it into the same contact rather than creating a new one."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Could you rewrite the CRM note with that cautious title language included?",
+      "agent_reply": "Sure:\n\nJordan Lee — renewable-energy contact at Sunweave Energy. Likely in a director-level or strategic partnerships role (title unconfirmed). Focused on clean power, climate tech partnerships, distributed energy, and utility programs. Connected via Maya Patel at GridForward. Has discussed utility/startup partnerships, utility innovation teams, and pilot programs including with Pacific Gas & Electric. Email: jordan.lee@sunweaveenergy.com."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "I want a version that’s even tighter, like 2 sentences max.",
+      "agent_reply": "Jordan Lee is a renewable-energy contact at Sunweave Energy, likely in a director-level or strategic partnerships role, with work spanning clean power, climate tech partnerships, distributed energy, and utility programs. Connected via Maya Patel at GridForward; involved in utility innovation, startup partnerships, and pilot discussions including with Pacific Gas & Electric. "
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Would you keep Pacific Gas & Electric spelled out, or use PG&E in a contact note?",
+      "agent_reply": "For a contact note, I’d use PG&E unless you need maximum formality. It’s shorter and still clear. A good compromise is to spell it out once if this is the first note, then use PG&E afterward."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Makes sense. I may have met Jordan at a GridForward event, not necessarily a conference panel. Does that change anything?",
+      "agent_reply": "Not really. It only changes the context of how you met, not the identity. You could soften that part to: \"Connected through Maya Patel at GridForward, possibly at a GridForward event or conference panel.\" That keeps the relationship link without pretending you’re certain."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Can you give me a final polished note with that uncertainty handled too?",
+      "agent_reply": "Absolutely:\n\nJordan Lee — renewable-energy contact at Sunweave Energy. Likely in a director-level or strategic partnerships role (title unconfirmed), focused on clean power, climate tech partnerships, distributed energy, and utility programs. Connected through Maya Patel at GridForward, possibly via a GridForward event or conference panel. Involved in utility innovation, utility/startup partnership discussions, and pilot programs including with PG&E. Email: jordan.lee@sunweaveenergy.com."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Should I add Maya Patel as a related contact on Jordan’s record?",
+      "agent_reply": "Yes, I would. There’s a clear relationship worth preserving:\n\n- Maya Patel — related contact\n- Organization: GridForward\n- Relationship: introduced or connected you to Jordan Lee\n\nThat makes your network context much easier to trace later."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "If I wanted one short line just for the relationship field, what would you put?",
+      "agent_reply": "Try:\n\n\"Connected via Maya Patel at GridForward.\"\n\nIf you want slightly more detail:\n\n\"Introduced or connected through Maya Patel (GridForward).\""
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Perfect. I think that’s enough to merge the notes into the existing Jordan Lee contact.",
+      "agent_reply": "Agreed. Everything you’ve collected points back to the same existing contact: Jordan Lee at Sunweave Energy, with Maya Patel at GridForward as the connection path and a consistent focus on climate-tech partnerships, distributed energy, and utility programs. This looks ready to merge."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Before I close this out, can you give me a structured version with fields like name, company, email, focus areas, relationship, and confidence?",
+      "agent_reply": "Sure:\n\nName: Jordan Lee\nCompany: Sunweave Energy\nEmail: jordan.lee@sunweaveenergy.com\nFocus areas: clean power; climate tech partnerships; distributed energy; utility programs; utility innovation teams\nRelationship: Existing renewable-energy contact; connected via Maya Patel at GridForward, possibly through a GridForward event or conference panel\nRelevant external orgs: PG&E\nRole/title: Likely director-level or strategic partnerships role (unconfirmed)\nConfidence: High that these notes refer to the same Jordan Lee"
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Can you add a one-line rationale for the confidence field?",
+      "agent_reply": "Yes:\n\nConfidence rationale: The notes are mutually reinforcing rather than conflicting and consistently describe one Sunweave Energy contact working on utility-facing clean power, partnerships, distributed energy, and pilot programs."
+    },
+    {
+      "turn_index": 23,
+      "user_message": "I also have a fragment that says “startup pilots + utility procurement.” Still same person?",
+      "agent_reply": "Most likely yes. \"Startup pilots + utility procurement\" fits the same pattern as Jordan’s partnership and utility-program work. It sounds like another shorthand note about the same Sunweave Energy contact rather than a separate Jordan Lee."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Would you include utility procurement in the note, or is that too speculative?",
+      "agent_reply": "I’d include it, but with cautious wording. For example:\n\n\"Associated with startup pilots and utility procurement discussions.\"\n\nThat captures the note without overstating Jordan’s exact responsibility."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Good call. Can you refresh the full note one last time with that added?",
+      "agent_reply": "Jordan Lee — renewable-energy contact at Sunweave Energy. Likely in a director-level or strategic partnerships role (title unconfirmed), focused on clean power, climate tech partnerships, distributed energy, utility programs, and utility innovation teams. Connected through Maya Patel at GridForward, possibly via a GridForward event or conference panel. Involved in utility/startup partnership discussions, startup pilots, utility procurement discussions, and pilot programs including with PG&E. Email: jordan.lee@sunweaveenergy.com."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "If I wanted a very short internal summary for search, maybe 12 words or so, what would you use?",
+      "agent_reply": "Try:\n\nJordan Lee, Sunweave Energy—climate partnerships, distributed energy, utility pilots, PG&E."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Nice. Should I save PG&E as a related organization on Jordan’s profile, or only in the notes?",
+      "agent_reply": "I’d save PG&E as a related organization if your system supports organization links. The relationship is meaningful: Jordan was involved in pilot-program discussions with PG&E. If your setup is lightweight, keeping it in notes is still fine, but the organization link will make future searching easier."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "What relationship label would you use for PG&E?",
+      "agent_reply": "A clean label would be:\n\n\"Pilot program counterpart\"\n\nOther workable options:\n- Utility partner\n- Pilot-program contact organization\n- Utility collaboration org\n\nIf you want the safest, most neutral choice: \"Utility partner (PG&E).\""
+    },
+    {
+      "turn_index": 29,
+      "user_message": "And for Sunweave Energy, would you mark that as employer or affiliation?",
+      "agent_reply": "Employer, if you believe Jordan worked there directly when the email was active. Affiliation is better only if you want to stay extra cautious. Given the email address jordan.lee@sunweaveenergy.com, \"Employer: Sunweave Energy\" is the stronger default."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Great, that gives me everything I need to finalize the merge.",
+      "agent_reply": "Excellent. Final takeaway: treat all of these notes as the same existing contact, Jordan Lee, with Sunweave Energy as employer, Maya Patel at GridForward as the connection path, and PG&E as a related utility partner mentioned in pilot discussions. Your merge looks well-supported."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Jordan Lee",
+        "Maya Patel",
+        "Sunweave Energy",
+        "GridForward",
+        "Pacific Gas & Electric",
+        "PG&E"
+      ],
+      "relations": [
+        "Jordan Lee is an existing renewable-energy contact of the user",
+        "Jordan Lee is associated with or employed by Sunweave Energy",
+        "Maya Patel is affiliated with GridForward",
+        "Maya Patel introduced or connected the user to Jordan Lee",
+        "Jordan Lee has discussed pilot programs with Pacific Gas & Electric / PG&E",
+        "PG&E is a related utility partner or pilot-program counterpart for Jordan Lee",
+        "Jordan Lee works on partnerships involving utilities and startups"
+      ],
+      "contact_or_org_details": [
+        "Jordan Lee email: jordan.lee@sunweaveenergy.com",
+        "Sunweave Energy is treated as Jordan Lee's employer by default",
+        "GridForward is the organization tied to Maya Patel",
+        "Pacific Gas & Electric may be abbreviated as PG&E in notes",
+        "Suggested relationship label for PG&E: Utility partner or Pilot program counterpart"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is Jordan Lee in my contacts, and should I treat all these notes as the same person?",
+      "tester_hint_answer": "He is the user's existing renewable-energy contact, and the notes were consistently consolidated into one Jordan Lee record.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        2,
+        10,
+        20,
+        30
+      ]
+    },
+    {
+      "question": "What kind of work is Jordan Lee connected to, especially around clean power and climate tech partnerships?",
+      "tester_hint_answer": "His focus areas include clean power, climate tech partnerships, distributed energy, utility programs, and related partnership work.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        4,
+        7,
+        21,
+        25
+      ]
+    },
+    {
+      "question": "How is Jordan Lee tied to distributed energy and utility programs in my notes?",
+      "tester_hint_answer": "The notes link him to distributed energy, utility programs, utility innovation teams, and pilot discussions with utilities.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        6,
+        12,
+        21,
+        25
+      ]
+    },
+    {
+      "question": "Why might I reach out to Jordan Lee again based on these notes?",
+      "tester_hint_answer": "He appears useful for utility/startup partnerships, pilot programs, distributed energy, and broader renewable-energy business development conversations.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        6,
+        7,
+        23,
+        25
+      ]
+    },
+    {
+      "question": "What relationship details should I remember for Jordan Lee, like company, email, and who connected us?",
+      "tester_hint_answer": "He is tied to Sunweave Energy, uses jordan.lee@sunweaveenergy.com, and the user was connected through Maya Patel at GridForward.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        5,
+        17,
+        18,
+        21
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_extraction_context_gap_02",
+    "issue": "extraction_without_full_existing_context",
+    "required_qa_phrases": [
+      "Jordan Lee",
+      "clean power",
+      "distributed energy"
+    ],
+    "stress_signal": "A known contact is re-described with several adjacent energy-domain phrases."
+  }
+}

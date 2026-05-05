@@ -1,0 +1,48 @@
+{
+  "sample_id": "awareness_mixed_explicit_oneoff_v1",
+  "seed": {
+    "preset_name": "awareness_mixed_explicit_oneoff",
+    "seed_type": "mixed_explicit_oneoff",
+    "description": "Discrimination test: dialogue alternates between genuine explicit awareness signals and superficially-similar one-off task instructions. Tests whether the agent correctly distinguishes 'this is a long-term preference' from 'this is just for the current task'."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {"turn_index": 1, "user_message": "Help me write API docs.", "agent_reply": "Sure — which API?", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 2, "user_message": "Don't include implementation details in docs — that's a rule for everything I write, not just this one.", "agent_reply": "Got it — no implementation details in any docs from now on.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 3, "user_message": "Don't include the auth section in this one — covered separately.", "agent_reply": "Skipping auth section for this doc.", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 4, "user_message": "Always use OpenAPI 3.1 style. That's our standard everywhere.", "agent_reply": "Confirmed — OpenAPI 3.1 as the standard for all API docs.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "task", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 5, "user_message": "Always include a changelog at the top — for this version specifically.", "agent_reply": "Adding changelog for v2.3.", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 6, "user_message": "I prefer examples over prose explanations. Always show code examples first, then text.", "agent_reply": "Got it — examples-first, prose second, as a default.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 7, "user_message": "Just give me a sketch first.", "agent_reply": "(provides outline)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 8, "user_message": "Be more concrete here — abstract phrasing isn't useful.", "agent_reply": "(rewrites with concrete examples)", "signal_annotation": {"signal_type": "one_off", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}},
+    {"turn_index": 9, "user_message": "Going forward, never use the word 'simply' or 'just' in any docs — it's condescending.", "agent_reply": "Confirmed — banning 'simply' and 'just' from all docs.", "signal_annotation": {"signal_type": "explicit", "module_scope": "awareness", "dimension": "communication", "signal_strength": "strong", "expected_action": "write_now"}},
+    {"turn_index": 10, "user_message": "OK ship it.", "agent_reply": "Done.", "signal_annotation": {"signal_type": "none", "module_scope": "none", "dimension": null, "signal_strength": null, "expected_action": "ignore"}}
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [1, 4],
+    "expected_profile_must_contain": [
+      {"section": "Communication Style", "phrase_or_synonym": "no implementation details"},
+      {"section": "Communication Style", "phrase_or_synonym": "examples first"},
+      {"section": "Communication Style", "phrase_or_synonym": "simply"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "OpenAPI 3.1"}
+    ],
+    "expected_profile_must_not_contain": [
+      "auth section",
+      "changelog",
+      "v2.3"
+    ],
+    "behavior_probe_turns": []
+  },
+  "qa_items": [
+    {
+      "question": "What rules apply to everything I write going forward?",
+      "tester_hint_answer": "No implementation details in docs, OpenAPI 3.1 style as standard, examples before prose, ban 'simply' and 'just' as condescending.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [2, 4, 6, 9]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}

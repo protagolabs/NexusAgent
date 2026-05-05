@@ -1,0 +1,277 @@
+{
+  "sample_id": "sn_keyword_semantic_duplicate_03_20260421T040537Z",
+  "dialogue_seed": "The user mentions Elena Morris, first as a master's student in NLP, then as a graduate student working on language models, then as a research student helping with annotation guidelines. The conversation should include why the user may ask Elena for feedback later.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"master's student\", \"graduate student\", and \"NLP\". The questions should ask who Elena Morris is, what academic role she has, and what language-model work she could help with.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I'm trying to keep track of people in my project notes. Can you help me write a short profile for Elena Morris?",
+      "agent_reply": "Sure. What do you want included—her role, research area, affiliation, and how you know her? If you want, I can turn rough notes into a clean profile."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Start simple: Elena Morris is a master's student in NLP at Northeastern University.",
+      "agent_reply": "Here’s a clean version: \"Elena Morris is a master's student in natural language processing at Northeastern University.\" If you want, I can make it more formal or expand it into a fuller contact-style note."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Add that she's been working on language models this year.",
+      "agent_reply": "Updated version: \"Elena Morris is a master's student in natural language processing at Northeastern University. This year, she has been working on language models.\""
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Also, in our lab she's basically a graduate student helping with annotation guidelines.",
+      "agent_reply": "You could combine that as: \"Elena Morris is a graduate student at Northeastern University working on language models. In our lab, she has also been helping develop annotation guidelines.\" That keeps both the academic role and the lab contribution."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Good. The lab is the Center for Language and AI, and our PI is Dr. Priya Raman.",
+      "agent_reply": "Great—here’s a fuller profile: \"Elena Morris is a graduate student at Northeastern University working on language models. She is involved with the Center for Language and AI, where she has been helping develop annotation guidelines under the supervision of Dr. Priya Raman.\""
+    },
+    {
+      "turn_index": 6,
+      "user_message": "That sounds right. I may ask Elena for feedback later because she's reviewed some of my dataset documentation before.",
+      "agent_reply": "Then it would help to note that relationship explicitly. For example: \"I may ask Elena Morris for feedback later, since she has previously reviewed my dataset documentation and is familiar with our annotation setup.\" That captures why she’s a useful reviewer."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Can you make it sound a little more like a note to myself than a formal bio?",
+      "agent_reply": "Of course. Try this: \"Elena Morris — grad student in NLP at Northeastern, working on language models this year. At the Center for Language and AI, she’s also been helping with annotation guidelines in Dr. Priya Raman’s lab. Good person to ask for feedback later since she’s already looked over some of my dataset docs.\""
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Nice. Add her email too: emorris@neu.edu.",
+      "agent_reply": "Updated note: \"Elena Morris — grad student in NLP at Northeastern, working on language models this year. At the Center for Language and AI, she’s also been helping with annotation guidelines in Dr. Priya Raman’s lab. Good person to ask for feedback later since she’s already looked over some of my dataset docs. Email: emorris@neu.edu.\""
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Can you also make a shorter version for a contact list?",
+      "agent_reply": "Sure: \"Elena Morris — Northeastern grad student in NLP; works on language models; helps with annotation guidelines at the Center for Language and AI. Email: emorris@neu.edu. Possible reviewer for my dataset docs.\""
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Perfect. One more thing: can you pull out the key facts as bullets?",
+      "agent_reply": "- Elena Morris\n- Graduate/master's student in NLP\n- Affiliation: Northeastern University\n- Research focus this year: language models\n- Lab/organization: Center for Language and AI\n- Supervisor/PI context: Dr. Priya Raman’s lab\n- Contribution: helping with annotation guidelines\n- Reason to contact later: previously reviewed my dataset documentation and could give feedback\n- Email: emorris@neu.edu"
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Actually, can you separate what's definitely factual from what's more like my reminder to myself?",
+      "agent_reply": "Yes — here’s a clean split:\n\n**Factual details**\n- Elena Morris\n- Graduate/master's student in NLP at Northeastern University\n- Working on language models this year\n- Affiliated with the Center for Language and AI\n- Helps with annotation guidelines\n- In Dr. Priya Raman’s lab\n- Email: emorris@neu.edu\n\n**Personal reminder / follow-up note**\n- Good person to ask for feedback later\n- Reason: she previously reviewed my dataset documentation and knows the annotation setup"
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Good. I also want a version that's a little less certain about the role, since I sometimes call her a master's student and sometimes just a grad student.",
+      "agent_reply": "You can make that more neutral:\n\n\"Elena Morris — graduate student in NLP at Northeastern University, working on language models this year. At the Center for Language and AI in Dr. Priya Raman’s lab, she’s been helping with annotation guidelines. Good person to ask for feedback later since she has reviewed some of my dataset documentation before. Email: emorris@neu.edu.\"\n\nUsing **graduate student** avoids the master's/grad inconsistency."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "That helps. Can you make the reminder part shorter, like something I'd skim quickly?",
+      "agent_reply": "Sure. Short reminder options:\n- Ask for dataset doc feedback later\n- Good reviewer for dataset docs\n- Already familiar with annotation setup\n- Has reviewed my docs before\n\nIf you want a single compact line, I’d use: **\"Possible reviewer for dataset docs; already familiar with setup.\"**"
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Let's use that. Also, I met her through Samir Chen on the annotation project, so maybe include that somewhere.",
+      "agent_reply": "Absolutely. Here’s an updated note with that relationship included:\n\n\"Elena Morris — graduate student in NLP at Northeastern University, working on language models this year. At the Center for Language and AI in Dr. Priya Raman’s lab, she’s been helping with annotation guidelines. Met through Samir Chen on the annotation project. Possible reviewer for dataset docs; already familiar with setup. Email: emorris@neu.edu.\"\n\nThat makes it clear how you know her."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Can you turn that into a compact CRM-style entry with fields?",
+      "agent_reply": "Sure:\n\n**Name:** Elena Morris  \n**Role:** Graduate student in NLP  \n**Affiliation:** Northeastern University  \n**Organization/Lab:** Center for Language and AI  \n**PI:** Dr. Priya Raman  \n**Current work:** Language models; annotation guidelines  \n**Connection:** Met through Samir Chen on the annotation project  \n**Follow-up note:** Possible reviewer for dataset docs; already familiar with setup  \n**Email:** emorris@neu.edu"
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Nice. Maybe \"current work\" should sound less like two separate jobs and more like one main area plus one lab task.",
+      "agent_reply": "Good point. Here’s a smoother version:\n\n**Name:** Elena Morris  \n**Role:** Graduate student in NLP  \n**Affiliation:** Northeastern University  \n**Organization/Lab:** Center for Language and AI  \n**PI:** Dr. Priya Raman  \n**Current work:** Research on language models; also supports annotation guideline development in the lab  \n**Connection:** Met through Samir Chen on the annotation project  \n**Follow-up note:** Possible reviewer for dataset docs; already familiar with setup  \n**Email:** emorris@neu.edu"
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Can you also give me a one-sentence version I could paste into a people spreadsheet note field?",
+      "agent_reply": "Elena Morris is a Northeastern graduate student in NLP working on language models and helping with annotation guideline development at the Center for Language and AI in Dr. Priya Raman’s lab; I met her through Samir Chen, and she may be a good reviewer for my dataset docs since she already knows the setup."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "That's good, but maybe a little too long for a spreadsheet cell.",
+      "agent_reply": "Here’s a shorter version:\n\nElena Morris — Northeastern NLP grad student; works on language models and annotation guidelines at the Center for Language and AI; met through Samir Chen; possible dataset-doc reviewer. \n\nIf you want, I can shorten it even further to a 15–20 word version."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Yes, give me the very short version too.",
+      "agent_reply": "Very short version:\n\nElena Morris — Northeastern NLP grad student; met via Samir Chen; possible reviewer for dataset documentation.\n\nSlightly richer alternative:\n\nElena Morris — Northeastern NLP grad student in Dr. Priya Raman’s lab; possible dataset-doc reviewer."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Great, I think that's enough. Before we stop, can you list the final fields I should keep for people notes in general?",
+      "agent_reply": "A solid reusable set would be:\n\n- **Name**\n- **Role**\n- **Affiliation**\n- **Team/Lab/Organization**\n- **Supervisor or key contact**\n- **Current work / research area**\n- **How I know them**\n- **Why they matter to this project**\n- **Possible follow-up / next action**\n- **Email or contact info**\n- **Last interaction**\n- **Notes / context**\n\nFor your use case, the most important are probably: **name, role, affiliation, current work, connection, follow-up note, and email**."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually, one more pass: if I use those fields for everyone, should I separate \"how I know them\" from \"project relevance,\" or is that redundant?",
+      "agent_reply": "I’d keep them separate. They answer different questions:\n\n- **How I know them**: the relationship path or context. Example: \"Met through Samir Chen on the annotation project.\"\n- **Project relevance**: why they matter for your current work. Example: \"Could review dataset documentation; already knows the annotation setup.\"\n\nThat separation helps later because one person may be socially connected to you one way but useful to the project for a different reason."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Makes sense. Can you show Elena's entry again with those two fields clearly split out?",
+      "agent_reply": "Sure:\n\n**Name:** Elena Morris  \n**Role:** Graduate student in NLP  \n**Affiliation:** Northeastern University  \n**Team/Lab/Organization:** Center for Language and AI  \n**Supervisor:** Dr. Priya Raman  \n**Current work:** Research on language models; also supports annotation guideline development in the lab  \n**How I know them:** Met through Samir Chen on the annotation project  \n**Project relevance:** Familiar with our annotation setup and has reviewed some of my dataset documentation  \n**Possible follow-up:** Ask for feedback on dataset docs later  \n**Email:** emorris@neu.edu"
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Good. I also sometimes want a field for confidence, like whether something is confirmed or just my impression.",
+      "agent_reply": "That’s a useful addition, especially for informal notes. A simple scheme works well:\n\n- **Confirmed** — you know it directly or have seen it documented\n- **Likely** — you’re fairly sure, but wording may be approximate\n- **Personal note** — your own reminder, judgment, or next step\n\nFor Elena, for example:\n- \"Graduate student in NLP at Northeastern University\" — likely/confirmed, depending on your source\n- \"Working on language models this year\" — confirmed if she told you directly\n- \"Possible reviewer for dataset docs\" — personal note"
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Can you annotate Elena's facts that way too, just briefly?",
+      "agent_reply": "Yes:\n\n- **Name:** Elena Morris — confirmed  \n- **Role:** Graduate student in NLP — likely/confirmed  \n- **Affiliation:** Northeastern University — confirmed  \n- **Organization:** Center for Language and AI — confirmed  \n- **Supervisor context:** Dr. Priya Raman’s lab — confirmed  \n- **Current work:** Language models — confirmed  \n- **Lab contribution:** Helps with annotation guideline development — confirmed  \n- **How I know her:** Met through Samir Chen on the annotation project — confirmed  \n- **Project relevance:** Familiar with my dataset docs / annotation setup — confirmed  \n- **Follow-up:** Ask for feedback later — personal note  \n- **Email:** emorris@neu.edu — confirmed"
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Nice. I may also add another person later from the same lab. Should I keep the PI and lab as separate fields or collapse them?",
+      "agent_reply": "Keep them separate.\n\n- **Lab / organization** is the stable group: e.g., **Center for Language and AI**\n- **PI / supervisor** is the reporting or mentorship relationship: e.g., **Dr. Priya Raman**\n\nThat way, if multiple people are in the same lab, you can group them easily, and if someone changes supervisors or collaborates across groups, your notes still stay clean."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Right. If I add Samir Chen too, what's the most compact way to note his relationship to Elena without writing a whole paragraph?",
+      "agent_reply": "Use a short relationship line, such as:\n\n- **Connection:** Introduced me to Elena Morris via the annotation project\n- **Related people:** Elena Morris (met through him)\n- **Relationship note:** Worked with Elena on the annotation project\n\nIf you want it even more compact for a spreadsheet: **\"Connected me with Elena Morris on annotation project.\"**"
+    },
+    {
+      "turn_index": 27,
+      "user_message": "That's helpful. I don't have Samir's full details yet, but I do know he's affiliated with the annotation project and was one of my first contacts there.",
+      "agent_reply": "Then a lightweight placeholder entry is fine. For example:\n\n**Name:** Samir Chen  \n**Role:** [unknown / to fill in]  \n**Affiliation:** Annotation project  \n**How I know them:** One of my first contacts on the project  \n**Relationship to others:** Connected me with Elena Morris  \n**Notes:** Full role and organization details still needed\n\nThat preserves the network information even before you have a full profile."
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Could you suggest a simple template for partial entries like that, so I don't wait until I know everything?",
+      "agent_reply": "Absolutely. A good minimal template is:\n\n**Name:**  \n**Role:**  \n**Affiliation/Project:**  \n**How I know them:**  \n**Related people:**  \n**Why they matter:**  \n**Contact info:**  \n**Missing details:**\n\nThis lets you capture useful social context right away, even if role, email, or organization are incomplete."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Great. For Elena, what would go under \"related people\" specifically?",
+      "agent_reply": "For Elena, I’d put:\n\n**Related people:**\n- **Samir Chen** — I met Elena through him on the annotation project\n- **Dr. Priya Raman** — Elena works in her lab\n\nThat field is nice because it makes both the peer connection and the supervision relationship easy to scan."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect. I think I have a good structure now. Can you end with one final compact Elena record using the template you recommend?",
+      "agent_reply": "Sure — here’s a compact final record:\n\n**Name:** Elena Morris  \n**Role:** Graduate student in NLP  \n**Affiliation/Project:** Northeastern University; Center for Language and AI  \n**How I know them:** Met through Samir Chen on the annotation project  \n**Related people:** Samir Chen; Dr. Priya Raman  \n**Why they matter:** Familiar with annotation setup; possible reviewer for dataset documentation  \n**Contact info:** emorris@neu.edu  \n**Notes:** Works on language models and helps with annotation guideline development in Dr. Priya Raman’s lab"
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Elena Morris",
+        "Northeastern University",
+        "Center for Language and AI",
+        "Dr. Priya Raman",
+        "Samir Chen",
+        "annotation project"
+      ],
+      "relations": [
+        "Elena Morris is a master's student in NLP at Northeastern University",
+        "Elena Morris is also described more generally as a graduate student",
+        "Elena Morris has been working on language models this year",
+        "Elena Morris helps with annotation guidelines in the lab",
+        "Elena Morris is involved with the Center for Language and AI",
+        "Elena Morris works in Dr. Priya Raman's lab",
+        "The user met Elena Morris through Samir Chen on the annotation project",
+        "Elena Morris previously reviewed the user's dataset documentation",
+        "Elena Morris is a possible reviewer for the user's dataset docs later",
+        "Samir Chen connected the user with Elena Morris"
+      ],
+      "contact_or_org_details": [
+        "Elena Morris email: emorris@neu.edu",
+        "Affiliation: Northeastern University",
+        "Organization/Lab: Center for Language and AI",
+        "PI/Supervisor: Dr. Priya Raman"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is Elena Morris in these notes?",
+      "tester_hint_answer": "She is a Northeastern student in NLP tied to the Center for Language and AI and the user's project context.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        5,
+        30
+      ]
+    },
+    {
+      "question": "What academic role does Elena Morris have—is she described as a master's student or a graduate student?",
+      "tester_hint_answer": "Both labels appear, with later wording preferring the more neutral 'graduate student.'",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        4,
+        12
+      ]
+    },
+    {
+      "question": "What kind of NLP and language-model work could Elena help with?",
+      "tester_hint_answer": "She works on language models and also supports annotation guideline development in the lab.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        3,
+        4,
+        16
+      ]
+    },
+    {
+      "question": "Why might I ask Elena Morris for feedback later?",
+      "tester_hint_answer": "Because she already reviewed some dataset documentation and knows the annotation setup.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        6,
+        22,
+        24
+      ]
+    },
+    {
+      "question": "How do I know Elena Morris, and what contact or lab details are listed for this graduate student in NLP?",
+      "tester_hint_answer": "The user met her through Samir Chen; the notes also include her lab, PI, university, and email.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        14,
+        22,
+        30
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_keyword_semantic_duplicate_03",
+    "issue": "keyword_semantic_duplicates",
+    "required_qa_phrases": [
+      "master's student",
+      "graduate student",
+      "NLP"
+    ],
+    "stress_signal": "User asks about one academic contact using several natural role descriptions."
+  }
+}

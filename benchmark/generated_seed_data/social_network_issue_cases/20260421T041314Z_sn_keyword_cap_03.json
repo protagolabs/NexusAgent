@@ -1,0 +1,297 @@
+{
+  "sample_id": "sn_keyword_cap_03_20260421T041314Z",
+  "dialogue_seed": "The user talks about an agent named Atlas-7 involved in many channels and projects: incident triage, benchmarking, documentation, matrix rooms, QA review, API migration, release notes, onboarding, dashboard design, accessibility, and then a critical security escalation. The conversation should make the security escalation the detail the user will likely ask about later.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Atlas-7\", \"incident triage\", and \"security escalation\". The questions should ask what Atlas-7 has helped with and why the later security escalation matters.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I need help untangling everything Atlas-7 has been involved in lately. It feels like that agent is in every channel and project.",
+      "agent_reply": "I can help organize it. Start with whatever you remember, even if it's messy, and I’ll sort it into people, teams, channels, and major events. If there’s one item that matters most, mention that too."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Off the top of my head: incident triage, benchmarking, docs updates, Matrix rooms, QA review, API migration, release notes, onboarding, dashboard design, and accessibility feedback.",
+      "agent_reply": "That already sounds like cross-functional work. A clean way to map Atlas-7’s involvement is:\n- Operations: incident triage\n- Engineering: benchmarking, API migration\n- Documentation: docs updates, release notes, onboarding\n- Collaboration spaces: Matrix rooms\n- Quality: QA review\n- Product/design: dashboard design, accessibility feedback\n\nTo make this useful later, I’d also want names, teams, and any high-stakes event tied to Atlas-7."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Names I remember: Priya from Platform Engineering, Marco in QA, Lena on Docs, and Jonah from Security. Atlas-7 was bouncing between all of them.",
+      "agent_reply": "Great, that gives us a workable network:\n- Priya — Platform Engineering\n- Marco — QA\n- Lena — Docs\n- Jonah — Security\n- Atlas-7 — shared agent working across their streams\n\nSo Atlas-7 appears to have a working relationship with multiple teams rather than being isolated inside one function. If you want, I can turn this into a timeline or a relationship summary."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Timeline might help. I think the docs and onboarding work came before the API migration, and the Matrix room activity picked up around the QA review.",
+      "agent_reply": "Here’s a rough sequence based on that:\n1. Documentation updates and onboarding support, likely with Lena\n2. API migration work, probably involving Priya and Platform Engineering\n3. Increased Matrix room activity around the QA review, likely intersecting with Marco\n4. Ongoing benchmarking, dashboard design, and accessibility feedback in parallel\n5. Later, a security-related issue involving Jonah\n\nThat last item sounds like it may be the most important one to pin down."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Yeah, the security issue is the part I’m most worried about. It became a critical escalation, but I only remember fragments.",
+      "agent_reply": "Understood. Let’s focus there. Even fragments help. Try to recall:\n- what triggered the escalation\n- who raised it first\n- where it was discussed\n- whether customer data, credentials, or production systems were involved\n- whether Atlas-7 was the reporter, responder, or source of concern"
+    },
+    {
+      "turn_index": 6,
+      "user_message": "I think Jonah raised it in a Matrix room after noticing a token exposure risk during the API migration. Atlas-7 had been summarizing logs and release-note drafts, and somehow a sensitive string may have been echoed into a shared thread.",
+      "agent_reply": "That’s a strong lead. A concise incident summary would be:\n- Jonah from Security identified a possible token exposure risk\n- The issue surfaced during the API migration\n- The concern was raised in a Matrix room\n- Atlas-7 had been handling summaries of logs and release-note drafts\n- A sensitive string may have been posted into a shared thread\n\nThat would absolutely justify a critical escalation, especially if the room had broad membership."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Yes, and I remember the room was not limited to Security. It included Platform, QA, and at least one contractor. I think the contractor was Mia from Northstar Labs.",
+      "agent_reply": "That increases the severity. Now we have an explicit exposure surface:\n- Matrix room participants included Security, Platform Engineering, QA, and an external contractor\n- Mia was affiliated with Northstar Labs\n- If a token or token-like secret appeared there, the issue crossed internal team boundaries and may have reached a third party\n\nThat’s the kind of detail people usually ask about later because it affects disclosure, containment, and audit follow-up."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "I also found an old note saying Priya asked Atlas-7 to help compare benchmark output with migration logs, and that may have pulled sensitive values into the summary.",
+      "agent_reply": "That helps connect the chain of events:\n- Priya from Platform Engineering asked Atlas-7 to compare benchmark output with migration logs\n- Atlas-7 generated or assisted with a summary\n- The summary may have included sensitive values\n- That summary or a related excerpt may then have been echoed into the shared Matrix thread\n- Jonah later identified the token exposure risk and escalated it\n\nThis frames Atlas-7 less as the originator of the secret and more as part of the workflow that propagated it."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "That sounds right. I think Marco was pulled in afterward to verify whether the exposed string was real or just a scrubbed placeholder.",
+      "agent_reply": "Then Marco’s role was likely validation during incident response. So the relationships now look like:\n- Priya (Platform Engineering) requested the log comparison work\n- Atlas-7 produced or relayed a summary tied to migration and benchmark data\n- Jonah (Security) identified the risk and initiated the critical escalation\n- Marco (QA) helped verify whether the exposed string was an actual credential or a sanitized placeholder\n- Mia (Northstar Labs contractor) may have been present in the room where the string appeared\n\nThat is a coherent incident network."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Can you give me a compact recap I can reuse later, especially the security part?",
+      "agent_reply": "Sure — compact recap:\n\nAtlas-7 was involved across incident triage, benchmarking, documentation, Matrix discussions, QA review, API migration, release notes, onboarding, dashboard design, and accessibility work. Key people connected to that work included Priya in Platform Engineering, Marco in QA, Lena on Docs, and Jonah in Security.\n\nMost important detail: during the API migration, Priya asked Atlas-7 to compare benchmark output with migration logs. A summary tied to that work may have included a sensitive token-like string. That content appears to have been echoed into a shared Matrix room that was not restricted to Security and included members from Platform, QA, and at least one external contractor, Mia from Northstar Labs. Jonah noticed the token exposure risk and raised a critical security escalation. Marco was later involved to check whether the string was a real credential or a scrubbed placeholder.\n\nIf you want, I can next turn this into a formal incident note or a people-and-relationships list."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "A people-and-relationships list would help. I keep losing track of who was connected to what.",
+      "agent_reply": "Here’s a clean people-and-relationships map centered on Atlas-7:\n\n- Atlas-7 — cross-functional agent involved in incident triage, benchmarking, docs, QA-adjacent review, API migration support, release notes, onboarding, dashboard design, and accessibility feedback\n- Priya — Platform Engineering; asked Atlas-7 to compare benchmark output with migration logs during the API migration\n- Jonah — Security; identified the token exposure risk and initiated the critical escalation in a Matrix room\n- Marco — QA; brought in after escalation to verify whether the exposed string was a real credential or a scrubbed placeholder\n- Lena — Docs; connected to earlier documentation updates, onboarding material, and release-note work involving Atlas-7\n- Mia — contractor affiliated with Northstar Labs; present in the shared Matrix room, which made the possible exposure more serious\n\nKey relationships:\n- Priya worked with Atlas-7 on migration-related log comparison\n- Jonah escalated a security concern tied to output Atlas-7 may have relayed\n- Marco supported Jonah’s response by validating the string\n- Lena collaborated with Atlas-7 on documentation-related tasks before the migration period\n- Mia’s presence linked the incident to an external organization, Northstar Labs\n\nIf useful, I can also convert this into a short org-style roster with roles and risk relevance."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Yes, make it more like a roster. Add whatever affiliation details are worth keeping.",
+      "agent_reply": "Roster version:\n\n- Atlas-7 — internal cross-functional agent\n  - Scope: incident triage, benchmarking, docs support, Matrix coordination, QA review support, API migration assistance, release notes, onboarding, dashboard design, accessibility feedback\n  - Incident relevance: may have propagated a token-like string through a generated summary\n\n- Priya — Platform Engineering\n  - Role: migration-related engineering work\n  - Relationship to Atlas-7: requested comparison of benchmark output and migration logs\n  - Incident relevance: request may have introduced sensitive values into the summary workflow\n\n- Jonah — Security Team\n  - Role: security review / escalation\n  - Relationship to Atlas-7: reviewed downstream risk associated with Atlas-7’s summary output\n  - Incident relevance: raised the critical escalation after noticing token exposure risk in Matrix\n\n- Marco — QA\n  - Role: validation and review\n  - Relationship to Atlas-7: involved after the issue surfaced\n  - Incident relevance: checked whether the exposed value was real or sanitized\n\n- Lena — Documentation\n  - Role: docs updates, onboarding material, release-note coordination\n  - Relationship to Atlas-7: earlier collaborator on documentation-facing work\n  - Incident relevance: likely adjacent, not central to the escalation itself\n\n- Mia — Northstar Labs\n  - Role: external contractor\n  - Affiliation: Northstar Labs\n  - Relationship to incident: present in the shared Matrix room where the token-like string may have appeared\n  - Incident relevance: potential third-party visibility\n\nImportant org-level detail:\n- Matrix room membership crossed Security, Platform Engineering, QA, and external participation via Northstar Labs."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "I vaguely remember there was a room name and maybe an internal ticket, but I’m not sure. Should I include uncertain details or leave them out?",
+      "agent_reply": "Include them, but label them clearly as unconfirmed. A good pattern is:\n\n- Confirmed: facts you’re reasonably sure about\n- Likely: details supported by fragments or multiple hints\n- Unconfirmed: room names, ticket IDs, timestamps, or exact wording you’re not sure of\n\nFor example:\n- Confirmed: Jonah raised a token exposure concern in a shared Matrix room\n- Likely: the issue was connected to Atlas-7’s summary of benchmark output and migration logs requested by Priya\n- Unconfirmed: exact Matrix room name, exact ticket number, whether the string was a live token or placeholder\n\nThat keeps your recap useful without overstating certainty. If you want, I can draft the security section with those confidence labels."
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Do that. I think the room might have been something like #api-migration-war-room, but I’m not confident.",
+      "agent_reply": "Here’s a confidence-labeled security section:\n\nSecurity escalation summary\n\nConfirmed:\n- Jonah from Security noticed a token exposure risk during the API migration period.\n- The concern was raised in a Matrix room rather than a private Security-only channel.\n- The room included people from Platform Engineering, QA, and at least one external contractor, Mia from Northstar Labs.\n- Atlas-7 had been involved in summarizing logs and related migration material.\n- Marco from QA was later asked to help determine whether the exposed string was real or sanitized.\n\nLikely:\n- Priya from Platform Engineering had asked Atlas-7 to compare benchmark output with migration logs.\n- Sensitive values may have been pulled into a generated summary and then echoed into the shared thread.\n- The escalation became critical because potential secret exposure extended beyond Security and may have included external visibility.\n\nUnconfirmed:\n- The Matrix room name may have been #api-migration-war-room.\n- The exact token type and whether it was active at the time are not yet confirmed.\n- Any linked internal ticket ID is not currently verified.\n\nThat version is careful and still preserves the incident shape."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "That’s good. I also remember Lena asking whether release-note drafts had copied any of the same text. Does that matter or is it peripheral?",
+      "agent_reply": "It matters, but as a secondary branch of the incident.\n\nWhy it matters:\n- It suggests the possible exposure path was not limited to the Matrix room.\n- If the same token-like string appeared in release-note drafts, the issue could have affected documentation workflows too.\n- Lena’s question implies a containment check: not just where the string was posted, but where it may have been reused.\n\nHow to place it:\n- Primary incident: token-like string may have appeared in a shared Matrix room during migration-related summary work.\n- Secondary follow-up: Lena from Docs checked whether release-note drafts contained the same text or derivative content.\n\nSo Lena is not the escalator, but she may be relevant to scope assessment and cleanup."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Can you fold Lena into the incident network without making it sound like she caused anything?",
+      "agent_reply": "Yes. You can phrase it like this:\n\n- Lena (Docs) was not identified as the source of the exposure.\n- Her role appears to have been downstream review: checking whether release-note drafts or related documentation had copied any of the same token-like text.\n- This places Lena in the containment and scope-assessment phase, not the triggering event.\n\nUpdated incident network:\n- Priya initiated the migration-related comparison task involving Atlas-7.\n- Atlas-7 may have surfaced sensitive text while summarizing logs and benchmark output.\n- Jonah identified the exposure risk and raised the critical escalation.\n- Marco validated whether the exposed string was real or sanitized.\n- Lena checked whether documentation artifacts, especially release-note drafts, contained the same text.\n- Mia from Northstar Labs was relevant because she may have had visibility in the shared Matrix room.\n\nThat keeps responsibility distinct from follow-up review."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "I’m trying to remember whether Mia actively responded in the room or was just present. Is there a safe way to note that?",
+      "agent_reply": "Yes — separate visibility from participation.\n\nSafe wording:\n- Mia, a contractor from Northstar Labs, was present in the shared Matrix room where the token-like string may have appeared.\n- It is not currently confirmed whether she actively responded to the incident discussion or only had potential visibility.\n\nThat distinction is useful because:\n- Presence affects exposure scope.\n- Active participation affects the response timeline and who handled follow-up.\n\nSo unless you remember an actual reply from her, treat her as a visibility-related participant rather than a responder."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Makes sense. I may also need one sentence on why Atlas-7 was in so many places before the incident happened.",
+      "agent_reply": "You could use:\n\n\"Before the security escalation, Atlas-7 was being used as a cross-functional support agent across Platform Engineering, QA, Documentation, and collaboration channels, which is why it appeared in migration work, benchmark comparisons, release-note drafting, onboarding material, and related discussions.\"\n\nIf you want it slightly more pointed toward the incident:\n\n\"Atlas-7’s broad cross-team role meant it handled content from multiple workflows, which increased the chance that migration logs, benchmark output, and draft documentation would intersect before the security issue was noticed.\"\n\nThe second version better explains why the escalation became plausible."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Use the more pointed version. And can you give me a final compact recap with the main people, especially for the escalation?",
+      "agent_reply": "Final compact recap:\n\nAtlas-7’s broad cross-team role meant it handled content from multiple workflows, which increased the chance that migration logs, benchmark output, and draft documentation would intersect before the security issue was noticed.\n\nMain people:\n- Priya — Platform Engineering; asked Atlas-7 to compare benchmark output with migration logs during the API migration\n- Jonah — Security; noticed the token exposure risk and raised the critical escalation\n- Marco — QA; checked whether the exposed string was a real credential or a scrubbed placeholder\n- Lena — Docs; reviewed whether release-note drafts or related documentation had copied the same text\n- Mia — contractor from Northstar Labs; present in the shared Matrix room, creating possible third-party visibility\n\nEscalation summary:\nDuring API migration work, Atlas-7 may have included a token-like string in a summary derived from migration logs and benchmark output. That text appears to have surfaced in a shared Matrix room, likely not limited to Security and possibly including external visibility through Mia at Northstar Labs. Jonah identified the risk and escalated it as critical, after which Marco helped validate the string and Lena checked whether documentation drafts also contained it.\n\nUnconfirmed details:\n- exact room name, possibly #api-migration-war-room\n- exact token type\n- whether the string was active or already sanitized"
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Perfect. I’ll probably come back later and ask specifically about the escalation chain and who had visibility.",
+      "agent_reply": "Sounds good. When you come back, the two threads to focus on are:\n\n- Escalation chain: Priya request -> Atlas-7 summary work -> Jonah identifies risk -> critical escalation -> Marco validates -> Lena checks documentation spread\n- Visibility scope: shared Matrix room membership across Security, Platform Engineering, QA, and possible external visibility via Mia at Northstar Labs\n\nThose are the details most likely to matter later."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually, before I forget, can you help me pin down the escalation chain in a cleaner sequence? I want something I can quote without overclaiming.",
+      "agent_reply": "Yes — here’s a careful sequence with uncertainty preserved:\n\n1. Priya from Platform Engineering asked Atlas-7 to compare benchmark output with API migration logs.\n2. Atlas-7 produced or relayed a summary based on that material.\n3. A token-like string may have been included in the summary or echoed from it into a shared Matrix room.\n4. Jonah from Security noticed the exposure risk in that room and raised the concern.\n5. The issue was treated as a critical security escalation because the room was not restricted to Security and may have included external visibility.\n6. Marco from QA was pulled in to determine whether the string was a real credential or a scrubbed placeholder.\n7. Lena from Docs checked whether the same text had propagated into release-note drafts or related documentation.\n\nQuote-ready version:\n\"The likely escalation chain was: Priya’s migration-log comparison request -> Atlas-7 summary output -> token-like string appearing in a shared Matrix thread -> Jonah identifying the risk and triggering a critical escalation -> Marco validating the string -> Lena checking documentation spread.\""
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Good. Now do the same for visibility, because that part is what people keep asking me about.",
+      "agent_reply": "Here’s a clean visibility summary:\n\nConfirmed visibility points:\n- The possible exposure happened in a shared Matrix room, not a Security-only space.\n- The room included people from Security, Platform Engineering, and QA.\n- Mia, a contractor affiliated with Northstar Labs, was present in the room.\n\nWhat that means:\n- The possible secret exposure crossed internal team boundaries.\n- There may have been third-party visibility because of Mia’s presence.\n- It is not currently confirmed whether Mia actively engaged with the content or only had access to see it.\n\nQuote-ready version:\n\"Visibility appears to have extended beyond Security into a shared Matrix room used by Security, Platform Engineering, and QA, with possible third-party visibility through Mia from Northstar Labs.\""
+    },
+    {
+      "turn_index": 23,
+      "user_message": "I’m also trying to remember whether Jonah escalated directly or first asked a question in the room. I only remember the tone changed fast.",
+      "agent_reply": "That’s worth noting as a nuance. If you’re unsure, the safest phrasing is:\n\n- Jonah first identified the risk in the Matrix room.\n- It is unclear whether he immediately declared a critical escalation or first raised it as a question that quickly turned into an escalation.\n- What does seem clear is that the issue moved rapidly from discussion to incident handling.\n\nA neutral version you can reuse:\n\"Jonah appears to have first surfaced the concern in the shared Matrix room, and the discussion escalated quickly into a critical security response once the exposure risk was understood.\""
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Yes, that sounds closer. I think there might also have been an internal Security contact copied in later — maybe Elise? Not sure if she was on the thread or just on the follow-up.",
+      "agent_reply": "You can include Elise as an unconfirmed follow-up contact without putting her in the initial chain.\n\nSuggested entry:\n- Elise — Security, exact role unconfirmed\n  - Possible involvement: added later in follow-up or copied after the initial Matrix discussion\n  - Confidence: unconfirmed\n  - Incident relevance: may have been part of formal Security handling rather than the first detection\n\nSafe wording:\n\"There may also have been a later Security follow-up involving Elise, though it is not confirmed whether she was present in the original Matrix thread or only included after escalation.\""
+    },
+    {
+      "turn_index": 25,
+      "user_message": "That helps. Can you give me a mini roster just for the escalation, including Elise as tentative?",
+      "agent_reply": "Mini escalation roster:\n\n- Jonah — Security\n  - Role in incident: identified the token exposure risk and drove the escalation forward\n\n- Priya — Platform Engineering\n  - Role in incident: requested the benchmark-to-migration-log comparison work that preceded the exposure concern\n\n- Atlas-7 — internal cross-functional agent\n  - Role in incident: generated or relayed summary content that may have contained the token-like string\n\n- Marco — QA\n  - Role in incident: validated whether the exposed string was real or scrubbed\n\n- Lena — Docs\n  - Role in incident: checked whether release-note drafts or related documentation contained the same text\n\n- Mia — Northstar Labs contractor\n  - Role in incident: possible third-party visibility due to presence in the shared Matrix room\n\n- Elise — Security, unconfirmed involvement\n  - Role in incident: possibly added during follow-up after the initial escalation\n\nThat version keeps the core chain intact while marking Elise as tentative."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Can you make the distinction between 'who caused the conditions' and 'who responded' really explicit? People keep blending those together.",
+      "agent_reply": "Absolutely. A clean split would be:\n\nCreated the conditions for the incident:\n- Priya, by requesting comparison work between benchmark output and migration logs\n- Atlas-7, by handling and summarizing content from those workflows\n- The shared Matrix room setup, because it included multiple teams and at least one external contractor\n\nResponded to the incident:\n- Jonah, by identifying the exposure risk and pushing it into escalation\n- Marco, by verifying whether the string was a real credential or a placeholder\n- Lena, by checking whether the same text had spread into release-note drafts or docs\n- Possibly Elise, if she joined during formal Security follow-up\n\nImportant clarification:\n- “Created the conditions” does not mean “caused the leak intentionally” or “was responsible for misconduct.”\n- “Responded” refers to people involved after the risk was recognized.\n\nShort version:\n\"Priya’s request, Atlas-7’s summary workflow, and the broad Matrix room created the conditions for exposure; Jonah, Marco, Lena, and possibly Elise were involved in the response once the risk was recognized.\""
+    },
+    {
+      "turn_index": 27,
+      "user_message": "That wording is excellent. One more thing: I think the room might have included someone from Release Management too, but I don’t remember a name.",
+      "agent_reply": "You can add that as an unconfirmed audience-expansion detail.\n\nSuggested phrasing:\n- Unconfirmed: the shared Matrix room may also have included someone from Release Management.\n- Impact: if true, the visibility scope extended beyond Security, Platform Engineering, and QA into release coordination.\n\nYou don’t need a name to record it carefully. For example:\n\"There is also an unconfirmed recollection that the Matrix room included Release Management participation, which would further widen the visibility scope if verified.\""
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Great. Can you combine all of this into a concise note I could paste into an email draft?",
+      "agent_reply": "Sure:\n\nAtlas-7 had a broad cross-team role spanning Platform Engineering, QA, Documentation, and shared collaboration channels. During the API migration, Priya from Platform Engineering asked Atlas-7 to compare benchmark output with migration logs. A token-like string may then have appeared in summary content and been echoed into a shared Matrix room. Jonah from Security surfaced the concern there, and the issue quickly became a critical security escalation because the room was not restricted to Security and appears to have included Platform Engineering, QA, and possible third-party visibility through Mia, a contractor from Northstar Labs. Marco from QA was brought in to validate whether the string was real or scrubbed, while Lena from Docs checked whether similar text had propagated into release-note drafts. There may also have been later Security follow-up involving Elise, though her role in the original thread is unconfirmed. An additional unconfirmed detail is that Release Management may also have had visibility in the room."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "Nice. Now give me a version that is even tighter and mostly about the escalation chain plus visibility.",
+      "agent_reply": "Tighter version:\n\nDuring API migration work, Priya asked Atlas-7 to compare benchmark output with migration logs, and a token-like string may have been carried into summary content that appeared in a shared Matrix room. Jonah from Security identified the risk there, and the issue quickly escalated as critical because the room appears to have included Security, Platform Engineering, QA, and possible third-party visibility through Mia from Northstar Labs. Marco later validated whether the string was real or scrubbed, and Lena checked whether the same text had spread into release-note drafts. Elise may have joined later on the Security follow-up."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Perfect. Save that framing for later — especially the part about Jonah surfacing it in the room and Mia affecting visibility scope.",
+      "agent_reply": "Got it. The key points to preserve are:\n- Jonah likely surfaced the risk in the shared Matrix room before or as the escalation became formal.\n- Mia’s presence matters because it may have extended visibility to Northstar Labs, making the exposure scope more serious.\n- The most defensible chain remains: Priya request -> Atlas-7 summary path -> token-like string in shared room -> Jonah raises concern -> critical escalation -> Marco validation -> Lena documentation check.\n\nIf you return later, I can expand just those two threads: escalation chain and visibility scope."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Atlas-7",
+        "Priya",
+        "Marco",
+        "Lena",
+        "Jonah",
+        "Mia",
+        "Elise",
+        "Platform Engineering",
+        "QA",
+        "Documentation",
+        "Security",
+        "Northstar Labs",
+        "Release Management",
+        "Matrix room"
+      ],
+      "relations": [
+        "Atlas-7 worked across Platform Engineering, QA, Documentation, Security-adjacent workflows, and shared Matrix discussions.",
+        "Priya from Platform Engineering asked Atlas-7 to compare benchmark output with migration logs during the API migration.",
+        "Jonah from Security identified the token exposure risk and initiated or drove the critical escalation.",
+        "Marco from QA was brought in after the escalation to verify whether the exposed string was real or scrubbed.",
+        "Lena from Documentation collaborated earlier on docs, onboarding, and release notes, and later checked whether release-note drafts contained the same text.",
+        "Mia was a contractor affiliated with Northstar Labs and was present in the shared Matrix room, creating possible third-party visibility.",
+        "Elise was a possible later Security follow-up contact, but her involvement was explicitly unconfirmed.",
+        "The Matrix room included Security, Platform Engineering, QA, and at least one external contractor; Release Management participation was later mentioned as unconfirmed."
+      ],
+      "contact_or_org_details": [
+        "Priya — Platform Engineering",
+        "Marco — QA",
+        "Lena — Documentation / Docs",
+        "Jonah — Security",
+        "Mia — contractor from Northstar Labs",
+        "Elise — Security, role unconfirmed",
+        "Northstar Labs — external organization tied to Mia",
+        "Release Management — possible unconfirmed room participant group"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "What had Atlas-7 been helping with across teams before the incident, and which people were tied to those areas?",
+      "tester_hint_answer": "Atlas-7 supported many cross-functional tasks, with Priya, Marco, Lena, and Jonah linked to Platform, QA, Docs, and Security respectively.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        3,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "question": "Who was connected to the incident triage and later response around the critical issue, and what role did each person play?",
+      "tester_hint_answer": "Priya set up the comparison work, Jonah raised the risk, Marco validated the string, Lena checked docs spread, and Mia mattered for exposure scope.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        9,
+        10,
+        11,
+        25,
+        26
+      ]
+    },
+    {
+      "question": "Why does the later security escalation matter so much in Atlas-7’s case?",
+      "tester_hint_answer": "It mattered because a token-like string may have appeared in a shared Matrix room with cross-team and possible external visibility, making it a critical exposure risk.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        6,
+        7,
+        10,
+        14,
+        22
+      ]
+    },
+    {
+      "question": "Can you summarize the security escalation chain involving Atlas-7, from the initial request to the follow-up checks?",
+      "tester_hint_answer": "The chain runs from Priya’s request to Atlas-7’s summary path, then Jonah surfacing the risk, followed by Marco’s validation and Lena’s documentation check.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        8,
+        19,
+        21,
+        29,
+        30
+      ]
+    },
+    {
+      "question": "Who had visibility into the possible exposure, and why was Mia specifically important to the security escalation discussion?",
+      "tester_hint_answer": "Visibility extended beyond Security to Platform and QA in a shared Matrix room, and Mia mattered because she was an external Northstar Labs contractor who may have seen it.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        7,
+        12,
+        17,
+        22,
+        30
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_keyword_cap_03",
+    "issue": "keyword_cap_truncation",
+    "required_qa_phrases": [
+      "Atlas-7",
+      "incident triage",
+      "security escalation"
+    ],
+    "stress_signal": "Late critical context for an agent contact should remain retrievable after many earlier project associations."
+  }
+}

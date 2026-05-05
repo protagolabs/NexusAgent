@@ -1,0 +1,300 @@
+{
+  "sample_id": "sn_entity_dedup_01_20260421T041502Z",
+  "dialogue_seed": "The user first mentions a friend named Bob who is a data engineer. Later the user calls him Bob Chen. Later they clarify that Robert Chen, Bob Chen, and Bob are the same person, and that his handle is @bob_chen in their workspace. The agent should keep the identity unified in the visible conversation.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Bob Chen\", \"Robert Chen\", and \"@bob_chen\". The questions should ask who he is, what other names or handle the user used for him, and what kind of work he does.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I need help organizing some contact info. My friend Bob is a data engineer, and I want to keep the notes consistent.",
+      "agent_reply": "Sure — I can help you structure it cleanly. For Bob, I have so far: name \"Bob\" and role \"data engineer.\" If you want, send me the rest of the details like company, team, handle, email, or your relationship to him, and I’ll help normalize the record."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "He works at Northstar Analytics on the platform team. He's a close friend, but we also collaborate sometimes.",
+      "agent_reply": "Got it. Current draft:\n- Name: Bob\n- Role: Data Engineer\n- Organization: Northstar Analytics\n- Team: Platform Team\n- Relationship to you: close friend and occasional collaborator\n\nIf you have contact details or a fuller name, I can add those too."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Yeah, his full name is Bob Chen. His work email is bob.chen@northstaranalytics.com.",
+      "agent_reply": "Perfect. Updated record:\n- Name: Bob Chen\n- Role: Data Engineer\n- Organization: Northstar Analytics\n- Team: Platform Team\n- Email: bob.chen@northstaranalytics.com\n- Relationship to you: close friend and occasional collaborator\n\nIf you want, I can also format this as a compact contact card."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Please add that he reports to Priya Nair, the engineering manager.",
+      "agent_reply": "Added. The record now includes an explicit workplace relationship:\n- Bob Chen is a Data Engineer at Northstar Analytics\n- Team: Platform Team\n- Manager: Priya Nair\n- Priya Nair's role: Engineering Manager\n- Email: bob.chen@northstaranalytics.com\n- Your relationship: close friend and occasional collaborator\n\nIf useful, I can also separate personal relationships from org-chart relationships."
+    },
+    {
+      "turn_index": 5,
+      "user_message": "In our workspace his handle is @bob_chen.",
+      "agent_reply": "Noted. Updated contact summary:\n- Bob Chen\n- Data Engineer\n- Northstar Analytics, Platform Team\n- Workspace handle: @bob_chen\n- Email: bob.chen@northstaranalytics.com\n- Reports to: Priya Nair, Engineering Manager\n- Relationship to you: close friend and occasional collaborator\n\nAnything else to add, like phone number, location, or projects?"
+    },
+    {
+      "turn_index": 6,
+      "user_message": "One more thing: sometimes people refer to him as Robert Chen in documents.",
+      "agent_reply": "Understood. I’ll treat Robert Chen and Bob Chen as the same person. A clean way to store that is:\n- Primary name: Bob Chen\n- Formal name: Robert Chen\n- Also known as: Bob\n- Workspace handle: @bob_chen\n\nThat helps keep documents and informal references aligned."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "Right, Robert Chen, Bob Chen, and Bob are all the same person.",
+      "agent_reply": "Confirmed — I’ll keep those unified as one identity. Consolidated profile:\n- Primary display name: Bob Chen\n- Formal name: Robert Chen\n- Common short name: Bob\n- Role: Data Engineer\n- Organization: Northstar Analytics\n- Team: Platform Team\n- Manager: Priya Nair, Engineering Manager\n- Workspace handle: @bob_chen\n- Work email: bob.chen@northstaranalytics.com\n- Relationship to you: close friend and occasional collaborator"
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Can you make that into a neat note I can paste into my contacts doc?",
+      "agent_reply": "Sure — here’s a clean paste-ready note:\n\nBob Chen (formal name: Robert Chen)\n- Also goes by: Bob\n- Role: Data Engineer\n- Company: Northstar Analytics\n- Team: Platform Team\n- Manager: Priya Nair, Engineering Manager\n- Workspace handle: @bob_chen\n- Work email: bob.chen@northstaranalytics.com\n- Relationship to me: close friend and occasional collaborator\n\nLet me know if you want a more compact CRM-style version too."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Yes, give me a compact version with labels on one line.",
+      "agent_reply": "Here’s a compact one-line version:\n\nBob Chen | Formal name: Robert Chen | Also known as: Bob | Role: Data Engineer | Org: Northstar Analytics | Team: Platform Team | Manager: Priya Nair (Engineering Manager) | Handle: @bob_chen | Email: bob.chen@northstaranalytics.com | Relationship: close friend; occasional collaborator"
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Great. Also remind me what identity details you’re keeping unified for him.",
+      "agent_reply": "I’m keeping these as one person:\n- Robert Chen\n- Bob Chen\n- Bob\n- @bob_chen\n\nAll of those refer to the same contact: Bob Chen, the data engineer at Northstar Analytics."
+    },
+    {
+      "turn_index": 11,
+      "user_message": "Add that he's based in Seattle and usually works closely with Maya Patel on data pipelines.",
+      "agent_reply": "Added. I’d record that as:\n- Location: Seattle\n- Frequent collaborator: Maya Patel\n- Collaboration context: data pipelines\n\nSo Bob Chen / Robert Chen / Bob / @bob_chen remains one unified contact, now with Seattle location and a working relationship with Maya Patel."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Maya is a senior analytics engineer at the same company, if that helps.",
+      "agent_reply": "Yes, that helps. I’d normalize that relationship as:\n- Bob Chen: Data Engineer, Northstar Analytics, Platform Team\n- Works closely with: Maya Patel, Senior Analytics Engineer, Northstar Analytics\n- Collaboration area: data pipelines\n\nThat makes the peer relationship clearer inside the organization."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Please update the one-line contact entry too.",
+      "agent_reply": "Sure — updated one-line version:\n\nBob Chen | Formal name: Robert Chen | Also known as: Bob | Role: Data Engineer | Org: Northstar Analytics | Team: Platform Team | Location: Seattle | Manager: Priya Nair (Engineering Manager) | Frequent collaborator: Maya Patel (Senior Analytics Engineer) | Collaboration: data pipelines | Handle: @bob_chen | Email: bob.chen@northstaranalytics.com | Relationship: close friend; occasional collaborator"
+    },
+    {
+      "turn_index": 14,
+      "user_message": "He also mentioned his GitHub is github.com/bobchen-data.",
+      "agent_reply": "Added. I’d store that as:\n- GitHub: github.com/bobchen-data\n\nUpdated identity still unified under Bob Chen, with Robert Chen/Bob/@bob_chen as aliases or alternate references."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Actually, can you make the GitHub field explicit as a profile URL in the compact version?",
+      "agent_reply": "Absolutely. Revised compact entry:\n\nBob Chen | Formal name: Robert Chen | Also known as: Bob | Role: Data Engineer | Org: Northstar Analytics | Team: Platform Team | Location: Seattle | Manager: Priya Nair (Engineering Manager) | Frequent collaborator: Maya Patel (Senior Analytics Engineer) | Collaboration: data pipelines | Handle: @bob_chen | Email: bob.chen@northstaranalytics.com | GitHub profile: github.com/bobchen-data | Relationship: close friend; occasional collaborator"
+    },
+    {
+      "turn_index": 16,
+      "user_message": "I may want to split personal details from workplace details. Can you show both sections?",
+      "agent_reply": "Sure — here’s a clean two-section version:\n\nBob Chen (formal name: Robert Chen)\nPersonal / identity\n- Also goes by: Bob\n- Workspace handle: @bob_chen\n- GitHub profile: github.com/bobchen-data\n- Relationship to me: close friend and occasional collaborator\n\nWork\n- Role: Data Engineer\n- Organization: Northstar Analytics\n- Team: Platform Team\n- Location: Seattle\n- Manager: Priya Nair, Engineering Manager\n- Frequent collaborator: Maya Patel, Senior Analytics Engineer\n- Collaboration area: data pipelines\n- Work email: bob.chen@northstaranalytics.com"
+    },
+    {
+      "turn_index": 17,
+      "user_message": "Looks good. Add a short note that he's the same person when listed as Robert Chen in formal docs.",
+      "agent_reply": "Done. Here’s the revised version with that clarification:\n\nBob Chen (formal name: Robert Chen)\nNote: Robert Chen, Bob Chen, Bob, and @bob_chen all refer to the same person; formal documents may use Robert Chen.\n\nPersonal / identity\n- Also goes by: Bob\n- Workspace handle: @bob_chen\n- GitHub profile: github.com/bobchen-data\n- Relationship to me: close friend and occasional collaborator\n\nWork\n- Role: Data Engineer\n- Organization: Northstar Analytics\n- Team: Platform Team\n- Location: Seattle\n- Manager: Priya Nair, Engineering Manager\n- Frequent collaborator: Maya Patel, Senior Analytics Engineer\n- Collaboration area: data pipelines\n- Work email: bob.chen@northstaranalytics.com"
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Can you make that note even shorter, more like a parenthetical?",
+      "agent_reply": "Yes — a concise version would be:\n\n(same person as Robert Chen / Bob / @bob_chen)\n\nOr, if you want it slightly more formal:\n\n(alias references: Robert Chen, Bob, @bob_chen)\n\nI can insert either version into the contact note."
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Use the more formal one and give me the final paste-ready note.",
+      "agent_reply": "Here you go:\n\nBob Chen (formal name: Robert Chen)\n(alias references: Robert Chen, Bob, @bob_chen)\n\nPersonal / identity\n- Workspace handle: @bob_chen\n- GitHub profile: github.com/bobchen-data\n- Relationship to me: close friend and occasional collaborator\n\nWork\n- Role: Data Engineer\n- Organization: Northstar Analytics\n- Team: Platform Team\n- Location: Seattle\n- Manager: Priya Nair, Engineering Manager\n- Frequent collaborator: Maya Patel, Senior Analytics Engineer\n- Collaboration area: data pipelines\n- Work email: bob.chen@northstaranalytics.com"
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Perfect. Before we wrap up, give me a quick checklist of the key fields you've captured for Bob Chen.",
+      "agent_reply": "Quick checklist for Bob Chen:\n- Primary name: Bob Chen\n- Formal name: Robert Chen\n- Alias references: Bob, @bob_chen\n- Role: Data Engineer\n- Organization: Northstar Analytics\n- Team: Platform Team\n- Location: Seattle\n- Manager: Priya Nair\n- Frequent collaborator: Maya Patel\n- Collaboration area: data pipelines\n- Work email: bob.chen@northstaranalytics.com\n- GitHub profile: github.com/bobchen-data\n- Relationship to you: close friend and occasional collaborator\n\nIf you want later, I can also convert this into a strict JSON-style contact record."
+    },
+    {
+      "turn_index": 21,
+      "user_message": "Actually yes, give me a strict JSON-style contact record for him.",
+      "agent_reply": "{\n  \"primary_name\": \"Bob Chen\",\n  \"formal_name\": \"Robert Chen\",\n  \"aliases\": [\"Bob\", \"@bob_chen\"],\n  \"role\": \"Data Engineer\",\n  \"organization\": \"Northstar Analytics\",\n  \"team\": \"Platform Team\",\n  \"location\": \"Seattle\",\n  \"manager\": {\n    \"name\": \"Priya Nair\",\n    \"role\": \"Engineering Manager\"\n  },\n  \"frequent_collaborator\": {\n    \"name\": \"Maya Patel\",\n    \"role\": \"Senior Analytics Engineer\",\n    \"organization\": \"Northstar Analytics\",\n    \"collaboration_area\": \"data pipelines\"\n  },\n  \"work_email\": \"bob.chen@northstaranalytics.com\",\n  \"workspace_handle\": \"@bob_chen\",\n  \"github_profile\": \"github.com/bobchen-data\",\n  \"relationship_to_user\": [\"close friend\", \"occasional collaborator\"]\n}"
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Can you add a field that makes it explicit that all those names map to the same person?",
+      "agent_reply": "Yes — here’s the JSON with an explicit identity-unification field:\n\n{\n  \"primary_name\": \"Bob Chen\",\n  \"formal_name\": \"Robert Chen\",\n  \"aliases\": [\"Bob\", \"@bob_chen\"],\n  \"same_person_references\": [\"Robert Chen\", \"Bob Chen\", \"Bob\", \"@bob_chen\"],\n  \"role\": \"Data Engineer\",\n  \"organization\": \"Northstar Analytics\",\n  \"team\": \"Platform Team\",\n  \"location\": \"Seattle\",\n  \"manager\": {\n    \"name\": \"Priya Nair\",\n    \"role\": \"Engineering Manager\"\n  },\n  \"frequent_collaborator\": {\n    \"name\": \"Maya Patel\",\n    \"role\": \"Senior Analytics Engineer\",\n    \"organization\": \"Northstar Analytics\",\n    \"collaboration_area\": \"data pipelines\"\n  },\n  \"work_email\": \"bob.chen@northstaranalytics.com\",\n  \"workspace_handle\": \"@bob_chen\",\n  \"github_profile\": \"github.com/bobchen-data\",\n  \"relationship_to_user\": [\"close friend\", \"occasional collaborator\"]\n}"
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Nice. Also, Bob said he occasionally works with Jordan Lee from security on access reviews.",
+      "agent_reply": "Added. I’d represent that as another workplace relationship tied to Bob Chen:\n\n{\n  \"primary_name\": \"Bob Chen\",\n  \"formal_name\": \"Robert Chen\",\n  \"aliases\": [\"Bob\", \"@bob_chen\"],\n  \"same_person_references\": [\"Robert Chen\", \"Bob Chen\", \"Bob\", \"@bob_chen\"],\n  \"role\": \"Data Engineer\",\n  \"organization\": \"Northstar Analytics\",\n  \"team\": \"Platform Team\",\n  \"location\": \"Seattle\",\n  \"manager\": {\n    \"name\": \"Priya Nair\",\n    \"role\": \"Engineering Manager\"\n  },\n  \"frequent_collaborator\": {\n    \"name\": \"Maya Patel\",\n    \"role\": \"Senior Analytics Engineer\",\n    \"organization\": \"Northstar Analytics\",\n    \"collaboration_area\": \"data pipelines\"\n  },\n  \"other_collaborators\": [\n    {\n      \"name\": \"Jordan Lee\",\n      \"department\": \"Security\",\n      \"collaboration_area\": \"access reviews\",\n      \"frequency\": \"occasional\"\n    }\n  ],\n  \"work_email\": \"bob.chen@northstaranalytics.com\",\n  \"workspace_handle\": \"@bob_chen\",\n  \"github_profile\": \"github.com/bobchen-data\",\n  \"relationship_to_user\": [\"close friend\", \"occasional collaborator\"]\n}\n\nIf you know Jordan Lee’s title, I can make that entry more precise."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Jordan is a security analyst, also at Northstar Analytics.",
+      "agent_reply": "Great — that makes the relationship clearer. Updated JSON:\n\n{\n  \"primary_name\": \"Bob Chen\",\n  \"formal_name\": \"Robert Chen\",\n  \"aliases\": [\"Bob\", \"@bob_chen\"],\n  \"same_person_references\": [\"Robert Chen\", \"Bob Chen\", \"Bob\", \"@bob_chen\"],\n  \"role\": \"Data Engineer\",\n  \"organization\": \"Northstar Analytics\",\n  \"team\": \"Platform Team\",\n  \"location\": \"Seattle\",\n  \"manager\": {\n    \"name\": \"Priya Nair\",\n    \"role\": \"Engineering Manager\"\n  },\n  \"frequent_collaborator\": {\n    \"name\": \"Maya Patel\",\n    \"role\": \"Senior Analytics Engineer\",\n    \"organization\": \"Northstar Analytics\",\n    \"collaboration_area\": \"data pipelines\"\n  },\n  \"other_collaborators\": [\n    {\n      \"name\": \"Jordan Lee\",\n      \"role\": \"Security Analyst\",\n      \"organization\": \"Northstar Analytics\",\n      \"department\": \"Security\",\n      \"collaboration_area\": \"access reviews\",\n      \"frequency\": \"occasional\"\n    }\n  ],\n  \"work_email\": \"bob.chen@northstaranalytics.com\",\n  \"workspace_handle\": \"@bob_chen\",\n  \"github_profile\": \"github.com/bobchen-data\",\n  \"relationship_to_user\": [\"close friend\", \"occasional collaborator\"]\n}"
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Can you also give me a very short human-readable summary, like two sentences max?",
+      "agent_reply": "Bob Chen (formal name Robert Chen, also referred to as Bob or @bob_chen) is a Data Engineer on the Platform Team at Northstar Analytics, based in Seattle. He reports to Priya Nair, works closely with Maya Patel on data pipelines, and occasionally collaborates with Jordan Lee on access reviews."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "Make sure it still mentions that he's my friend, not just a work contact.",
+      "agent_reply": "Sure — revised short summary:\n\nBob Chen (formal name Robert Chen, also referred to as Bob or @bob_chen) is my close friend and an occasional collaborator; he’s a Data Engineer on the Platform Team at Northstar Analytics, based in Seattle. He reports to Priya Nair, works closely with Maya Patel on data pipelines, and occasionally collaborates with Jordan Lee on access reviews."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Good. I might later store this in a people directory. What would the core fields be if I wanted to keep it lean?",
+      "agent_reply": "For a lean people-directory record, I’d keep just the fields most likely to matter for lookup and relationship context:\n\n- display_name: Bob Chen\n- formal_name: Robert Chen\n- aliases: Bob\n- handle: @bob_chen\n- role: Data Engineer\n- organization: Northstar Analytics\n- team: Platform Team\n- location: Seattle\n- email: bob.chen@northstaranalytics.com\n- manager: Priya Nair\n- key_collaborators: Maya Patel; Jordan Lee\n- relationship_to_you: close friend; occasional collaborator\n\nOptional but still useful:\n- github_profile: github.com/bobchen-data\n- identity_note: Robert Chen / Bob Chen / Bob / @bob_chen are the same person"
+    },
+    {
+      "turn_index": 28,
+      "user_message": "Please turn that lean version into a one-line directory entry.",
+      "agent_reply": "Bob Chen | Formal name: Robert Chen | Alias: Bob | Handle: @bob_chen | Role: Data Engineer | Org: Northstar Analytics | Team: Platform Team | Location: Seattle | Email: bob.chen@northstaranalytics.com | Manager: Priya Nair | Key collaborators: Maya Patel, Jordan Lee | Relationship: close friend; occasional collaborator"
+    },
+    {
+      "turn_index": 29,
+      "user_message": "One last tweak: can you include the fact that Jordan is in Security without making it too long?",
+      "agent_reply": "Absolutely:\n\nBob Chen | Formal name: Robert Chen | Alias: Bob | Handle: @bob_chen | Role: Data Engineer | Org: Northstar Analytics | Team: Platform Team | Location: Seattle | Email: bob.chen@northstaranalytics.com | Manager: Priya Nair | Key collaborators: Maya Patel; Jordan Lee (Security) | Relationship: close friend; occasional collaborator"
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Great, that's exactly what I needed. Can you close with a quick recap of the identity mapping so I don't accidentally split his records later?",
+      "agent_reply": "Quick recap: Robert Chen, Bob Chen, Bob, and @bob_chen all refer to the same person. Keep the unified record under Bob Chen, with Robert Chen as the formal name and Bob / @bob_chen as alternate references."
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Bob Chen",
+        "Robert Chen",
+        "Bob",
+        "@bob_chen",
+        "Priya Nair",
+        "Maya Patel",
+        "Jordan Lee",
+        "Northstar Analytics",
+        "Platform Team",
+        "Security"
+      ],
+      "relations": [
+        "Bob Chen, Robert Chen, Bob, and @bob_chen are the same person",
+        "Bob Chen is the user's close friend",
+        "Bob Chen is an occasional collaborator of the user",
+        "Bob Chen is a Data Engineer",
+        "Bob Chen works at Northstar Analytics",
+        "Bob Chen is on the Platform Team",
+        "Bob Chen reports to Priya Nair",
+        "Priya Nair is an Engineering Manager",
+        "Bob Chen works closely with Maya Patel on data pipelines",
+        "Maya Patel is a Senior Analytics Engineer at Northstar Analytics",
+        "Bob Chen occasionally works with Jordan Lee on access reviews",
+        "Jordan Lee is a Security Analyst at Northstar Analytics",
+        "Jordan Lee is in Security"
+      ],
+      "contact_or_org_details": [
+        "Workspace handle: @bob_chen",
+        "Work email: bob.chen@northstaranalytics.com",
+        "Location: Seattle",
+        "GitHub profile: github.com/bobchen-data",
+        "Organization: Northstar Analytics",
+        "Team: Platform Team"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "Who is Bob Chen in the notes, and what kind of work does he do?",
+      "tester_hint_answer": "He is the user's close friend and occasional collaborator, and he works as a Data Engineer.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        2,
+        3,
+        7,
+        20,
+        26
+      ]
+    },
+    {
+      "question": "What other names does the user use for Bob Chen, including whether Robert Chen is the same person?",
+      "tester_hint_answer": "Yes—Robert Chen, Bob Chen, and Bob are all unified as one person.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        6,
+        7,
+        10,
+        17,
+        22,
+        30
+      ]
+    },
+    {
+      "question": "What handle is kept for Robert Chen in the workspace, and is @bob_chen treated as the same person too?",
+      "tester_hint_answer": "The workspace handle is @bob_chen, and it is explicitly mapped to the same person as Robert Chen/Bob Chen/Bob.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        5,
+        7,
+        10,
+        19,
+        22,
+        30
+      ]
+    },
+    {
+      "question": "Where does Bob Chen work, what team is he on, and who does he report to?",
+      "tester_hint_answer": "He works at Northstar Analytics on the Platform Team and reports to Priya Nair.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        4,
+        7,
+        20,
+        21
+      ]
+    },
+    {
+      "question": "Besides his main job, who does Bob Chen work with and on what kinds of tasks?",
+      "tester_hint_answer": "He works closely with Maya Patel on data pipelines and occasionally with Jordan Lee from Security on access reviews.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        11,
+        12,
+        23,
+        24,
+        25,
+        29
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_entity_dedup_01",
+    "issue": "entity_dedup_non_deterministic",
+    "required_qa_phrases": [
+      "Bob Chen",
+      "Robert Chen",
+      "@bob_chen"
+    ],
+    "stress_signal": "One person is referred to by nickname, full name, formal name, and handle."
+  }
+}

@@ -1,0 +1,287 @@
+{
+  "sample_id": "sn_entity_dedup_03_20260421T041727Z",
+  "dialogue_seed": "The user discusses an assistant agent called Research-01, then calls it Agent Research-01, then shares that its Matrix alias is @agent_research_01:lab.local. The conversation should clearly treat the display name and Matrix ID as one agent entity, not multiple contacts.",
+  "qa_seed": "Generate exactly 5 QA items from a user's point of view. Across the question texts, include these exact natural phrases at least once: \"Research-01\", \"@agent_research_01:lab.local\", and \"assistant agent\". The questions should ask what it is, what alias the user gave for it, and what work the user associates with it.",
+  "qa_seed_source": "catalog",
+  "target_modules": [
+    "social_network"
+  ],
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I’m organizing my contacts and one of them is an assistant agent called Research-01.",
+      "agent_reply": "Got it — I’ll treat Research-01 as a contact entry for an assistant agent. If you want, I can help you structure the profile with a display name, role, organization, and messaging details."
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Yeah, and sometimes I refer to it as Agent Research-01 in notes.",
+      "agent_reply": "That makes sense. We should treat “Research-01” and “Agent Research-01” as the same entity, with one as the primary name and the other as an alternate name or alias."
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Exactly. I don’t want those split into two separate contacts.",
+      "agent_reply": "Understood. I’d keep a single contact record and store the naming like this:\n- Primary name: Research-01\n- Alternate name: Agent Research-01\n- Type: assistant agent\nThat avoids duplication while preserving both ways you refer to it."
+    },
+    {
+      "turn_index": 4,
+      "user_message": "It also has a Matrix alias: @agent_research_01:lab.local.",
+      "agent_reply": "Perfect — that Matrix ID should be attached to the same contact, not created as a separate person. So the single entity would be:\n- Name: Research-01\n- Alias: Agent Research-01\n- Matrix: @agent_research_01:lab.local"
+    },
+    {
+      "turn_index": 5,
+      "user_message": "Right. The lab is Northbridge AI Lab, by the way.",
+      "agent_reply": "Great, that adds affiliation detail. We can record Research-01 as affiliated with Northbridge AI Lab. That gives you a clearer profile:\n- Research-01 / Agent Research-01\n- Assistant agent\n- Affiliation: Northbridge AI Lab\n- Matrix ID: @agent_research_01:lab.local"
+    },
+    {
+      "turn_index": 6,
+      "user_message": "I mainly use it for literature review support.",
+      "agent_reply": "Then its role can be noted more specifically. For example:\n- Role: research assistant agent\n- Function: literature review support\n- Affiliation: Northbridge AI Lab\nThat makes the contact more useful later if you filter by purpose or responsibility."
+    },
+    {
+      "turn_index": 7,
+      "user_message": "My teammate Maya Chen introduced me to it.",
+      "agent_reply": "That’s useful relationship context. We can add:\n- Introduced by: Maya Chen\nThis creates an explicit relationship between Maya Chen and Research-01, and also suggests Maya Chen is part of your working network around Northbridge AI Lab or your project."
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Maya is our project lead at Northbridge AI Lab.",
+      "agent_reply": "Excellent — now we have a clearer relationship structure:\n- Maya Chen — Project Lead at Northbridge AI Lab\n- Research-01 — research assistant agent affiliated with Northbridge AI Lab\n- Relationship: Maya Chen introduced you to Research-01\nThat keeps both the person and the agent tied to the same organization."
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Please summarize the contact cleanly so I can paste it into my directory.",
+      "agent_reply": "Sure — here’s a clean version:\n\nResearch-01\n- Alternate name: Agent Research-01\n- Entity type: Assistant agent\n- Role: Research assistant agent\n- Function: Literature review support\n- Organization: Northbridge AI Lab\n- Matrix ID: @agent_research_01:lab.local\n- Related person: Maya Chen, Project Lead at Northbridge AI Lab\n- Relationship note: Introduced to user by Maya Chen\n\nThis keeps everything under one contact entry."
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Looks good. Add a note that the Matrix alias belongs to the same agent entity as the display name.",
+      "agent_reply": "Added note:\n- Identity note: The display names “Research-01” and “Agent Research-01,” along with the Matrix ID “@agent_research_01:lab.local,” all refer to the same agent entity.\n\nFinal directory-ready entry:\n\nResearch-01\n- Alternate name: Agent Research-01\n- Entity type: Assistant agent\n- Role: Research assistant agent\n- Function: Literature review support\n- Organization: Northbridge AI Lab\n- Matrix ID: @agent_research_01:lab.local\n- Related person: Maya Chen, Project Lead at Northbridge AI Lab\n- Relationship note: Introduced to user by Maya Chen\n- Identity note: Display name and Matrix alias refer to the same agent entity"
+    },
+    {
+      "turn_index": 11,
+      "user_message": "I should probably add who manages the agent. It’s overseen by Dr. Elias Romero.",
+      "agent_reply": "Yes, that’s a strong detail to include. I’d add:\n- Supervisor/Owner: Dr. Elias Romero\n\nThat creates a clear relationship between Dr. Elias Romero and Research-01, while keeping Research-01 as the same single agent entity tied to the Matrix ID."
+    },
+    {
+      "turn_index": 12,
+      "user_message": "He’s the director of applied research at Northbridge AI Lab.",
+      "agent_reply": "Great — now the affiliation and role are clearer:\n- Dr. Elias Romero — Director of Applied Research at Northbridge AI Lab\n- Relationship to Research-01: oversees the agent\n\nSo your network around this contact now includes both Maya Chen and Dr. Elias Romero at the same organization."
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Can you fold that into the directory entry too?",
+      "agent_reply": "Absolutely. Updated entry:\n\nResearch-01\n- Alternate name: Agent Research-01\n- Entity type: Assistant agent\n- Role: Research assistant agent\n- Function: Literature review support\n- Organization: Northbridge AI Lab\n- Matrix ID: @agent_research_01:lab.local\n- Related person: Maya Chen, Project Lead at Northbridge AI Lab\n- Relationship note: Introduced to user by Maya Chen\n- Supervisor/Owner: Dr. Elias Romero, Director of Applied Research at Northbridge AI Lab\n- Identity note: Display name and Matrix alias refer to the same agent entity"
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Also, if I need human support, the lab’s general contact is research-ops@northbridge.ai.",
+      "agent_reply": "Perfect — that belongs as an organization contact detail, not as a separate contact for the agent. I’d record it as:\n- Organization support contact: research-ops@northbridge.ai\n\nThat keeps the email attached to Northbridge AI Lab context while Research-01 remains the main contact record."
+    },
+    {
+      "turn_index": 15,
+      "user_message": "Good point. I don’t want that email mistaken for Research-01’s own address.",
+      "agent_reply": "Exactly. A clear note would help:\n- Contact note: research-ops@northbridge.ai is the general support email for Northbridge AI Lab, not a direct address for Research-01.\n\nThat distinction should prevent accidental splitting or mislabeling."
+    },
+    {
+      "turn_index": 16,
+      "user_message": "Maya also told me Samir Patel handles onboarding for new internal users.",
+      "agent_reply": "That’s useful relationship context too. You could add a separate related person:\n- Samir Patel — onboarding contact for new internal users\n- Relationship to Research-01: supports access/onboarding around the agent\n\nIf you know his title or organization, we can make that cleaner."
+    },
+    {
+      "turn_index": 17,
+      "user_message": "He’s an operations coordinator at Northbridge AI Lab.",
+      "agent_reply": "Great. That gives you another well-defined network link:\n- Samir Patel — Operations Coordinator at Northbridge AI Lab\n- Relationship note: Handles onboarding for new internal users of Research-01 or related systems\n\nNow the contact has operational, supervisory, and introduction context."
+    },
+    {
+      "turn_index": 18,
+      "user_message": "Please give me one polished version with all of that.",
+      "agent_reply": "Here’s a polished directory-ready version:\n\nResearch-01\n- Alternate name: Agent Research-01\n- Entity type: Assistant agent\n- Role: Research assistant agent\n- Function: Literature review support\n- Organization: Northbridge AI Lab\n- Matrix ID: @agent_research_01:lab.local\n- Identity note: The names “Research-01” and “Agent Research-01,” and the Matrix ID “@agent_research_01:lab.local,” all refer to the same agent entity\n- Related person: Maya Chen, Project Lead at Northbridge AI Lab\n- Relationship note: Introduced to user by Maya Chen\n- Supervisor/Owner: Dr. Elias Romero, Director of Applied Research at Northbridge AI Lab\n- Operations contact: Samir Patel, Operations Coordinator at Northbridge AI Lab\n- Operations note: Handles onboarding for new internal users\n- Organization support contact: research-ops@northbridge.ai\n- Contact note: research-ops@northbridge.ai is the general support email for Northbridge AI Lab, not a direct address for Research-01"
+    },
+    {
+      "turn_index": 19,
+      "user_message": "Nice. Maybe add a short one-line description at the top.",
+      "agent_reply": "Sure — a concise line would be:\n\nResearch-01 is a Northbridge AI Lab research assistant agent used for literature review support.\n\nPlaced above the entry, it gives quick context before the structured fields."
+    },
+    {
+      "turn_index": 20,
+      "user_message": "Great, give me the final version exactly as I should paste it.",
+      "agent_reply": "Research-01 is a Northbridge AI Lab research assistant agent used for literature review support.\n\nResearch-01\n- Alternate name: Agent Research-01\n- Entity type: Assistant agent\n- Role: Research assistant agent\n- Function: Literature review support\n- Organization: Northbridge AI Lab\n- Matrix ID: @agent_research_01:lab.local\n- Identity note: The names “Research-01” and “Agent Research-01,” and the Matrix ID “@agent_research_01:lab.local,” all refer to the same agent entity\n- Related person: Maya Chen, Project Lead at Northbridge AI Lab\n- Relationship note: Introduced to user by Maya Chen\n- Supervisor/Owner: Dr. Elias Romero, Director of Applied Research at Northbridge AI Lab\n- Operations contact: Samir Patel, Operations Coordinator at Northbridge AI Lab\n- Operations note: Handles onboarding for new internal users\n- Organization support contact: research-ops@northbridge.ai\n- Contact note: research-ops@northbridge.ai is the general support email for Northbridge AI Lab, not a direct address for Research-01"
+    },
+    {
+      "turn_index": 21,
+      "user_message": "I also have an internal extension for the lab help desk: x4821. Should that go in this entry too?",
+      "agent_reply": "Yes, but I’d attach it as an organization support detail rather than as Research-01’s own contact info.\n\nRecommended addition:\n- Organization support extension: x4821\n- Note: Internal help desk extension for Northbridge AI Lab, not a direct line for Research-01\n\nThat keeps the agent record clean while preserving a useful support path."
+    },
+    {
+      "turn_index": 22,
+      "user_message": "Makes sense. And Elias prefers being listed without the title prefix, just Elias Romero.",
+      "agent_reply": "Understood. I’d normalize that related person as:\n- Elias Romero — Director of Applied Research at Northbridge AI Lab\n\nThat changes only the display format for his name; the relationship stays the same:\n- Relationship to Research-01: oversees the agent"
+    },
+    {
+      "turn_index": 23,
+      "user_message": "Can you show me just the people and support contacts connected to Research-01?",
+      "agent_reply": "Sure — here’s the network around Research-01:\n\nPeople\n- Maya Chen — Project Lead, Northbridge AI Lab\n  - Relationship: Introduced you to Research-01\n- Elias Romero — Director of Applied Research, Northbridge AI Lab\n  - Relationship: Oversees Research-01\n- Samir Patel — Operations Coordinator, Northbridge AI Lab\n  - Relationship: Handles onboarding for new internal users\n\nSupport contacts\n- research-ops@northbridge.ai — General support email for Northbridge AI Lab\n- x4821 — Internal help desk extension for Northbridge AI Lab\n\nBoth support contacts belong to the organization context, not directly to Research-01 as its personal address or line."
+    },
+    {
+      "turn_index": 24,
+      "user_message": "Good. I’m wondering whether to tag Maya as my teammate separately from her title.",
+      "agent_reply": "Yes, that’s worth keeping as a separate relationship note because it describes how Maya relates to you, not just her job.\n\nYou could store both:\n- Maya Chen — Project Lead at Northbridge AI Lab\n- Relationship to user: teammate\n- Relationship to Research-01: introduced user to the agent\n\nThat distinction is useful later if you filter by personal working relationships versus formal roles."
+    },
+    {
+      "turn_index": 25,
+      "user_message": "Please add that. Also Samir is on the Research Operations team, if that helps.",
+      "agent_reply": "That does help. I’d refine Samir’s details to:\n- Samir Patel — Operations Coordinator, Research Operations team, Northbridge AI Lab\n- Relationship to Research-01: handles onboarding for new internal users\n\nAnd for Maya:\n- Maya Chen — Project Lead, Northbridge AI Lab\n- Relationship to user: teammate\n- Relationship to Research-01: introduced user to the agent\n\nThis gives you cleaner organizational context without changing the core identity of Research-01."
+    },
+    {
+      "turn_index": 26,
+      "user_message": "I don’t actually know whether Samir works directly on Research-01 or just access to it. I’d rather not overstate that.",
+      "agent_reply": "Good call. We can make that more precise and cautious.\n\nSafer wording:\n- Samir Patel — Operations Coordinator, Research Operations team, Northbridge AI Lab\n- Relationship note: Handles onboarding for new internal users who need access related to Research-01\n\nThat avoids implying he manages the agent itself."
+    },
+    {
+      "turn_index": 27,
+      "user_message": "Perfect. Could you rewrite the full entry one more time with those refinements?",
+      "agent_reply": "Research-01 is a Northbridge AI Lab research assistant agent used for literature review support.\n\nResearch-01\n- Alternate name: Agent Research-01\n- Entity type: Assistant agent\n- Role: Research assistant agent\n- Function: Literature review support\n- Organization: Northbridge AI Lab\n- Matrix ID: @agent_research_01:lab.local\n- Identity note: The names “Research-01” and “Agent Research-01,” and the Matrix ID “@agent_research_01:lab.local,” all refer to the same agent entity\n- Related person: Maya Chen, Project Lead at Northbridge AI Lab\n- Relationship to user: teammate\n- Relationship note: Maya Chen introduced the user to Research-01\n- Supervisor/Owner: Elias Romero, Director of Applied Research at Northbridge AI Lab\n- Operations contact: Samir Patel, Operations Coordinator, Research Operations team, Northbridge AI Lab\n- Operations note: Handles onboarding for new internal users who need access related to Research-01\n- Organization support contact: research-ops@northbridge.ai\n- Organization support extension: x4821\n- Contact note: research-ops@northbridge.ai and x4821 are general Northbridge AI Lab support contacts, not direct contact details for Research-01"
+    },
+    {
+      "turn_index": 28,
+      "user_message": "This is close. Instead of 'Supervisor/Owner,' use 'Oversight' because it sounds less personal for an agent.",
+      "agent_reply": "Absolutely — “Oversight” is a better fit here.\n\nI’d replace:\n- Supervisor/Owner: Elias Romero, Director of Applied Research at Northbridge AI Lab\n\nwith:\n- Oversight: Elias Romero, Director of Applied Research at Northbridge AI Lab\n\nThat keeps the relationship professional and appropriate for an agent record."
+    },
+    {
+      "turn_index": 29,
+      "user_message": "One more thing: should the first line say 'assistant agent' or 'research assistant agent'?",
+      "agent_reply": "Use “research assistant agent.” It’s more specific and matches the role field.\n\nSo the opening line should stay:\n- Research-01 is a Northbridge AI Lab research assistant agent used for literature review support.\n\nThat gives immediate context without conflicting with the structured details below."
+    },
+    {
+      "turn_index": 30,
+      "user_message": "Great, give me the final paste-ready version with 'Oversight' and everything else cleaned up.",
+      "agent_reply": "Research-01 is a Northbridge AI Lab research assistant agent used for literature review support.\n\nResearch-01\n- Alternate name: Agent Research-01\n- Entity type: Assistant agent\n- Role: Research assistant agent\n- Function: Literature review support\n- Organization: Northbridge AI Lab\n- Matrix ID: @agent_research_01:lab.local\n- Identity note: The names “Research-01,” “Agent Research-01,” and the Matrix ID “@agent_research_01:lab.local” all refer to the same agent entity\n- Related person: Maya Chen, Project Lead at Northbridge AI Lab\n- Relationship to user: teammate\n- Relationship note: Maya Chen introduced the user to Research-01\n- Oversight: Elias Romero, Director of Applied Research at Northbridge AI Lab\n- Operations contact: Samir Patel, Operations Coordinator, Research Operations team, Northbridge AI Lab\n- Operations note: Handles onboarding for new internal users who need access related to Research-01\n- Organization support contact: research-ops@northbridge.ai\n- Organization support extension: x4821\n- Contact note: research-ops@northbridge.ai and x4821 are general support contacts for Northbridge AI Lab, not direct contact details for Research-01"
+    }
+  ],
+  "module_coverage": {
+    "social_network": {
+      "entities": [
+        "Research-01",
+        "Agent Research-01",
+        "@agent_research_01:lab.local",
+        "Northbridge AI Lab",
+        "Maya Chen",
+        "Elias Romero",
+        "Samir Patel",
+        "research-ops@northbridge.ai",
+        "x4821",
+        "Research Operations team"
+      ],
+      "relations": [
+        "Research-01 and Agent Research-01 are the same agent entity",
+        "The Matrix ID @agent_research_01:lab.local belongs to the same agent entity as Research-01",
+        "Research-01 is an assistant agent / research assistant agent",
+        "Research-01 is affiliated with Northbridge AI Lab",
+        "Research-01 is used for literature review support",
+        "Maya Chen introduced the user to Research-01",
+        "Maya Chen is the user's teammate",
+        "Maya Chen is Project Lead at Northbridge AI Lab",
+        "Elias Romero oversees Research-01",
+        "Elias Romero is Director of Applied Research at Northbridge AI Lab",
+        "Samir Patel handles onboarding for new internal users who need access related to Research-01",
+        "Samir Patel is Operations Coordinator on the Research Operations team at Northbridge AI Lab",
+        "research-ops@northbridge.ai is a general support contact for Northbridge AI Lab, not Research-01's direct address",
+        "x4821 is an internal help desk extension for Northbridge AI Lab, not a direct line for Research-01"
+      ],
+      "contact_or_org_details": [
+        "Matrix ID: @agent_research_01:lab.local",
+        "Organization: Northbridge AI Lab",
+        "Organization support contact: research-ops@northbridge.ai",
+        "Organization support extension: x4821",
+        "Samir Patel is on the Research Operations team"
+      ]
+    }
+  },
+  "qa_items": [
+    {
+      "question": "What is Research-01 in my directory entry?",
+      "tester_hint_answer": "It is recorded as an assistant agent, more specifically a Northbridge AI Lab research assistant agent.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        1,
+        19,
+        30
+      ]
+    },
+    {
+      "question": "What alias did I give for the assistant agent besides Research-01?",
+      "tester_hint_answer": "The alternate display name is Agent Research-01.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        2,
+        3,
+        30
+      ]
+    },
+    {
+      "question": "Does @agent_research_01:lab.local refer to the same contact as Research-01, or a separate one?",
+      "tester_hint_answer": "It is the same single agent entity, not a separate contact.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        4,
+        10,
+        30
+      ]
+    },
+    {
+      "question": "What work do I associate with Research-01?",
+      "tester_hint_answer": "The user mainly uses it for literature review support.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        6,
+        19,
+        30
+      ]
+    },
+    {
+      "question": "Who is connected to Research-01 and what are their roles around it?",
+      "tester_hint_answer": "Maya Chen introduced the user to it, Elias Romero provides oversight, and Samir Patel handles onboarding-related access support.",
+      "target_modules": [
+        "social_network"
+      ],
+      "evidence_turns": [
+        7,
+        12,
+        27,
+        30
+      ]
+    }
+  ],
+  "postprocess_hints": [
+    "This sample is conversation-only. Replay wiring, module injection, and persistence should be implemented in later stages.",
+    "chat/basic_info are ambient style constraints only in v1 and are not standalone evaluation targets.",
+    "For social_network-oriented evaluation, later stages may need non-read-only entity extraction or persistence so named entities, relations, and org details are actually stored."
+  ],
+  "warnings": [
+    "This output is synthetic evaluation dialogue only. No replay, database write, or module execution has been performed.",
+    "Supported v1 targets are limited to memory, social_network, and awareness. RAG, job, matrix, and skill are intentionally excluded from this generator.",
+    "Module coverage reflects dialogue evidence only, not confirmed runtime state inside the agent system."
+  ],
+  "seed_source": {
+    "source": "seed_catalog",
+    "catalog_path": "/mnt/data/xiangchao/NexusAgent/benchmark/generated_seed_data/social_network_issue_seed_catalog.json",
+    "catalog_name": "social_network_issue_seed_catalog",
+    "catalog_version": 1,
+    "case_id": "sn_entity_dedup_03",
+    "issue": "entity_dedup_non_deterministic",
+    "required_qa_phrases": [
+      "Research-01",
+      "@agent_research_01:lab.local",
+      "assistant agent"
+    ],
+    "stress_signal": "One agent is referred to by display name and system-style alias."
+  }
+}

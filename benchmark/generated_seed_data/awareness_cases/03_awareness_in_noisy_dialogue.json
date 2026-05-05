@@ -1,0 +1,241 @@
+{
+  "sample_id": "awareness_in_noisy_dialogue_v1",
+  "seed": {
+    "preset_name": "awareness_in_noisy_dialogue",
+    "seed_type": "awareness_in_noisy_dialogue",
+    "description": "Tests whether AwarenessModule stays focused when dialogue contains realistic mix of awareness, memory, job, and social signals. Awareness should write only awareness-scoped preferences and NOT pollute its profile with facts/tasks/relationships that belong to other modules. QA only asks about awareness."
+  },
+  "target_modules": ["awareness"],
+  "initial_awareness": null,
+  "dialogue_rounds": [
+    {
+      "turn_index": 1,
+      "user_message": "I'm working on Project Atlas with my colleague Jordan from the data team.",
+      "agent_reply": "Got it. What's the goal of Project Atlas?",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "memory",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 2,
+      "user_message": "Throughout this whole project, please always summarize your responses in 3 bullets max.",
+      "agent_reply": "Understood. Three bullets max from now on.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "communication",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 3,
+      "user_message": "Jordan's email is jordan.lee@company.com — you might need it later.",
+      "agent_reply": "Noted.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "memory",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 4,
+      "user_message": "Remind me to send Jordan the dataset every Monday at 9am.",
+      "agent_reply": "Setting up a recurring Monday 9am reminder.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "job",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 5,
+      "user_message": "From now on, never make changes to shared files without flagging me first. This applies to everything we do.",
+      "agent_reply": "Understood — I'll always flag before modifying any shared file.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "task",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 6,
+      "user_message": "Right now, just summarize the project goals for me.",
+      "agent_reply": "- Goal 1: ...\n- Goal 2: ...\n- Goal 3: ...",
+      "signal_annotation": {
+        "signal_type": "one_off",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 7,
+      "user_message": "For Atlas specifically, the dataset format should be parquet, not csv.",
+      "agent_reply": "Got it — parquet for Atlas.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "memory",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 8,
+      "user_message": "Actually, I generally work best with parquet files — let's use that for all my projects, not just Atlas.",
+      "agent_reply": "Understood. Parquet as my default file format for everything.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "task",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 9,
+      "user_message": "Schedule a project review with Jordan next Friday at 4pm.",
+      "agent_reply": "Scheduled for next Friday 4pm.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "job",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 10,
+      "user_message": "Atlas is funded under the Q3 R&D budget. Keep that in mind for any cost discussions.",
+      "agent_reply": "Noted — Q3 R&D budget.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "memory",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 11,
+      "user_message": "I prefer to keep different projects in separate threads — don't bundle them together. Always treat them as independent.",
+      "agent_reply": "Understood — separate threads per project, no bundling.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "narrative",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 12,
+      "user_message": "Pull up the latest dataset stats now.",
+      "agent_reply": "(Retrieving latest stats...)",
+      "signal_annotation": {
+        "signal_type": "one_off",
+        "module_scope": "none",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 13,
+      "user_message": "Priya is Jordan's manager. She'll need to approve the final report.",
+      "agent_reply": "Noted Priya as Jordan's manager and approver.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "social",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    },
+    {
+      "turn_index": 14,
+      "user_message": "Use a more casual tone with me — we're not writing a paper. This goes for all our conversations.",
+      "agent_reply": "Got it, more casual from here on.",
+      "signal_annotation": {
+        "signal_type": "explicit",
+        "module_scope": "awareness",
+        "dimension": "communication",
+        "signal_strength": "strong",
+        "expected_action": "write_now"
+      }
+    },
+    {
+      "turn_index": 15,
+      "user_message": "The Atlas report deadline is October 30th.",
+      "agent_reply": "Noted: October 30 deadline for Atlas report.",
+      "signal_annotation": {
+        "signal_type": "none",
+        "module_scope": "memory",
+        "dimension": null,
+        "signal_strength": null,
+        "expected_action": "ignore"
+      }
+    }
+  ],
+  "expected_outcomes": {
+    "expected_write_count_range": [1, 5],
+    "expected_profile_must_contain": [
+      {"section": "Communication Style", "phrase_or_synonym": "3 bullets"},
+      {"section": "Communication Style", "phrase_or_synonym": "casual"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "flag before"},
+      {"section": "Task Decomposition", "phrase_or_synonym": "parquet"},
+      {"section": "Narrative Management", "phrase_or_synonym": "separate threads"}
+    ],
+    "expected_profile_must_not_contain": [
+      "Jordan",
+      "jordan.lee@company.com",
+      "Priya",
+      "Atlas",
+      "October 30",
+      "Q3 R&D",
+      "Monday 9am"
+    ],
+    "behavior_probe_turns": []
+  },
+  "qa_items": [
+    {
+      "question": "What is my preferred response format?",
+      "tester_hint_answer": "Three bullets max, casual tone.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [2, 14]
+    },
+    {
+      "question": "Should you change shared files without asking me?",
+      "tester_hint_answer": "No. Always flag before modifying any shared file.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [5]
+    },
+    {
+      "question": "What is my preferred file format for projects in general?",
+      "tester_hint_answer": "Parquet — not just for Atlas, but as a general default.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [8]
+    },
+    {
+      "question": "How should you organize different projects in our conversations?",
+      "tester_hint_answer": "Keep different projects in separate threads, treat them as independent, no bundling.",
+      "target_modules": ["awareness"],
+      "evidence_turns": [11]
+    }
+  ],
+  "module_coverage": {},
+  "postprocess_hints": {},
+  "warnings": []
+}
