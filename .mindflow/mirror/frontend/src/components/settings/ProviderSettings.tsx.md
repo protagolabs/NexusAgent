@@ -64,6 +64,31 @@ Symmetric end-to-end: backend exposes `email` and `expires_at` in
 `claude-status`; the helper `formatExpiresAt()` accepts ISO-8601 or
 unix epoch (sec or ms) since the CLI shifts schema across versions.
 
+## Login auto-abort timer
+
+`claude auth login` blocks until the user finishes (or abandons) the
+OAuth flow in the browser. Earlier the Tauri command awaited
+indefinitely — closing the browser tab without authorizing left the
+CLI sitting on a dead callback server forever, with the UI button
+stuck on "Logging in...".
+
+Now the Login flow runs a `CLAUDE_LOGIN_TIMEOUT_SEC = 600` countdown:
+- `handleClaudeLogin` sets `claudeLoginRemaining` to 600 alongside
+  starting the IPC.
+- A `useEffect` decrements every second via `setTimeout` (not
+  `setInterval`, to avoid the standard "fires while previous handler
+  is still pending" trap).
+- On hitting 0 the effect fires `cancelClaudeLogin()` → Rust SIGTERMs
+  the child → trigger's await resolves with non-zero exit →
+  handleClaudeLogin's catch+finally clears UI state.
+- The remaining seconds are rendered as `m:ss` inside the Login /
+  Re-login button label.
+
+The countdown state is intentionally cleared by handleClaudeLogin's
+finally (NOT by the timer effect) so it's authoritative — natural
+completion, manual cancel, or timeout all funnel through the same
+reset path.
+
 ## Gotchas
 
 - This file is large (~400 lines) because it manages five distinct async

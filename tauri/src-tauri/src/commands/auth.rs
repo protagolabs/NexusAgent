@@ -35,25 +35,87 @@ fn build_child_path() -> String {
 /// user to complete (or cancel) the OAuth flow in the system browser.
 /// Credentials are written to `~/.claude/.credentials.json` — shared by
 /// both the bundled and any user-installed `claude` binary.
+///
+/// The child PID is recorded in `AppState::claude_login_pid` for the
+/// duration of the await so `cancel_claude_login` (driven by the
+/// frontend's 600s countdown) can SIGTERM the in-flight CLI without
+/// having to hold the Child handle across the await boundary.
+/// `kill_on_drop(true)` is a defense-in-depth: if the Tauri runtime
+/// drops this future (e.g. on app quit while a login is mid-flight),
+/// the child is SIGKILL'd rather than leaked as an orphan that keeps
+/// the OAuth callback port bound forever.
 #[tauri::command]
-pub async fn trigger_claude_login(_state: State<'_, AppState>) -> Result<String, String> {
+pub async fn trigger_claude_login(state: State<'_, AppState>) -> Result<String, String> {
     let child_path = build_child_path();
-    let output = tokio::process::Command::new("claude")
+    let mut child = tokio::process::Command::new("claude")
         .args(["auth", "login"])
         .env("PATH", &child_path)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
-        .status()
-        .await
+        .kill_on_drop(true)
+        .spawn()
         .map_err(|e| format!("Failed to spawn claude auth login: {}", e))?;
-    if output.success() {
+
+    if let Some(pid) = child.id() {
+        if let Ok(mut guard) = state.claude_login_pid.lock() {
+            *guard = Some(pid);
+        }
+    }
+
+    let wait_result = child.wait().await;
+
+    // Always clear the recorded PID — success, error, or cancel — so a
+    // stale entry doesn't trick a later cancel into SIGTERMing some
+    // unrelated process that happens to recycle this PID.
+    if let Ok(mut guard) = state.claude_login_pid.lock() {
+        *guard = None;
+    }
+
+    let status =
+        wait_result.map_err(|e| format!("Failed waiting for claude auth login: {}", e))?;
+    if status.success() {
         Ok("Login completed successfully".to_string())
     } else {
         Err(format!(
             "claude auth login exited with code {}",
-            output.code().unwrap_or(-1)
+            status.code().unwrap_or(-1)
         ))
     }
+}
+
+/// Send SIGTERM to the in-flight `claude auth login` child, if any.
+///
+/// Used by the frontend's 600s timeout: when the countdown reaches 0,
+/// it calls this to abort the dangling login. The matching
+/// `trigger_claude_login` future is still awaiting `child.wait()` —
+/// SIGTERM causes `claude` to tear down its OAuth callback server and
+/// exit non-zero, which the trigger surfaces back to the frontend as
+/// an Err so the UI can revert to the logged-out state.
+///
+/// Returns `true` if a login was actually in flight and got the
+/// signal, `false` if no PID was recorded (no-op).
+#[tauri::command]
+pub async fn cancel_claude_login(state: State<'_, AppState>) -> Result<bool, String> {
+    let pid_opt = match state.claude_login_pid.lock() {
+        Ok(g) => *g,
+        Err(_) => return Err("claude_login_pid mutex poisoned".to_string()),
+    };
+    let Some(pid) = pid_opt else {
+        return Ok(false);
+    };
+
+    #[cfg(unix)]
+    {
+        // Safety: kill() is safe to call with any pid_t; an invalid
+        // one returns ESRCH which we ignore. SIGTERM lets the CLI
+        // close its callback HTTP server cleanly. trigger_claude_login
+        // will observe the exit and clear the PID itself.
+        unsafe {
+            libc::kill(pid as i32, libc::SIGTERM);
+        }
+    }
+
+    Ok(true)
 }
 
 /// Spawn `claude auth logout` to revoke the locally cached OAuth

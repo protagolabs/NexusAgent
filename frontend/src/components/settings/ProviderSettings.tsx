@@ -30,7 +30,14 @@ import { getApiBaseUrl } from '@/stores/runtimeStore'
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui'
 import { QuotaPanel } from './QuotaPanel'
 import { api } from '@/lib/api'
-import { isTauri, triggerClaudeLogin, triggerClaudeLogout } from '@/lib/tauri'
+import { isTauri, triggerClaudeLogin, triggerClaudeLogout, cancelClaudeLogin } from '@/lib/tauri'
+
+/** How long we let `claude auth login` block before auto-aborting it.
+ *  Anthropic's OAuth flow itself has no hard upper bound, but past ~10 min
+ *  the user has almost certainly closed the browser tab and the CLI is
+ *  just sitting on a dead callback server. Keeping it as a constant so
+ *  the value is visible in one place + cheap to tune. */
+const CLAUDE_LOGIN_TIMEOUT_SEC = 600
 
 /** fetch wrapper that injects JWT auth header when available (cloud mode) */
 function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -343,6 +350,14 @@ function ModelSuggestionChips({
 // Helpers
 // =============================================================================
 
+/** "9:32" / "0:08" — countdown formatter for the login timeout label. */
+function formatCountdown(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds))
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
 /** Best-effort render of whatever expiry value the CLI handed us.
  *
  * The Claude Code CLI shifts schemas across minor versions: some builds
@@ -412,6 +427,11 @@ export function ProviderSettings() {
   const [claudeStatus, setClaudeStatus] = useState<{ cli_installed: boolean; logged_in: boolean; email: string | null; expires_at: string | null } | null>(null)
   const [claudeLoggingIn, setClaudeLoggingIn] = useState(false)
   const [claudeLoggingOut, setClaudeLoggingOut] = useState(false)
+  // Seconds remaining on the login auto-abort timer, or null when no
+  // login is in flight. Decremented every 1s by the effect below; on
+  // hitting 0 we fire cancelClaudeLogin so the Rust side SIGTERMs the
+  // dangling `claude auth login` child.
+  const [claudeLoginRemaining, setClaudeLoginRemaining] = useState<number | null>(null)
 
   // Quick Add (preset provider)
   const [selectedPreset, setSelectedPreset] = useState<string>(PRESET_PROVIDERS[0].id)
@@ -474,6 +494,26 @@ export function ProviderSettings() {
 
   useEffect(() => { refreshConfig() }, [refreshConfig])
 
+  // Login auto-abort timer. Set claudeLoginRemaining to N to start
+  // counting down to 0; reaching 0 fires cancelClaudeLogin which
+  // SIGTERMs the dangling `claude auth login` child on the Rust side.
+  // Setting it to null (e.g. on natural completion) clears the timer.
+  useEffect(() => {
+    if (claudeLoginRemaining === null) return
+    if (claudeLoginRemaining <= 0) {
+      cancelClaudeLogin().catch((e) => console.error('cancelClaudeLogin failed:', e))
+      // Don't null it here — handleClaudeLogin's finally clears state
+      // once the trigger's await resolves with the SIGTERM exit code.
+      // Returning early prevents a re-fire next tick.
+      return
+    }
+    const t = setTimeout(
+      () => setClaudeLoginRemaining((r) => (r === null ? null : r - 1)),
+      1000,
+    )
+    return () => clearTimeout(t)
+  }, [claudeLoginRemaining])
+
   const providerList = Object.values(providers)
   const hasProviders = providerList.length > 0
   const hasClaude = providerList.some((p) => p.source === 'claude_oauth')
@@ -522,14 +562,18 @@ export function ProviderSettings() {
 
   const handleClaudeLogin = async () => {
     setClaudeLoggingIn(true)
+    setClaudeLoginRemaining(CLAUDE_LOGIN_TIMEOUT_SEC)
     try {
       await triggerClaudeLogin()
       // After login completes, refresh to pick up the new status
       await refreshConfig()
     } catch (e) {
+      // SIGTERM from the timeout path also lands here (claude exits
+      // non-zero). The finally below resets state regardless.
       console.error('Claude login failed:', e)
     } finally {
       setClaudeLoggingIn(false)
+      setClaudeLoginRemaining(null)
     }
   }
 
@@ -997,7 +1041,11 @@ export function ProviderSettings() {
                           <button onClick={handleClaudeLogin}
                             disabled={claudeLoggingIn || claudeLoggingOut}
                             className="px-4 py-2 text-sm font-medium rounded-lg border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 transition-colors">
-                            {claudeLoggingIn ? 'Re-logging in... (check your browser)' : 'Re-login / Switch account'}
+                            {claudeLoggingIn
+                              ? (claudeLoginRemaining !== null
+                                  ? `Re-logging in... ${formatCountdown(claudeLoginRemaining)} left (check browser)`
+                                  : 'Re-logging in... (check your browser)')
+                              : 'Re-login / Switch account'}
                           </button>
                           <button onClick={handleClaudeLogout}
                             disabled={claudeLoggingIn || claudeLoggingOut}
@@ -1009,7 +1057,11 @@ export function ProviderSettings() {
                         <button onClick={handleClaudeLogin}
                           disabled={claudeLoggingIn}
                           className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-[var(--text-inverse)] hover:opacity-90 transition-colors disabled:opacity-50">
-                          {claudeLoggingIn ? 'Logging in... (check your browser)' : 'Login with Claude Code'}
+                          {claudeLoggingIn
+                            ? (claudeLoginRemaining !== null
+                                ? `Logging in... ${formatCountdown(claudeLoginRemaining)} left (check browser)`
+                                : 'Logging in... (check your browser)')
+                            : 'Login with Claude Code'}
                         </button>
                       )}
                     </div>

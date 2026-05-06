@@ -17,6 +17,7 @@ stub: false
 - `listenTauri(event, handler)` — 订阅 Tauri 事件（如 `tauri://blur`），web 模式返 null
 - `triggerClaudeLogin()` — 调起 Tauri 端的 `claude auth login`，web 模式返 null
 - `triggerClaudeLogout()` — 调起 Tauri 端的 `claude auth logout`，web 模式返 null
+- `cancelClaudeLogin()` — SIGTERM 当前在跑的 `claude auth login` 子进程，配合前端 600s 倒计时使用
 - `getClaudeLoginStatus()` — Tauri 端登录态快照（不阻塞，但前端目前主要用后端 `/api/providers/claude-status`，这个保留作为 backend-down 时的兜底）
 
 ## 设计决策

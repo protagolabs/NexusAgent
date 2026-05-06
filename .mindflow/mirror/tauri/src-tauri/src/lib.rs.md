@@ -49,7 +49,7 @@ Current set (kept in lockstep with `commands/mod.rs`):
 - config:  `get_app_config`, `get_app_mode`, `set_app_mode`
 - health:  `get_health_status`, `get_logs`
 - tray:    `set_tray_badge`
-- auth:    `trigger_claude_login`, `trigger_claude_logout`, `get_claude_login_status`
+- auth:    `trigger_claude_login`, `trigger_claude_logout`, `cancel_claude_login`, `get_claude_login_status`
 
 Forgetting to add a freshly-defined command here is the #1 frontend symptom
 ("invoke returned 'command not found'") — the macro list is the source of

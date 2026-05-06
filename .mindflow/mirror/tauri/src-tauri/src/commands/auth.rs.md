@@ -1,13 +1,17 @@
 ---
 code_file: tauri/src-tauri/src/commands/auth.rs
-last_verified: 2026-05-05
+last_verified: 2026-05-06
 ---
 
 # auth.rs — IPC commands for Claude Code OAuth login/logout/status
 
-Three commands exposed to the frontend:
-- `trigger_claude_login`  → spawns `claude auth login`, blocks until OAuth completes in browser
+Four commands exposed to the frontend:
+- `trigger_claude_login`  → spawns `claude auth login`, records the child
+  PID into `AppState::claude_login_pid`, then awaits the OAuth flow
 - `trigger_claude_logout` → spawns `claude auth logout`, revokes local credentials
+- `cancel_claude_login`   → SIGTERMs the recorded login PID; used by the
+  frontend's 600s timeout (and any future explicit Cancel button) to
+  abort a stuck login without holding the Child handle across awaits
 - `get_claude_login_status` → `ClaudeLoginStatus { cli_installed, logged_in }`, non-blocking
 
 ## Why exists
@@ -39,6 +43,22 @@ poll cheaply.
 logging in via the DMG's CLI also unlocks the user's terminal CLI, and
 vice versa.
 
+## PID tracking + cancellation
+
+`trigger_claude_login` writes the spawned child's PID into
+`AppState::claude_login_pid` (an `Arc<StdMutex<Option<u32>>>`) right
+after `.spawn()`, then clears it on any await resolution path
+(success, child exit non-zero, IO error). `cancel_claude_login`
+reads that PID under the same mutex and `libc::kill(pid, SIGTERM)`s
+it. Storing only the PID (not the `Child`) sidesteps the ownership
+problem of holding a not-Clone handle across await points in two
+separate command futures.
+
+`kill_on_drop(true)` on the spawn is defense-in-depth: if the Tauri
+runtime drops the trigger future for any reason (app exit while a
+login is mid-flight), the child is SIGKILL'd rather than leaked as
+an orphan that keeps the OAuth callback port bound.
+
 ## Gotchas
 
 - `claude auth status` JSON schema isn't formally documented and shifts
@@ -50,3 +70,7 @@ vice versa.
   augmented PATH too, otherwise the bundled shim won't be found.
 - Both login and logout block the Tauri command future; the frontend
   must show a loading state and avoid firing concurrent calls.
+- The recorded PID is cleared in trigger_claude_login's await-completion
+  branch, NOT in cancel_claude_login. This avoids a stale-PID race
+  where cancel runs, clears, then trigger spawns a fresh child and
+  another cancel arrives racing the spawn → SIGTERMing the wrong PID.

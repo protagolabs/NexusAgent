@@ -107,6 +107,19 @@ export async function triggerClaudeLogout(): Promise<string | null> {
 }
 
 /**
+ * SIGTERM the in-flight `claude auth login` child. Used by the
+ * settings UI to abort a stuck login when the 600s countdown elapses.
+ * Resolves to `true` if a login was actually in flight, `false` if
+ * the Rust side had no recorded PID. Outside Tauri returns false.
+ */
+export async function cancelClaudeLogin(): Promise<boolean> {
+  if (!isTauri()) return false;
+  const invoke = _getInvoke();
+  if (!invoke) return false;
+  return (await invoke('cancel_claude_login')) as boolean;
+}
+
+/**
  * Check Claude Code login status from the Tauri side.
  * Returns { cli_installed, logged_in } or null if not in Tauri.
  */

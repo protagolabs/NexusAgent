@@ -45,6 +45,7 @@ pub fn run() {
             commands::tray::set_tray_badge,
             commands::auth::trigger_claude_login,
             commands::auth::trigger_claude_logout,
+            commands::auth::cancel_claude_login,
             commands::auth::get_claude_login_status,
         ])
         .setup(|app| {
