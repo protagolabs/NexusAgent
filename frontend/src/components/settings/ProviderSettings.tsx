@@ -1008,7 +1008,7 @@ export function ProviderSettings() {
                       ) : (
                         <button onClick={handleClaudeLogin}
                           disabled={claudeLoggingIn}
-                          className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:opacity-90 transition-colors disabled:opacity-50">
+                          className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-[var(--text-inverse)] hover:opacity-90 transition-colors disabled:opacity-50">
                           {claudeLoggingIn ? 'Logging in... (check your browser)' : 'Login with Claude Code'}
                         </button>
                       )}
@@ -1252,7 +1252,7 @@ export function ProviderSettings() {
               <button
                 onClick={saveEditModels}
                 disabled={editSaving}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]/90 disabled:opacity-40 transition-colors"
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-[var(--text-inverse)] hover:bg-[var(--accent-primary)]/90 disabled:opacity-40 transition-colors"
               >
                 {editSaving ? 'Saving...' : 'Save'}
               </button>
