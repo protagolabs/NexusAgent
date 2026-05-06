@@ -43,6 +43,28 @@ poll cheaply.
 logging in via the DMG's CLI also unlocks the user's terminal CLI, and
 vice versa.
 
+## Stdio drainers (`drain_to_log`)
+
+Both login and logout pipe stdout+stderr from the spawned `claude`
+binary. A piped fd that nobody reads is a deadlock waiting to happen
+— once the kernel pipe buffer (~16 KB on macOS) fills, the child
+blocks on its next `write()`. This is the same failure mode that hit
+`process_manager.rs` Python sidecars before its log drainer was
+added (commit `5cf8c1d` — "chat hangs at agent loop step 3.2").
+
+`drain_to_log` is a small detached `tokio::spawn` task that loops on
+`BufReader::lines().next_line().await` and forwards each line to
+`log::info!`. The CLI is currently quiet (a few hundred bytes over
+an entire OAuth flow), so this isn't load-bearing today — but it
+makes us **structurally** immune to a future Anthropic CLI release
+that decides to be more verbose. Bonus: every login attempt now
+leaves a debug trail in Console.app, which is invaluable when an
+OAuth flow misbehaves.
+
+The drainer task ends naturally on EOF (child closes its fd), so
+there's no explicit cleanup. `kill_on_drop(true)` on the child
+guarantees the fds close even if the trigger future is dropped.
+
 ## PID tracking + cancellation
 
 `trigger_claude_login` writes the spawned child's PID into

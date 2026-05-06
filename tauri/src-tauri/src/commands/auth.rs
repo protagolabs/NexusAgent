@@ -7,8 +7,46 @@
 //! `process_manager.rs` does for Python services).
 
 use tauri::State;
+use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 
 use crate::state::{resolve_bundled_node_bins, AppState};
+
+/// Detached drainer for a piped stdout/stderr stream from a spawned CLI.
+///
+/// Why this matters: `tokio::process::Command::stdout(piped())` makes the
+/// kernel allocate a ~16 KB buffer; if nobody reads it, the child blocks
+/// on its next write the moment the buffer fills. That's the exact same
+/// failure mode that hung Python sidecars before `process_manager.rs`
+/// added its log drainer. `claude auth login` is currently quiet (a few
+/// hundred bytes over the whole OAuth flow) so this isn't load-bearing
+/// today — but adding the drainer is what makes us *structurally* immune
+/// to a future Anthropic CLI release that decides to be more verbose.
+///
+/// Each line goes to the standard `log::info!` macro tagged with the
+/// child label. Beyond preventing deadlock, this gives us a free debug
+/// trail in Console.app whenever an OAuth flow misbehaves.
+///
+/// The task ends naturally on EOF (child closed the fd), so there's no
+/// explicit cleanup — `tokio::spawn` detaches it and the runtime drops
+/// it once `next_line()` returns `Ok(None)`.
+fn drain_to_log<R>(child_label: &'static str, stream: &'static str, reader: R)
+where
+    R: AsyncRead + Unpin + Send + 'static,
+{
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(reader).lines();
+        loop {
+            match lines.next_line().await {
+                Ok(Some(line)) => log::info!("[{} {}] {}", child_label, stream, line),
+                Ok(None) => break,
+                Err(e) => {
+                    log::warn!("[{} {}] drainer error: {}", child_label, stream, e);
+                    break;
+                }
+            }
+        }
+    });
+}
 
 /// Build the PATH the bundled `claude` shim needs to be discoverable when
 /// the .app is launched from Finder. Finder-launched apps inherit the
@@ -60,6 +98,15 @@ pub async fn trigger_claude_login(state: State<'_, AppState>) -> Result<String, 
         if let Ok(mut guard) = state.claude_login_pid.lock() {
             *guard = Some(pid);
         }
+    }
+
+    // Drain stdio so a chatty future CLI release can't deadlock by
+    // filling the 16 KB pipe buffer — see drain_to_log() rationale.
+    if let Some(stdout) = child.stdout.take() {
+        drain_to_log("claude-login", "stdout", stdout);
+    }
+    if let Some(stderr) = child.stderr.take() {
+        drain_to_log("claude-login", "stderr", stderr);
     }
 
     let wait_result = child.wait().await;
@@ -122,23 +169,40 @@ pub async fn cancel_claude_login(state: State<'_, AppState>) -> Result<bool, Str
 /// credentials. Symmetric to `trigger_claude_login`. Used by the settings
 /// UI so users can switch accounts or sign out without touching a
 /// terminal.
+///
+/// We spawn-then-wait (instead of `.status()`) for the same reason as
+/// login: stdio is piped, so we attach `drain_to_log` to both pipes
+/// before awaiting. Without drainers a verbose future logout could
+/// deadlock filling the 16 KB pipe buffer.
 #[tauri::command]
 pub async fn trigger_claude_logout(_state: State<'_, AppState>) -> Result<String, String> {
     let child_path = build_child_path();
-    let output = tokio::process::Command::new("claude")
+    let mut child = tokio::process::Command::new("claude")
         .args(["auth", "logout"])
         .env("PATH", &child_path)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
-        .status()
-        .await
+        .kill_on_drop(true)
+        .spawn()
         .map_err(|e| format!("Failed to spawn claude auth logout: {}", e))?;
-    if output.success() {
+
+    if let Some(stdout) = child.stdout.take() {
+        drain_to_log("claude-logout", "stdout", stdout);
+    }
+    if let Some(stderr) = child.stderr.take() {
+        drain_to_log("claude-logout", "stderr", stderr);
+    }
+
+    let status = child
+        .wait()
+        .await
+        .map_err(|e| format!("Failed waiting for claude auth logout: {}", e))?;
+    if status.success() {
         Ok("Logout completed".to_string())
     } else {
         Err(format!(
             "claude auth logout exited with code {}",
-            output.code().unwrap_or(-1)
+            status.code().unwrap_or(-1)
         ))
     }
 }
