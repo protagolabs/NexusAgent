@@ -1,0 +1,52 @@
+---
+code_file: tauri/src-tauri/src/commands/auth.rs
+last_verified: 2026-05-05
+---
+
+# auth.rs — IPC commands for Claude Code OAuth login/logout/status
+
+Three commands exposed to the frontend:
+- `trigger_claude_login`  → spawns `claude auth login`, blocks until OAuth completes in browser
+- `trigger_claude_logout` → spawns `claude auth logout`, revokes local credentials
+- `get_claude_login_status` → `ClaudeLoginStatus { cli_installed, logged_in }`, non-blocking
+
+## Why exists
+
+The DMG-packaged app ships its own bundled `claude` CLI under
+`Contents/Resources/resources/nodejs/node_modules/.bin/claude`, but a
+Finder-launched `.app` inherits the launchd minimal PATH
+(`/usr/bin:/bin:/usr/sbin:/sbin`) which never sees that bin dir. Without
+an in-app login flow, users had to drop to Terminal to run
+`claude auth login` — defeating the purpose of bundling the CLI.
+
+These commands inject the bundled paths into PATH (same trick
+`process_manager.rs` uses for the Python sidecars) so the frontend can
+fire login/logout/status checks without ever leaving the app.
+
+## Design decisions
+
+**`build_child_path()` helper** — DRYs the PATH-augmentation logic that
+all three commands need. Earlier inline copies drifted; the helper makes
+intent obvious and removes accidental divergence.
+
+**Login + Logout are blocking, status is not** — `claude auth login`
+opens a browser and waits for the user to finish OAuth, so the Tauri
+command awaits `.status()`. Status is fire-and-parse so the frontend can
+poll cheaply.
+
+**Credentials shared with user-installed CLI** — both write to
+`~/.claude/.credentials.json`. There's no isolation, which is desired:
+logging in via the DMG's CLI also unlocks the user's terminal CLI, and
+vice versa.
+
+## Gotchas
+
+- `claude auth status` JSON schema isn't formally documented and shifts
+  between minor versions. The status command does only a substring match
+  (`"loggedIn":true`) instead of full JSON parsing — keep it loose so
+  schema bumps don't break it. Richer parsing (email, expiry) lives in
+  the Python backend's `/api/providers/claude-status` endpoint.
+- `which claude` is used to detect installation; that requires the
+  augmented PATH too, otherwise the bundled shim won't be found.
+- Both login and logout block the Tauri command future; the frontend
+  must show a loading state and avoid firing concurrent calls.

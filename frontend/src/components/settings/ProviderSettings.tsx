@@ -30,7 +30,7 @@ import { getApiBaseUrl } from '@/stores/runtimeStore'
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui'
 import { QuotaPanel } from './QuotaPanel'
 import { api } from '@/lib/api'
-import { isTauri, triggerClaudeLogin } from '@/lib/tauri'
+import { isTauri, triggerClaudeLogin, triggerClaudeLogout } from '@/lib/tauri'
 
 /** fetch wrapper that injects JWT auth header when available (cloud mode) */
 function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -340,6 +340,32 @@ function ModelSuggestionChips({
 }
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/** Best-effort render of whatever expiry value the CLI handed us.
+ *
+ * The Claude Code CLI shifts schemas across minor versions: some builds
+ * emit ISO-8601 strings, others emit unix epoch (sec OR ms). We accept
+ * any of them. If parsing fails we just show the raw value rather than
+ * eating the field — the user still gets *something* useful. */
+function formatExpiresAt(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const trimmed = String(raw).trim()
+  if (!trimmed) return null
+  const n = Number(trimmed)
+  let d: Date | null = null
+  if (Number.isFinite(n) && n > 0) {
+    d = new Date(n < 1e12 ? n * 1000 : n)
+  } else {
+    const t = Date.parse(trimmed)
+    if (!Number.isNaN(t)) d = new Date(t)
+  }
+  if (!d || Number.isNaN(d.getTime())) return trimmed
+  return d.toLocaleString()
+}
+
+// =============================================================================
 // Section Header
 // =============================================================================
 
@@ -383,8 +409,9 @@ export function ProviderSettings() {
   const [embeddingModels, setEmbeddingModels] = useState<EmbeddingModelInfo[]>([])
   const [officialBaseUrls, setOfficialBaseUrls] = useState<Record<string, string[]>>({})
   const [error, setError] = useState('')
-  const [claudeStatus, setClaudeStatus] = useState<{ cli_installed: boolean; logged_in: boolean; expires_at: string | null } | null>(null)
+  const [claudeStatus, setClaudeStatus] = useState<{ cli_installed: boolean; logged_in: boolean; email: string | null; expires_at: string | null } | null>(null)
   const [claudeLoggingIn, setClaudeLoggingIn] = useState(false)
+  const [claudeLoggingOut, setClaudeLoggingOut] = useState(false)
 
   // Quick Add (preset provider)
   const [selectedPreset, setSelectedPreset] = useState<string>(PRESET_PROVIDERS[0].id)
@@ -503,6 +530,18 @@ export function ProviderSettings() {
       console.error('Claude login failed:', e)
     } finally {
       setClaudeLoggingIn(false)
+    }
+  }
+
+  const handleClaudeLogout = async () => {
+    setClaudeLoggingOut(true)
+    try {
+      await triggerClaudeLogout()
+      await refreshConfig()
+    } catch (e) {
+      console.error('Claude logout failed:', e)
+    } finally {
+      setClaudeLoggingOut(false)
     }
   }
 
@@ -899,49 +938,116 @@ export function ProviderSettings() {
             </div>
           </div>
 
-          {/* ---- Claude Code Login Card ---- */}
+          {/* ---- Claude Code Login Card ----
+            *
+            * The card surfaces TWO independent pieces of state and lets the
+            * user act on each separately:
+            *
+            *   1. OS credential state \u2014 owned by the `claude` CLI and
+            *      stored in `~/.claude/.credentials.json`. Drives
+            *      Login / Re-login / Logout buttons.
+            *
+            *   2. Provider record state \u2014 owned by NarraNexus and stored
+            *      in `user_providers`. Drives the "Add as Provider" /
+            *      "Remove" affordance.
+            *
+            * Earlier versions hid the entire login UI once `hasClaude`
+            * was true, which prevented account switching, re-auth after
+            * token expiry, and viewing the active account. Decoupling
+            * the two layers means a user can re-login, switch accounts,
+            * or sign out without first having to delete the provider.
+            */}
           <div className="p-4 rounded-xl border border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="text-sm font-medium text-[var(--text-primary)]">Claude Code Login</h4>
-              {hasClaude && <span className="text-[var(--color-success)] text-sm ml-auto">{'\u2713'} Added</span>}
             </div>
-            <p className="text-sm text-[var(--text-tertiary)] mb-2">OAuth login via Claude Code CLI. No API key needed.</p>
-            {!hasClaude && claudeStatus && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className={cn('inline-block w-2 h-2 rounded-full',
-                    claudeStatus.logged_in ? 'bg-[var(--color-success)]' :
-                    claudeStatus.cli_installed ? 'bg-[var(--color-warning)]' : 'bg-[var(--text-tertiary)]'
-                  )} />
-                  <span className="text-sm text-[var(--text-secondary)]">
-                    {claudeStatus.logged_in ? 'Logged in' : claudeStatus.cli_installed ? 'Not logged in' : 'CLI not installed'}
-                  </span>
+            <p className="text-sm text-[var(--text-tertiary)] mb-3">OAuth login via Claude Code CLI. No API key needed.</p>
+
+            {!claudeStatus && (
+              <p className="text-sm text-[var(--text-tertiary)]">Checking status...</p>
+            )}
+
+            {claudeStatus && (
+              <div className="space-y-3">
+                {/* ---- Section A: OS credential state ---- */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn('inline-block w-2 h-2 rounded-full',
+                      claudeStatus.logged_in ? 'bg-[var(--color-success)]' :
+                      claudeStatus.cli_installed ? 'bg-[var(--color-warning)]' : 'bg-[var(--text-tertiary)]'
+                    )} />
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      {claudeStatus.logged_in
+                        ? <>Logged in{claudeStatus.email ? <> as <span className="font-mono">{claudeStatus.email}</span></> : null}</>
+                        : claudeStatus.cli_installed ? 'Not logged in' : 'CLI not installed'}
+                    </span>
+                    {claudeStatus.logged_in && claudeStatus.expires_at && (
+                      <span className="text-xs text-[var(--text-tertiary)]">
+                        \u00b7 expires {formatExpiresAt(claudeStatus.expires_at)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action buttons. Always visible when CLI is installed
+                    * + Tauri \u2014 never hidden behind a provider-record check. */}
+                  {claudeStatus.cli_installed && isTauri() && (
+                    <div className="flex gap-2 flex-wrap">
+                      {claudeStatus.logged_in ? (
+                        <>
+                          <button onClick={handleClaudeLogin}
+                            disabled={claudeLoggingIn || claudeLoggingOut}
+                            className="px-4 py-2 text-sm font-medium rounded-lg border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50 transition-colors">
+                            {claudeLoggingIn ? 'Re-logging in... (check your browser)' : 'Re-login / Switch account'}
+                          </button>
+                          <button onClick={handleClaudeLogout}
+                            disabled={claudeLoggingIn || claudeLoggingOut}
+                            className="px-4 py-2 text-sm font-medium rounded-lg border border-[var(--color-error)]/30 text-[var(--color-error)] hover:bg-[var(--color-error)]/5 disabled:opacity-50 transition-colors">
+                            {claudeLoggingOut ? 'Logging out...' : 'Logout'}
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={handleClaudeLogin}
+                          disabled={claudeLoggingIn}
+                          className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:opacity-90 transition-colors disabled:opacity-50">
+                          {claudeLoggingIn ? 'Logging in... (check your browser)' : 'Login with Claude Code'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Web-mode fallback: no Tauri IPC, user goes to terminal. */}
+                  {!isTauri() && (
+                    <p className="text-sm text-[var(--text-tertiary)]">
+                      {claudeStatus.cli_installed
+                        ? 'Run "claude auth login" / "claude auth logout" in your terminal, then refresh this page.'
+                        : 'Install Claude Code CLI first, then run "claude auth login" in your terminal.'}
+                    </p>
+                  )}
+                  {!claudeStatus.cli_installed && isTauri() && (
+                    <p className="text-sm text-[var(--text-tertiary)]">
+                      Claude Code CLI not found in bundle. Please rebuild the app.
+                    </p>
+                  )}
                 </div>
-                {claudeStatus.logged_in && (
-                  <button onClick={handleAddClaudeOAuth}
-                    className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--text-primary)] text-[var(--text-inverse)] hover:opacity-90 transition-colors">
-                    Add as Provider
-                  </button>
-                )}
-                {!claudeStatus.logged_in && claudeStatus.cli_installed && isTauri() && (
-                  <button onClick={handleClaudeLogin}
-                    disabled={claudeLoggingIn}
-                    className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent-primary)] text-white hover:opacity-90 transition-colors disabled:opacity-50">
-                    {claudeLoggingIn ? 'Logging in... (check your browser)' : 'Login with Claude Code'}
-                  </button>
-                )}
-                {!claudeStatus.logged_in && !isTauri() && (
-                  <p className="text-sm text-[var(--text-tertiary)]">
-                    {claudeStatus.cli_installed
-                      ? 'Run "claude login" in your terminal first, then refresh this page.'
-                      : 'Install Claude Code CLI first, then run "claude login" in your terminal.'}
-                  </p>
-                )}
-                {!claudeStatus.logged_in && !claudeStatus.cli_installed && isTauri() && (
-                  <p className="text-sm text-[var(--text-tertiary)]">
-                    Claude Code CLI not found in bundle. Please rebuild the app.
-                  </p>
-                )}
+
+                {/* ---- Section B: Provider record state ---- */}
+                <div className="pt-2 border-t border-[var(--border-subtle)]">
+                  {hasClaude ? (
+                    <div className="flex items-center gap-2 text-sm text-[var(--color-success)]">
+                      <span>{'\u2713'}</span>
+                      <span>Added as a NarraNexus provider \u2014 assignable in Step 2 below.</span>
+                    </div>
+                  ) : claudeStatus.logged_in ? (
+                    <button onClick={handleAddClaudeOAuth}
+                      className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--text-primary)] text-[var(--text-inverse)] hover:opacity-90 transition-colors">
+                      Add as Provider
+                    </button>
+                  ) : (
+                    <p className="text-sm text-[var(--text-tertiary)]">
+                      Log in above to add Claude Code as a provider.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>

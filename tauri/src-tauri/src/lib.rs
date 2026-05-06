@@ -28,6 +28,7 @@ pub fn run() {
             commands::health::get_logs,
             commands::tray::set_tray_badge,
             commands::auth::trigger_claude_login,
+            commands::auth::trigger_claude_logout,
             commands::auth::get_claude_login_status,
         ])
         .setup(|app| {

@@ -95,6 +95,18 @@ export async function triggerClaudeLogin(): Promise<string | null> {
 }
 
 /**
+ * Trigger Claude Code logout — revokes the locally cached OAuth
+ * credentials. Symmetric to `triggerClaudeLogin`. No-op (returns null)
+ * outside Tauri; throws if the spawned CLI exits non-zero.
+ */
+export async function triggerClaudeLogout(): Promise<string | null> {
+  if (!isTauri()) return null;
+  const invoke = _getInvoke();
+  if (!invoke) return null;
+  return (await invoke('trigger_claude_logout')) as string;
+}
+
+/**
  * Check Claude Code login status from the Tauri side.
  * Returns { cli_installed, logged_in } or null if not in Tauri.
  */

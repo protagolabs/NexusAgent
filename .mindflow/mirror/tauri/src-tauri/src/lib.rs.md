@@ -1,6 +1,6 @@
 ---
 code_file: tauri/src-tauri/src/lib.rs
-last_verified: 2026-04-23
+last_verified: 2026-05-05
 ---
 
 # lib.rs — Tauri app bootstrap: registers commands, wires setup, handles close
@@ -39,6 +39,21 @@ std::env::set_var("SQLITE_PROXY_PORT", "8100");
 These are set here but **not reliably inherited** by spawned children due to
 macOS thread-safety issues. `process_manager.rs::start_service` re-reads them
 and passes them explicitly via `.env(...)`. Both placements are required.
+
+## Registered IPC commands
+
+The `invoke_handler!` macro registers all frontend-callable commands.
+Current set (kept in lockstep with `commands/mod.rs`):
+
+- service: `get_service_status`, `start_all_services`, `stop_all_services`, `restart_service`
+- config:  `get_app_config`, `get_app_mode`, `set_app_mode`
+- health:  `get_health_status`, `get_logs`
+- tray:    `set_tray_badge`
+- auth:    `trigger_claude_login`, `trigger_claude_logout`, `get_claude_login_status`
+
+Forgetting to add a freshly-defined command here is the #1 frontend symptom
+("invoke returned 'command not found'") — the macro list is the source of
+truth. `commands/auth.rs` exists since 2026-04-30 (in-app Claude Code OAuth).
 
 ## Upstream / downstream
 
